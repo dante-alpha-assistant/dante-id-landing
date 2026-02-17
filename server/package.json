@@ -1,0 +1,11 @@
+{
+  "name": "dante-id-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "express": "^4.21.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "cors": "^2.8.5"
+  }
+}
