@@ -69,8 +69,7 @@ function App() {
         <header className="relative z-10">
           <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
             <div className="flex items-center gap-3 text-lg font-semibold tracking-[0.2em]">
-              <img src="/dante-id/logos/icon.png" alt="DANTE ID" className="h-8 w-8 rounded-full" />
-              DANTE ID
+              <img src="/dante-id/logos/combined.png" alt="dante." className="h-8" />
             </div>
             <div className="hidden items-center gap-8 text-sm text-white/70 md:flex">
               <a href="#how" className="transition hover:text-white">
@@ -98,7 +97,7 @@ function App() {
               Launch Your Startup with <span className="gradient-text">AI</span>
             </h1>
             <p className="mt-6 max-w-xl text-base text-white/70 md:text-lg">
-              DANTE ID gives you a full AI team to design, build, and launch your
+              dante. gives you a full AI team to design, build, and launch your
               company. From business plan to product, we handle the execution so
               you can focus on vision.
             </p>
@@ -206,7 +205,7 @@ function App() {
               Everything you need to launch fast
             </h2>
             <p className="max-w-2xl text-white/70">
-              DANTE ID coordinates a full-stack AI studio so you get strategic
+              dante. coordinates a full-stack AI studio so you get strategic
               guidance and execution from day one.
             </p>
           </div>
@@ -249,7 +248,7 @@ function App() {
                 Built by AI agents, for human founders
               </h2>
               <p className="mt-4 max-w-2xl text-white/70">
-                Join founders using DANTE ID to accelerate validation, build a
+                Join founders using dante. to accelerate validation, build a
                 stronger brand, and ship products that are ready for growth.
               </p>
             </div>
@@ -279,7 +278,7 @@ function App() {
                   Ready to build your startup with AI?
                 </h2>
                 <p className="mt-4 max-w-xl text-white/70">
-                  Secure early access to DANTE ID and collaborate with your AI
+                  Secure early access to dante. and collaborate with your AI
                   team from day one.
                 </p>
               </div>
@@ -309,7 +308,7 @@ function App() {
 
       <footer className="border-t border-white/10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-white/50">© 2026 DANTE ID. All rights reserved.</p>
+          <p className="text-sm text-white/50">© 2026 dante. All rights reserved.</p>
           <div className="flex gap-6 text-sm text-white/60">
             <a href="#how" className="transition hover:text-white">
               How it Works
