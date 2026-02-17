@@ -1,324 +1,495 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+
+const navLinks = [
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Features", href: "#features" },
+  { label: "Pricing", href: "#pricing" },
+]
 
 const steps = [
   {
-    title: "Sign Up",
-    description: "Share your vision and goals in minutes.",
+    number: "01",
+    title: "Describe your idea",
+    description:
+      "Tell us what you're building, who it's for, and your vision. Takes 5 minutes.",
   },
   {
-    title: "Get Your AI Team",
-    description: "We assemble specialists across product, design, and growth.",
+    number: "02",
+    title: "Meet your AI team",
+    description:
+      "We assemble a team of specialized agents — strategist, designer, developer, legal, growth — tailored to your startup.",
   },
   {
-    title: "Launch Your Startup",
-    description: "Ship a validated, launch-ready business fast.",
+    number: "03",
+    title: "Launch your business",
+    description:
+      "Your team builds everything: business plan, brand, website, legal docs, payment setup. You review and approve.",
   },
 ]
 
 const features = [
   {
-    title: "Business Plan",
-    description: "Market research, positioning, pricing, and MVP roadmap.",
+    title: "Strategy & Planning",
+    description:
+      "Market research, business model, competitive analysis, and a pitch-ready business plan.",
   },
   {
-    title: "Branding & Design",
-    description: "Name, identity, visuals, and product UX crafted by AI.",
-  },
-  {
-    title: "Legal & Compliance",
-    description: "Entity setup guidance, policy templates, and risk checks.",
-  },
-  {
-    title: "Payments & Banking",
-    description: "Payment stack selection, billing flows, and go-live setup.",
+    title: "Brand & Design",
+    description:
+      "Logo, color palette, typography, brand guidelines, and a complete visual identity.",
   },
   {
     title: "Website & Product",
-    description: "Landing page, product experience, and technical specs.",
+    description:
+      "Landing page, product UI, deployment, and domain setup — all built for you.",
   },
   {
-    title: "Marketing & Growth",
-    description: "Launch plan, content, and growth experiments at speed.",
+    title: "Legal & Compliance",
+    description:
+      "Terms of service, privacy policy, entity guidance, and contractor agreements.",
+  },
+  {
+    title: "Payments & Finance",
+    description:
+      "Stripe integration, pricing strategy, invoicing setup, and basic bookkeeping.",
+  },
+  {
+    title: "Growth & Launch",
+    description:
+      "Launch strategy, social media presence, SEO fundamentals, and a content calendar.",
   },
 ]
 
 const stats = [
-  { value: "3.2x", label: "Faster time to launch" },
-  { value: "120+", label: "AI specialists available" },
-  { value: "92%", label: "Founder satisfaction" },
+  {
+    value: "10x",
+    label: "Faster than traditional setup",
+  },
+  {
+    value: "$50K",
+    label: "Average savings vs agencies",
+  },
+  {
+    value: "24/7",
+    label: "Your team never sleeps",
+  },
+]
+
+const faqItems = [
+  {
+    question: "What is dante.?",
+    answer:
+      "dante. is an AI-powered startup builder. You describe your idea, and a team of specialized AI agents builds your business — strategy, branding, website, legal, payments, and growth.",
+  },
+  {
+    question: "How is this different from ChatGPT?",
+    answer:
+      "ChatGPT gives you text. dante. gives you a team that produces real deliverables — actual business plans, actual logos, actual deployed websites. It's the difference between advice and execution.",
+  },
+  {
+    question: "How much does it cost?",
+    answer:
+      "We're in early access. Join the waitlist for free and be first in line when we launch.",
+  },
+  {
+    question: "How long does it take?",
+    answer:
+      "Most startups go from idea to launch-ready in 3-5 days. Your AI team works 24/7 in parallel.",
+  },
+  {
+    question: "Can I customize what the agents build?",
+    answer:
+      "Absolutely. You review every deliverable and can request iterations. The agents work for you, not the other way around.",
+  },
+  {
+    question: "Is this just for tech startups?",
+    answer:
+      "No. dante. works for any type of startup — e-commerce, services, SaaS, agencies, local businesses, and more.",
+  },
 ]
 
 function App() {
-  const [email, setEmail] = useState("")
+  const [heroEmail, setHeroEmail] = useState("")
+  const [ctaEmail, setCtaEmail] = useState("")
+  const [openIndex, setOpenIndex] = useState(null)
 
-  const handleSubmit = (event) => {
+  useEffect(() => {
+    const elements = document.querySelectorAll(".reveal")
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible")
+          }
+        })
+      },
+      { threshold: 0.15 }
+    )
+
+    elements.forEach((el) => observer.observe(el))
+
+    return () => observer.disconnect()
+  }, [])
+
+  const handleSubmit = (event, source) => {
     event.preventDefault()
+    const email = source === "hero" ? heroEmail : ctaEmail
     if (!email) return
     console.log("Waitlist signup:", email)
-    setEmail("")
+    if (source === "hero") setHeroEmail("")
+    if (source === "cta") setCtaEmail("")
   }
 
   return (
-    <div className="min-h-screen bg-dante-bg text-white">
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-dante-primary/20 blur-[120px]" />
-          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-dante-accent/20 blur-[120px]" />
-        </div>
-
-        <header className="relative z-10">
-          <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-            <div className="flex items-center gap-3 text-lg font-semibold tracking-[0.2em]">
-              <img src="/dante-id/logos/combined.png" alt="dante." className="h-8" />
-            </div>
-            <div className="hidden items-center gap-8 text-sm text-white/70 md:flex">
-              <a href="#how" className="transition hover:text-white">
-                How it Works
+    <div>
+      <header className="navbar">
+        <div className="container navbar-inner">
+          <a href="/" aria-label="dante. home">
+            <img src="/dante-id/logos/combined.png" alt="dante." height="28" loading="lazy" />
+          </a>
+          <nav className="nav-links" aria-label="Primary">
+            {navLinks.map((link) => (
+              <a key={link.label} href={link.href}>
+                {link.label}
               </a>
-              <a href="#features" className="transition hover:text-white">
-                Features
-              </a>
-              <a href="#waitlist" className="transition hover:text-white">
-                Waitlist
-              </a>
-            </div>
-            <button className="rounded-full border border-white/20 px-4 py-2 text-sm transition hover:border-white/50">
-              Request Access
-            </button>
+            ))}
           </nav>
-        </header>
-
-        <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-20 pt-12 lg:flex-row lg:items-center lg:pb-32">
-          <div className="flex-1">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/70">
-              AI Startup Builder Platform
-            </p>
-            <h1 className="text-4xl font-semibold leading-tight md:text-5xl lg:text-6xl">
-              Launch Your Startup with <span className="gradient-text">AI</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-base text-white/70 md:text-lg">
-              dante. gives you a full AI team to design, build, and launch your
-              company. From business plan to product, we handle the execution so
-              you can focus on vision.
-            </p>
-            <form
-              onSubmit={handleSubmit}
-              className="mt-8 flex flex-col gap-4 sm:flex-row"
-            >
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="Enter your email"
-                className="w-full flex-1 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white placeholder:text-white/40 focus:border-dante-primary/60 focus:outline-none"
-                required
-              />
-              <button
-                type="submit"
-                className="rounded-full bg-gradient-to-r from-dante-primary to-dante-accent px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
-              >
-                Join the Waitlist
-              </button>
-            </form>
-            <p className="mt-4 text-xs text-white/50">
-              Early access invites are rolling out weekly.
-            </p>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button className="hamburger" aria-label="Open navigation">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+            <button className="btn btn-ghost">Get Started</button>
           </div>
-          <div className="flex-1">
-            <div className="glass rounded-3xl p-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                    Team Output
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold">
-                    Your AI workforce
-                  </p>
+        </div>
+      </header>
+
+      <main>
+        <section className="hero" id="top">
+          <div className="container hero-grid">
+            <div>
+              <p className="section-label reveal" style={{ "--delay": "0ms" }}>
+                AI STARTUP BUILDER
+              </p>
+              <h1 className="hero-title reveal" style={{ "--delay": "100ms" }}>
+                Build your startup in days, not months.
+              </h1>
+              <p className="hero-subtitle reveal" style={{ "--delay": "200ms" }}>
+                dante. gives you a full AI team — strategist, designer, developer, lawyer — that builds your business while you focus on your vision.
+              </p>
+              <form
+                className="hero-cta reveal"
+                style={{ "--delay": "300ms" }}
+                onSubmit={(event) => handleSubmit(event, "hero")}
+              >
+                <input
+                  className="input"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={heroEmail}
+                  onChange={(event) => setHeroEmail(event.target.value)}
+                  required
+                />
+                <button className="btn btn-primary" type="submit">
+                  Join the waitlist
+                </button>
+              </form>
+              <p className="text-muted reveal" style={{ fontSize: "13px", marginTop: "12px", "--delay": "400ms" }}>
+                Free to join. No credit card required.
+              </p>
+            </div>
+            <div className="reveal" style={{ "--delay": "200ms" }}>
+              <div className="hero-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h3 className="heading-md" style={{ margin: 0 }}>
+                    Your AI Team
+                  </h3>
+                  <span className="status-badge">Active</span>
                 </div>
-                <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/60">
-                  Live
-                </span>
-              </div>
-              <div className="mt-6 space-y-4">
-                {[
-                  "Product strategy complete",
-                  "Brand kit generated",
-                  "Launch site in progress",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-                  >
-                    <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-dante-primary to-dante-accent" />
-                    <span className="text-sm text-white/80">{item}</span>
+                <div className="status-list">
+                  <div className="status-item">
+                    <span>🟣</span>
+                    <span>Strategy complete</span>
+                    <span style={{ marginLeft: "auto", color: "var(--color-success)" }}>✓</span>
                   </div>
-                ))}
-              </div>
-              <div className="mt-6 grid grid-cols-2 gap-4 text-xs text-white/50">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-lg font-semibold text-white">12 hrs</p>
-                  <p>Avg. first draft</p>
+                  <div className="status-item">
+                    <span>🟣</span>
+                    <span>Brand kit generated</span>
+                    <span style={{ marginLeft: "auto", color: "var(--color-success)" }}>✓</span>
+                  </div>
+                  <div className="status-item">
+                    <span>🔵</span>
+                    <span>Website in progress</span>
+                    <span style={{ marginLeft: "auto" }} className="spinner" />
+                  </div>
+                  <div className="status-item muted">
+                    <span>○</span>
+                    <span>Legal docs queued</span>
+                  </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-lg font-semibold text-white">24/7</p>
-                  <p>AI support team</p>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "12px",
+                    marginTop: "20px",
+                    fontSize: "12px",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  <div style={{ fontSize: "14px", color: "var(--color-text)" }}>4 agents</div>
+                  <div style={{ fontSize: "14px", color: "var(--color-text)" }}>12 hrs avg</div>
+                  <div style={{ fontSize: "14px", color: "var(--color-text)" }}>24/7</div>
                 </div>
               </div>
             </div>
           </div>
         </section>
-      </div>
 
-      <section id="how" className="mx-auto w-full max-w-6xl px-6 py-20">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-            How it works
-          </p>
-          <h2 className="text-3xl font-semibold md:text-4xl">
-            From idea to launch, end-to-end
-          </h2>
-          <p className="max-w-2xl text-white/70">
-            Your AI team moves in parallel — strategy, product, and growth —
-            while you stay in control with clear checkpoints.
-          </p>
-        </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {steps.map((step, index) => (
-            <div key={step.title} className="glass rounded-3xl p-6">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-lg font-semibold text-white">
-                0{index + 1}
-              </div>
-              <h3 className="text-xl font-semibold">{step.title}</h3>
-              <p className="mt-3 text-sm text-white/70">{step.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        <section className="social-proof">
+          <div className="container reveal">Trusted by founders building with AI</div>
+        </section>
 
-      <section id="features" className="bg-black/40">
-        <div className="mx-auto w-full max-w-6xl px-6 py-20">
-          <div className="flex flex-col gap-4">
-            <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-              Features
-            </p>
-            <h2 className="text-3xl font-semibold md:text-4xl">
-              Everything you need to launch fast
-            </h2>
-            <p className="max-w-2xl text-white/70">
-              dante. coordinates a full-stack AI studio so you get strategic
-              guidance and execution from day one.
-            </p>
-          </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {features.map((feature) => (
-              <div key={feature.title} className="glass rounded-3xl p-6">
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-dante-primary/20 to-dante-accent/20 text-white">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6v6l4 2"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold">{feature.title}</h3>
-                <p className="mt-3 text-sm text-white/70">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-6xl px-6 py-20">
-        <div className="glass rounded-3xl px-8 py-10 md:px-12">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-                Social proof
-              </p>
-              <h2 className="mt-4 text-3xl font-semibold md:text-4xl">
-                Built by AI agents, for human founders
+        <section className="section" id="how-it-works">
+          <div className="container">
+            <div style={{ textAlign: "center", maxWidth: "700px", margin: "0 auto" }}>
+              <p className="section-label reveal">HOW IT WORKS</p>
+              <h2 className="heading-xl reveal" style={{ marginBottom: "16px", "--delay": "100ms" }}>
+                From idea to launch, end-to-end.
               </h2>
-              <p className="mt-4 max-w-2xl text-white/70">
-                Join founders using dante. to accelerate validation, build a
-                stronger brand, and ship products that are ready for growth.
+              <p className="text-secondary reveal" style={{ fontSize: "18px", "--delay": "200ms" }}>
+                Your AI team works in parallel — strategy, product, and growth — while you stay in control.
               </p>
             </div>
-            <div className="grid gap-6 sm:grid-cols-3">
-              {stats.map((stat) => (
-                <div key={stat.label}>
-                  <p className="text-3xl font-semibold gradient-text">
-                    {stat.value}
+            <div className="grid-3" style={{ marginTop: "48px" }}>
+              {steps.map((step, index) => (
+                <div key={step.title} className="card reveal" style={{ "--delay": `${index * 100}ms` }}>
+                  <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--color-primary)" }}>{step.number}</div>
+                  <h3 className="heading-md" style={{ marginTop: "16px" }}>
+                    {step.title}
+                  </h3>
+                  <p className="text-secondary" style={{ marginTop: "12px" }}>
+                    {step.description}
                   </p>
-                  <p className="mt-2 text-sm text-white/60">{stat.label}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="waitlist" className="bg-black/40">
-        <div className="mx-auto w-full max-w-6xl px-6 py-20">
-          <div className="glass rounded-3xl px-8 py-12 md:px-12">
-            <div className="flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-                  Waitlist
-                </p>
-                <h2 className="mt-4 text-3xl font-semibold md:text-4xl">
-                  Ready to build your startup with AI?
-                </h2>
-                <p className="mt-4 max-w-xl text-white/70">
-                  Secure early access to dante. and collaborate with your AI
-                  team from day one.
-                </p>
-              </div>
-              <form
-                onSubmit={handleSubmit}
-                className="flex w-full max-w-md flex-col gap-4 sm:flex-row"
-              >
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Email address"
-                  className="w-full flex-1 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white placeholder:text-white/40 focus:border-dante-primary/60 focus:outline-none"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="rounded-full bg-gradient-to-r from-dante-primary to-dante-accent px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
-                >
-                  Join the waitlist
-                </button>
-              </form>
+        <section className="section" id="features">
+          <div className="container">
+            <div style={{ textAlign: "center", maxWidth: "700px", margin: "0 auto" }}>
+              <p className="section-label reveal">WHAT YOU GET</p>
+              <h2 className="heading-xl reveal" style={{ marginBottom: "16px", "--delay": "100ms" }}>
+                Everything you need to launch.
+              </h2>
+              <p className="text-secondary reveal" style={{ fontSize: "18px", "--delay": "200ms" }}>
+                Six specialized AI agents, one unified team.
+              </p>
+            </div>
+            <div className="grid-2x3" style={{ marginTop: "48px" }}>
+              {features.map((feature, index) => (
+                <div key={feature.title} className="card card-lift reveal" style={{ "--delay": `${index * 100}ms` }}>
+                  <div className="card-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+                    </svg>
+                  </div>
+                  <h3 className="heading-md" style={{ fontSize: "18px" }}>
+                    {feature.title}
+                  </h3>
+                  <p className="text-secondary" style={{ fontSize: "14px", marginTop: "12px" }}>
+                    {feature.description}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <footer className="border-t border-white/10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-white/50">© 2026 dante. All rights reserved.</p>
-          <div className="flex gap-6 text-sm text-white/60">
-            <a href="#how" className="transition hover:text-white">
-              How it Works
-            </a>
-            <a href="#features" className="transition hover:text-white">
-              Features
-            </a>
-            <a href="#waitlist" className="transition hover:text-white">
-              Waitlist
-            </a>
+        <section className="section demo-section">
+          <div className="container" style={{ textAlign: "center" }}>
+            <p className="section-label reveal">SEE IT IN ACTION</p>
+            <h2 className="heading-xl reveal" style={{ marginBottom: "16px", "--delay": "100ms" }}>
+              Watch your team build.
+            </h2>
+            <div className="demo-card reveal" style={{ "--delay": "200ms" }}>
+              <div className="chat-row">
+                <div className="chat-bubble agent">
+                  Strategy agent: Market analysis shows strong demand in creator tools. Drafting your business plan now.
+                </div>
+                <div className="chat-bubble agent">
+                  Design agent: Brand kit is ready — logo concepts and primary palette attached.
+                </div>
+                <div className="chat-bubble user">
+                  Founder: Prioritize a clean homepage with onboarding flow.
+                </div>
+                <div className="chat-bubble agent">
+                  Dev agent: Website build in progress. ETA 6 hours for first draft.
+                </div>
+              </div>
+            </div>
+            <p className="text-muted" style={{ fontSize: "14px", marginTop: "16px" }}>
+              Real output from a dante. agent team.
+            </p>
+          </div>
+        </section>
+
+        <section className="section stats-section" id="pricing">
+          <div className="container">
+            <div className="stats-layout">
+              <div>
+                <p className="section-label reveal">BUILT DIFFERENT</p>
+                <h2 className="heading-lg reveal" style={{ marginBottom: "16px", fontSize: "36px", "--delay": "100ms" }}>
+                  Built by AI agents, for human founders.
+                </h2>
+                <p className="text-secondary reveal" style={{ "--delay": "200ms" }}>
+                  Traditional startup setup costs $10K–$50K and takes months. dante. does it in days for a fraction of the cost.
+                </p>
+              </div>
+              <div className="stats-grid">
+                {stats.map((stat, index) => (
+                  <div key={stat.label} className="reveal" style={{ "--delay": `${index * 100}ms` }}>
+                    <div className="stat-value">{stat.value}</div>
+                    <div className="text-secondary" style={{ fontSize: "14px" }}>
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="faq">
+          <div className="container faq">
+            <div style={{ textAlign: "center" }}>
+              <p className="section-label reveal">FAQ</p>
+              <h2 className="heading-xl reveal" style={{ marginBottom: "32px", "--delay": "100ms" }}>
+                Questions?
+              </h2>
+            </div>
+            {faqItems.map((item, index) => {
+              const isOpen = openIndex === index
+              return (
+                <div key={item.question} className="faq-item reveal" style={{ "--delay": `${index * 100}ms` }}>
+                  <button
+                    className="faq-question"
+                    type="button"
+                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{item.question}</span>
+                    <span>{isOpen ? "−" : "+"}</span>
+                  </button>
+                  {isOpen && <p className="faq-answer">{item.answer}</p>}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="section cta-section" id="waitlist">
+          <div className="container" style={{ textAlign: "center", maxWidth: "720px" }}>
+            <h2 className="heading-xl reveal" style={{ fontSize: "48px" }}>
+              Ready to build?
+            </h2>
+            <p
+              className="text-secondary reveal"
+              style={{ fontSize: "18px", marginTop: "16px", maxWidth: "480px", marginInline: "auto", "--delay": "100ms" }}
+            >
+              Join the waitlist and get early access to your AI startup team.
+            </p>
+            <form
+              className="hero-cta reveal"
+              style={{ justifyContent: "center", marginTop: "32px", "--delay": "200ms" }}
+              onSubmit={(event) => handleSubmit(event, "cta")}
+            >
+              <input
+                className="input"
+                type="email"
+                placeholder="Enter your email"
+                value={ctaEmail}
+                onChange={(event) => setCtaEmail(event.target.value)}
+                required
+              />
+              <button className="btn btn-primary" type="submit">
+                Join the waitlist
+              </button>
+            </form>
+            <p className="text-muted reveal" style={{ fontSize: "13px", marginTop: "12px", "--delay": "300ms" }}>
+              Free to join. No credit card required.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-grid">
+            <div>
+              <img src="/dante-id/logos/combined.png" alt="dante." height="24" loading="lazy" />
+              <p className="text-secondary" style={{ marginTop: "12px", fontSize: "14px" }}>
+                Build with AI.
+              </p>
+            </div>
+            <div>
+              <h4 className="heading-md" style={{ fontSize: "16px", marginBottom: "12px" }}>
+                Product
+              </h4>
+              <div className="footer-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+              </div>
+            </div>
+            <div>
+              <h4 className="heading-md" style={{ fontSize: "16px", marginBottom: "12px" }}>
+                Company
+              </h4>
+              <div className="footer-links">
+                <span>About</span>
+                <span>Blog</span>
+                <span>Contact</span>
+              </div>
+            </div>
+            <div>
+              <h4 className="heading-md" style={{ fontSize: "16px", marginBottom: "12px" }}>
+                Legal
+              </h4>
+              <div className="footer-links">
+                <span>Privacy Policy</span>
+                <span>Terms of Service</span>
+              </div>
+            </div>
+          </div>
+          <div className="footer-bottom">
+            <span>© 2026 dante.</span>
+            <div className="footer-socials">
+              <a href="https://x.com" aria-label="Twitter/X">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M4 4l16 16M20 4L4 20" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+              <a href="https://discord.com" aria-label="Discord">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M7 18c3 2 7 2 10 0" strokeLinecap="round" />
+                  <circle cx="9" cy="12" r="1" />
+                  <circle cx="15" cy="12" r="1" />
+                </svg>
+              </a>
+              <a href="https://github.com" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path
+                    d="M12 2a10 10 0 00-3 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.2-3.4-1.2-.5-1.1-1.2-1.4-1.2-1.4-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 .1 1.6-.8 1.6-.8.2-.7.6-1.1 1-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 011-2.7 3.6 3.6 0 01.1-2.7s.8-.3 2.8 1a9.7 9.7 0 015.1 0c2-1.3 2.8-1 2.8-1a3.6 3.6 0 01.1 2.7 3.9 3.9 0 011 2.7c0 3.9-2.4 4.7-4.6 5 .6.5 1.1 1.2 1.1 2.5v2.2c0 .3.2.6.7.5A10 10 0 0012 2z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </footer>
