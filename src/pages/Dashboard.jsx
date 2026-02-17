@@ -1,25 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-
-const statusColors = {
-  pending: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-  in_progress: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-  completed: 'bg-green-500/20 text-green-400 border border-green-500/30',
-}
-
-const statusLabels = {
-  pending: 'Pending',
-  in_progress: 'In Progress',
-  completed: 'Completed',
-}
+import DeliverableCard from '../components/DeliverableCard'
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [deliverables, setDeliverables] = useState([])
+  const [expanded, setExpanded] = useState({})
+  const [triggered, setTriggered] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -38,10 +30,46 @@ export default function Dashboard() {
       })
   }, [user, navigate])
 
+  const fetchDeliverables = useCallback(async () => {
+    if (!project) return
+    const { data } = await supabase
+      .from('deliverables')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('created_at')
+    if (data) setDeliverables(data)
+  }, [project])
+
+  useEffect(() => {
+    fetchDeliverables()
+  }, [fetchDeliverables])
+
+  // Auto-refresh while pending/generating
+  useEffect(() => {
+    const hasPending = deliverables?.some(d => ['pending', 'generating'].includes(d.status))
+    if (!hasPending) return
+    const interval = setInterval(fetchDeliverables, 5000)
+    return () => clearInterval(interval)
+  }, [deliverables, fetchDeliverables])
+
+  // Trigger generation if no deliverables
+  useEffect(() => {
+    if (project && deliverables.length === 0 && !triggered) {
+      setTriggered(true)
+      fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: project.id })
+      }).catch(() => {})
+    }
+  }, [project, deliverables, triggered])
+
   const handleSignOut = async () => {
     await signOut()
     navigate('/')
   }
+
+  const toggleCard = (id) => setExpanded((p) => ({ ...p, [id]: !p[id] }))
 
   if (loading) {
     return (
@@ -53,7 +81,6 @@ export default function Dashboard() {
 
   if (!project) return null
 
-  const status = project.status || 'pending'
   const needs = Array.isArray(project.needs) ? project.needs : []
 
   return (
@@ -70,34 +97,28 @@ export default function Dashboard() {
       </div>
 
       {/* Content */}
-      <div className="max-w-xl mx-auto mt-16 px-4">
+      <div className="max-w-4xl mx-auto mt-10 px-4 pb-16">
         <h1 className="text-2xl font-semibold mb-8">
           Welcome, {project.full_name || 'there'}
         </h1>
 
         {/* Project card */}
-        <div className="bg-[#111] border border-[#222] rounded-xl p-6 space-y-4">
+        <div className="bg-[#111] border border-[#222] rounded-xl p-6 space-y-4 mb-10">
           {project.company_name && (
             <div className="text-lg font-medium">{project.company_name}</div>
           )}
-
           {project.idea && (
             <p className="text-gray-400 text-sm leading-relaxed">
               {project.idea.length > 200 ? project.idea.slice(0, 200) + '…' : project.idea}
             </p>
           )}
-
           <div className="flex flex-wrap items-center gap-2">
             {project.stage && (
               <span className="rounded-full px-3 py-1 text-sm bg-white/10 text-gray-300">
                 {project.stage}
               </span>
             )}
-            <span className={`rounded-full px-3 py-1 text-sm ${statusColors[status] || statusColors.pending}`}>
-              {statusLabels[status] || 'Pending'}
-            </span>
           </div>
-
           {needs.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
               {needs.map((need) => (
@@ -109,12 +130,24 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Assembling message */}
-        <div className="mt-8 text-center">
-          <p className="text-gray-400 animate-pulse">
-            ✨ Your AI team is being assembled... We'll notify you when your deliverables are ready.
+        {/* Deliverables */}
+        <h2 className="text-lg font-semibold mb-4">Your Deliverables</h2>
+        {deliverables.length === 0 ? (
+          <p className="text-gray-400 animate-pulse text-center py-8">
+            ✨ Your AI team is being assembled...
           </p>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {deliverables.map((d) => (
+              <DeliverableCard
+                key={d.id}
+                deliverable={d}
+                isExpanded={!!expanded[d.id]}
+                onToggle={() => toggleCard(d.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
