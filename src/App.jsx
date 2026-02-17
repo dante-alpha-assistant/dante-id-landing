@@ -120,13 +120,17 @@ function App() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("is-visible")
+            observer.unobserve(entry.target)
           }
         })
       },
-      { threshold: 0.15 }
+      { threshold: 0.1, rootMargin: "0px 0px -20px 0px" }
     )
 
-    elements.forEach((el) => observer.observe(el))
+    // Small delay to ensure layout is ready before observing
+    requestAnimationFrame(() => {
+      elements.forEach((el) => observer.observe(el))
+    })
 
     return () => observer.disconnect()
   }, [])

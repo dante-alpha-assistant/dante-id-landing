@@ -202,6 +202,11 @@ input {
   justify-content: space-between;
 }
 
+.navbar-inner img {
+  height: 28px;
+  width: auto;
+}
+
 .nav-links {
   display: none;
   gap: var(--space-8);
@@ -646,4 +651,13 @@ input {
 :focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 3px;
+}
+
+/* Fallback: if JS hasn't run after 2s, show everything */
+@keyframes forceReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  animation: forceReveal 0s 2s forwards;
 }
