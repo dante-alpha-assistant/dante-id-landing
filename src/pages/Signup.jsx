@@ -7,6 +7,7 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmationSent, setConfirmationSent] = useState(false)
   const { signUp } = useAuth()
   const navigate = useNavigate()
 
@@ -18,13 +19,35 @@ export default function Signup() {
       return
     }
     setLoading(true)
-    const { error } = await signUp(email, password)
+    const { data, error } = await signUp(email, password)
     setLoading(false)
     if (error) {
       setError(error.message)
+    } else if (data?.user && !data?.session) {
+      setConfirmationSent(true)
     } else {
       navigate('/onboarding')
     }
+  }
+
+  if (confirmationSent) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+        <div className="w-full max-w-md animate-fadeIn">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center space-y-4">
+            <div className="text-6xl">✉️</div>
+            <h2 className="text-2xl font-bold text-white">Check your email</h2>
+            <p className="text-gray-300">
+              We sent a confirmation link to <span className="text-blue-400 font-semibold">{email}</span>. Click it to activate your account.
+            </p>
+            <p className="text-gray-500 text-sm">Didn't receive it? Check your spam folder.</p>
+            <Link to="/login" className="inline-block mt-2 text-purple-400 hover:text-purple-300 text-sm">
+              ← Back to login
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

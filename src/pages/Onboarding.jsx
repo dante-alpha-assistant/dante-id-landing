@@ -88,15 +88,23 @@ export default function Onboarding() {
     setError('');
     setSubmitting(true);
     try {
-      const { error: dbError } = await supabase.from('projects').insert({
+      const { data: insertData, error: dbError } = await supabase.from('projects').insert({
         user_id: user?.id,
         full_name: form.fullName.trim(),
         company_name: form.companyName.trim() || null,
         idea: form.idea.trim(),
         stage: form.stage,
         needs: form.needs,
-      });
+      }).select();
       if (dbError) throw dbError;
+      // Fire and forget — trigger deliverable generation
+      if (insertData?.[0]?.id) {
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: insertData[0].id })
+        }).catch(() => {});
+      }
       window.location.href = '/dashboard';
     } catch (e) {
       setError(e.message || 'Something went wrong');
