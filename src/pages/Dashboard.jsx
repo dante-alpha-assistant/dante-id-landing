@@ -11,7 +11,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [deliverables, setDeliverables] = useState([])
   const [expanded, setExpanded] = useState({})
-  const [triggered, setTriggered] = useState(false)
+  const [deliverablesLoaded, setDeliverablesLoaded] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -38,31 +38,32 @@ export default function Dashboard() {
       .eq('project_id', project.id)
       .order('created_at')
     if (data) setDeliverables(data)
+    return data
   }, [project])
 
+  // Initial fetch + trigger generation only if truly empty
   useEffect(() => {
-    fetchDeliverables()
-  }, [fetchDeliverables])
+    if (!project || deliverablesLoaded) return
+    fetchDeliverables().then((data) => {
+      setDeliverablesLoaded(true)
+      if (!data || data.length === 0) {
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: project.id })
+        }).catch(() => {})
+      }
+    })
+  }, [project, deliverablesLoaded, fetchDeliverables])
 
   // Auto-refresh while pending/generating
   useEffect(() => {
     const hasPending = deliverables?.some(d => ['pending', 'generating'].includes(d.status))
-    if (!hasPending) return
+    if (!hasPending && deliverablesLoaded && deliverables.length > 0) return
+    if (!deliverablesLoaded) return
     const interval = setInterval(fetchDeliverables, 5000)
     return () => clearInterval(interval)
-  }, [deliverables, fetchDeliverables])
-
-  // Trigger generation if no deliverables
-  useEffect(() => {
-    if (project && deliverables.length === 0 && !triggered) {
-      setTriggered(true)
-      fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: project.id })
-      }).catch(() => {})
-    }
-  }, [project, deliverables, triggered])
+  }, [deliverables, fetchDeliverables, deliverablesLoaded])
 
   const handleSignOut = async () => {
     await signOut()

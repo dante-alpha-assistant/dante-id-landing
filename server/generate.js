@@ -18,7 +18,18 @@ async function generateDeliverables(projectId) {
     return;
   }
 
-  // 2. Create pending deliverable rows
+  // 2. Check if deliverables already exist (idempotent)
+  const { data: existing } = await supabase
+    .from("deliverables")
+    .select("id")
+    .eq("project_id", projectId);
+
+  if (existing && existing.length > 0) {
+    console.log(`Deliverables already exist for project ${projectId}, skipping`);
+    return;
+  }
+
+  // 3. Create pending deliverable rows
   const rows = DELIVERABLE_TYPES.map((type) => ({
     project_id: projectId,
     type,
