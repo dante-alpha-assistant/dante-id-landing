@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-dante-bg text-white font-sans antialiased;
+}
+
+.glass {
+  @apply border border-white/10 bg-white/5 backdrop-blur-xl;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent;
+}
