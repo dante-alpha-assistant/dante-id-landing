@@ -68,8 +68,8 @@ function App() {
 
         <header className="relative z-10">
           <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-            <div className="flex items-center gap-2 text-lg font-semibold tracking-[0.2em]">
-              <span className="h-3 w-3 rounded-full bg-gradient-to-tr from-dante-primary to-dante-accent" />
+            <div className="flex items-center gap-3 text-lg font-semibold tracking-[0.2em]">
+              <img src="/dante-id/logos/icon.png" alt="DANTE ID" className="h-8 w-8 rounded-full" />
               DANTE ID
             </div>
             <div className="hidden items-center gap-8 text-sm text-white/70 md:flex">
