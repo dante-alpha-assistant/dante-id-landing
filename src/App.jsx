@@ -62,14 +62,14 @@ function App() {
     <div className="min-h-screen bg-dante-bg text-white">
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-blue-500/20 blur-[120px]" />
-          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-violet-500/20 blur-[120px]" />
+          <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-dante-primary/20 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-dante-accent/20 blur-[120px]" />
         </div>
 
         <header className="relative z-10">
           <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
             <div className="flex items-center gap-2 text-lg font-semibold tracking-[0.2em]">
-              <span className="h-3 w-3 rounded-full bg-gradient-to-tr from-cyan-400 to-violet-500" />
+              <span className="h-3 w-3 rounded-full bg-gradient-to-tr from-dante-primary to-dante-accent" />
               DANTE ID
             </div>
             <div className="hidden items-center gap-8 text-sm text-white/70 md:flex">
@@ -111,12 +111,12 @@ function App() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your email"
-                className="w-full flex-1 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white placeholder:text-white/40 focus:border-cyan-400/60 focus:outline-none"
+                className="w-full flex-1 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white placeholder:text-white/40 focus:border-dante-primary/60 focus:outline-none"
                 required
               />
               <button
                 type="submit"
-                className="rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
+                className="rounded-full bg-gradient-to-r from-dante-primary to-dante-accent px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
               >
                 Join the Waitlist
               </button>
@@ -150,7 +150,7 @@ function App() {
                     key={item}
                     className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
                   >
-                    <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-dante-primary to-dante-accent" />
                     <span className="text-sm text-white/80">{item}</span>
                   </div>
                 ))}
@@ -213,7 +213,7 @@ function App() {
           <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {features.map((feature) => (
               <div key={feature.title} className="glass rounded-3xl p-6">
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400/20 via-blue-500/20 to-violet-500/20 text-white">
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-dante-primary/20 to-dante-accent/20 text-white">
                   <svg
                     viewBox="0 0 24 24"
                     className="h-5 w-5"
@@ -292,12 +292,12 @@ function App() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Email address"
-                  className="w-full flex-1 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white placeholder:text-white/40 focus:border-cyan-400/60 focus:outline-none"
+                  className="w-full flex-1 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white placeholder:text-white/40 focus:border-dante-primary/60 focus:outline-none"
                   required
                 />
                 <button
                   type="submit"
-                  className="rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
+                  className="rounded-full bg-gradient-to-r from-dante-primary to-dante-accent px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
                 >
                   Join the waitlist
                 </button>
@@ -309,7 +309,7 @@ function App() {
 
       <footer className="border-t border-white/10">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-white/50">© 2025 DANTE ID. All rights reserved.</p>
+          <p className="text-sm text-white/50">© 2026 DANTE ID. All rights reserved.</p>
           <div className="flex gap-6 text-sm text-white/60">
             <a href="#how" className="transition hover:text-white">
               How it Works

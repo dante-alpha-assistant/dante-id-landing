@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,13 +13,17 @@ html {
 }
 
 body {
-  @apply bg-dante-bg text-white font-sans antialiased;
+  @apply bg-dante-bg text-dante-text font-sans antialiased;
+}
+
+h1, h2, h3 {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui;
 }
 
 .glass {
-  @apply border border-white/10 bg-white/5 backdrop-blur-xl;
+  @apply border border-white/10 bg-dante-secondary/30 backdrop-blur-xl;
 }
 
 .gradient-text {
-  @apply bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-dante-primary via-dante-primary to-dante-accent bg-clip-text text-transparent;
 }
