@@ -1,5 +1,9 @@
 const { createClient } = require("@supabase/supabase-js");
 const { getPrompts } = require("./prompts");
+const { generateLandingProject } = require("./generate-landing");
+const { deployLandingPage } = require("./deploy");
+const path = require("path");
+const fs = require("fs");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -83,6 +87,31 @@ async function generateDeliverables(projectId) {
 
       const data = await res.json();
       const content = JSON.parse(data.choices[0].message.content);
+
+      // Special handling for landing_page: generate full project + deploy
+      if (deliverable.type === 'landing_page') {
+        try {
+          const projectDir = path.join('/tmp/landing-projects', deliverable.project_id);
+          if (fs.existsSync(projectDir)) {
+            fs.rmSync(projectDir, { recursive: true });
+          }
+
+          const meta = { company_name: project.company_name || '', full_name: project.full_name || '' };
+
+          await generateLandingProject(content, projectDir, meta);
+
+          const urls = await deployLandingPage(projectDir, project.company_name || project.full_name || 'project', deliverable.id);
+
+          content.deploy_url = urls.deploy_url;
+          content.github_url = urls.github_url;
+
+          try { fs.rmSync(projectDir, { recursive: true }); } catch(e) {}
+
+          console.log('Landing page deployed:', urls);
+        } catch (deployErr) {
+          console.error('Landing page deploy failed:', deployErr.message);
+        }
+      }
 
       await supabase
         .from("deliverables")
