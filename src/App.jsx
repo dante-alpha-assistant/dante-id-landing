@@ -148,8 +148,9 @@ function App() {
     <div>
       <header className="navbar">
         <div className="container navbar-inner">
-          <a href="/" aria-label="dante. home">
-            <img src="/dante-id/logos/combined.png" alt="dante." height="28" loading="lazy" />
+          <a href="/" className="logo-lockup" aria-label="dante. home">
+            <span className="logo-d">d</span>
+            <span className="logo-text">dante<span className="logo-dot">.</span></span>
           </a>
           <nav className="nav-links" aria-label="Primary">
             {navLinks.map((link) => (
@@ -434,7 +435,10 @@ function App() {
         <div className="container">
           <div className="footer-grid">
             <div>
-              <img src="/dante-id/logos/combined.png" alt="dante." height="24" loading="lazy" />
+              <div className="logo-lockup logo-sm">
+                <span className="logo-d">d</span>
+                <span className="logo-text">dante<span className="logo-dot">.</span></span>
+              </div>
               <p className="text-secondary" style={{ marginTop: "12px", fontSize: "14px" }}>
                 Build with AI.
               </p>
