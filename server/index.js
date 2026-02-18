@@ -7,6 +7,7 @@ const { generateDeliverables, retrySingleDeliverable, repairJson } = require("./
 const { generateLandingProject, renderLandingHTML } = require("./generate-landing");
 const { deployLandingPage } = require("./deploy");
 const { DomainManager } = require("./domains");
+const { stripe, PLANS, createCheckoutSession, createPortalSession, handleWebhookEvent } = require("./stripe");
 const path = require("path");
 const fs = require("fs");
 const { randomUUID } = require("crypto");
@@ -19,6 +20,19 @@ app.use(cors({
   methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
   credentials: true
 }));
+
+// Stripe webhook needs raw body — must be before express.json()
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  try {
+    const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    await handleWebhookEvent(supabase, event);
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Stripe webhook error:", err.message);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
 
 app.use(express.json({ limit: "100kb" }));
 
@@ -1586,6 +1600,55 @@ function summarizeDeliverable(d) {
       return 'Completed';
   }
 }
+
+// --- Stripe Billing Endpoints ---
+
+app.get("/api/subscription", requireAuth, async (req, res) => {
+  try {
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", req.user.id)
+      .single();
+
+    const plan = sub?.plan || "free";
+    res.json({
+      plan,
+      status: sub?.status || "active",
+      currentPeriodEnd: sub?.current_period_end || null,
+      projectLimit: PLANS[plan]?.projectLimit ?? 1,
+      plans: Object.entries(PLANS).map(([key, p]) => ({
+        id: key, name: p.name, price: p.price, projectLimit: p.projectLimit === Infinity ? "unlimited" : p.projectLimit,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/checkout", requireAuth, async (req, res) => {
+  const { plan } = req.body;
+  if (!plan || !PLANS[plan] || plan === "free") {
+    return res.status(400).json({ error: "Invalid plan" });
+  }
+  try {
+    const session = await createCheckoutSession(supabase, req.user.id, req.user.email, plan);
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Checkout error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/billing-portal", requireAuth, async (req, res) => {
+  try {
+    const session = await createPortalSession(supabase, req.user.id);
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Portal error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Error handling ---
 app.use((err, req, res, next) => {
