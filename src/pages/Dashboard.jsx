@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import DeliverableCard from '../components/DeliverableCard'
+import CofounderChat from '../components/CofounderChat'
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
@@ -161,6 +162,17 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* AI Co-founder Chat */}
+      {project && (
+        <CofounderChat 
+          projectId={project.id} 
+          context={{
+            project: { name: project.company_name, idea: project.idea, stage: project.stage },
+            deliverables: deliverables.filter(d => d.status === 'completed').map(d => ({ type: d.type, summary: d.type }))
+          }}
+        />
+      )}
     </div>
   )
 }

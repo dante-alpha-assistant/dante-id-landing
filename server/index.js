@@ -1372,6 +1372,221 @@ app.get("/api/domains/:projectId", requireAuth, async (req, res) => {
   }
 });
 
+// --- AI Co-founder Chat Endpoints ---
+
+// Get chat history for a project
+app.get("/api/chat/:projectId", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const { limit = 50 } = req.query;
+
+  try {
+    const { data: messages, error } = await supabase
+      .from("chat_messages")
+      .select("id, role, content, created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(parseInt(limit));
+
+    if (error) throw error;
+
+    // Get project context for system message
+    const { data: project } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .single();
+
+    const { data: deliverables } = await supabase
+      .from("deliverables")
+      .select("type, content")
+      .eq("project_id", projectId)
+      .eq("status", "completed");
+
+    res.json({
+      messages: (messages || []).reverse(),
+      context: {
+        project: { name: project?.company_name, idea: project?.idea, stage: project?.stage },
+        deliverables: (deliverables || []).map(d => ({ type: d.type, summary: summarizeDeliverable(d) }))
+      }
+    });
+  } catch (err) {
+    console.error("Chat history error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send message to AI co-founder
+app.post("/api/chat/:projectId", requireAuth, rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
+  const { projectId } = req.params;
+  const { message } = req.body;
+
+  if (!message || message.trim().length === 0) {
+    return res.status(400).json({ error: "message is required" });
+  }
+
+  try {
+    // Save user message
+    const { data: userMsg, error: userError } = await supabase
+      .from("chat_messages")
+      .insert({ project_id: projectId, role: "user", content: message.trim() })
+      .select()
+      .single();
+
+    if (userError) throw userError;
+
+    // Get recent context (last 10 messages)
+    const { data: recentMessages } = await supabase
+      .from("chat_messages")
+      .select("role, content")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // Get project and deliverables for context
+    const { data: project } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .single();
+
+    const { data: deliverables } = await supabase
+      .from("deliverables")
+      .select("type, content")
+      .eq("project_id", projectId)
+      .eq("status", "completed");
+
+    // Build AI prompt with full business context
+    const systemPrompt = buildCofounderSystemPrompt(project, deliverables);
+    const aiMessages = [
+      { role: "system", content: systemPrompt },
+      ...(recentMessages || []).reverse().map(m => ({ role: m.role, content: m.content })),
+      { role: "user", content: message.trim() }
+    ];
+
+    // Call AI
+    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: aiMessages,
+        temperature: 0.7,
+        max_tokens: 2000
+      })
+    });
+
+    const aiData = await aiRes.json();
+    const aiResponse = aiData.choices?.[0]?.message?.content || "I'm not sure how to help with that right now.";
+
+    // Save AI response
+    const { data: aiMsg } = await supabase
+      .from("chat_messages")
+      .insert({ project_id: projectId, role: "assistant", content: aiResponse })
+      .select()
+      .single();
+
+    res.json({
+      user_message: userMsg,
+      assistant_message: aiMsg,
+      context_used: deliverables?.length || 0
+    });
+  } catch (err) {
+    console.error("Chat message error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear chat history
+app.delete("/api/chat/:projectId", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+
+  try {
+    await supabase
+      .from("chat_messages")
+      .delete()
+      .eq("project_id", projectId);
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Helper: Build system prompt with full business context
+function buildCofounderSystemPrompt(project, deliverables) {
+  const dMap = {};
+  (deliverables || []).forEach(d => { dMap[d.type] = d.content; });
+
+  let prompt = `You are an experienced startup co-founder and advisor. You're helping ${project?.full_name || 'the founder'} with their startup ${project?.company_name || ''}.
+
+Your role is to provide strategic advice, answer questions, challenge assumptions, and help them think through decisions. Be direct, practical, and actionable — like a real co-founder would be.
+
+Here's what you know about their business:
+
+`;
+
+  if (project?.idea) {
+    prompt += `**The Idea:** ${project.idea}\n\n`;
+  }
+  if (project?.stage) {
+    prompt += `**Current Stage:** ${project.stage}\n\n`;
+  }
+
+  if (dMap.business_plan?.executive_summary) {
+    prompt += `**Business Summary:** ${dMap.business_plan.executive_summary}\n\n`;
+  }
+
+  if (dMap.brand_identity?.taglines?.[0]) {
+    prompt += `**Positioning:** "${dMap.brand_identity.taglines[0].text}"\n\n`;
+  }
+
+  if (dMap.competitor_analysis?.competitors?.length > 0) {
+    const comps = dMap.competitor_analysis.competitors.slice(0, 3).map(c => c.name).join(', ');
+    prompt += `**Key Competitors:** ${comps}\n\n`;
+  }
+
+  if (dMap.growth_strategy?.channel_strategy?.length > 0) {
+    const channels = dMap.growth_strategy.channel_strategy.slice(0, 2).map(c => c.channel).join(', ');
+    prompt += `**Growth Focus:** ${channels}\n\n`;
+  }
+
+  prompt += `When answering:
+1. Reference specific details from their business context when relevant
+2. Give concrete next steps, not just high-level advice
+3. Challenge weak assumptions gently but directly
+4. Prioritize speed and validation over perfection
+5. If they ask about something not in your context, tell them you need more info
+
+Current date: ${new Date().toISOString().split('T')[0]}`;
+
+  return prompt;
+}
+
+// Helper: Summarize deliverable for context list
+function summarizeDeliverable(d) {
+  switch (d.type) {
+    case 'brand_identity':
+      return d.content?.taglines?.[0]?.text || 'Brand strategy completed';
+    case 'landing_page':
+      return d.content?.hero?.headline || 'Landing page created';
+    case 'business_plan':
+      return d.content?.executive_summary?.slice(0, 100) + '...' || 'Business plan complete';
+    case 'growth_strategy':
+      return `${d.content?.channel_strategy?.length || 0} growth channels identified`;
+    case 'personal_brand':
+      return 'Launch content ready';
+    case 'pitch_deck':
+      return `${d.content?.slides?.length || 0}-slide pitch deck ready`;
+    case 'competitor_analysis':
+      return `${d.content?.competitors?.length || 0} competitors analyzed`;
+    default:
+      return 'Completed';
+  }
+}
+
 // --- Error handling ---
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
