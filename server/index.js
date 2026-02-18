@@ -4,7 +4,7 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const { createClient } = require("@supabase/supabase-js");
 const { generateDeliverables, retrySingleDeliverable, repairJson } = require("./generate");
-const { generateLandingProject } = require("./generate-landing");
+const { generateLandingProject, renderLandingHTML } = require("./generate-landing");
 const { deployLandingPage } = require("./deploy");
 const path = require("path");
 const fs = require("fs");
@@ -66,7 +66,7 @@ function ensureMetricsShape(metrics, agents = []) {
 }
 
 function getSectionsModified(before = {}, after = {}) {
-  const ignored = new Set(["deploy_url", "github_url", "edits"]);
+  const ignored = new Set(["deploy_url", "github_url", "edits", "versions", "last_published_content", "last_published_at", "last_published_url"]);
   const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
   const changed = [];
   for (const key of keys) {
@@ -78,6 +78,18 @@ function getSectionsModified(before = {}, after = {}) {
     }
   }
   return changed;
+}
+
+function stripContentForSnapshot(content = {}) {
+  const snapshot = JSON.parse(JSON.stringify(content || {}));
+  delete snapshot.edits;
+  delete snapshot.versions;
+  delete snapshot.deploy_url;
+  delete snapshot.github_url;
+  delete snapshot.last_published_content;
+  delete snapshot.last_published_at;
+  delete snapshot.last_published_url;
+  return snapshot;
 }
 
 // --- Health check ---
@@ -135,7 +147,7 @@ async function requireAuth(req, res, next) {
     req.user = user;
 
     // If request has project_id, verify ownership
-    const projectId = req.body.project_id;
+    const projectId = req.body.project_id || req.query.project_id || req.params.project_id;
     if (projectId) {
       const { data: project } = await supabase
         .from("projects")
@@ -220,6 +232,7 @@ app.post("/api/retry-deliverable", requireAuth, genLimiter, async (req, res) => 
 app.post("/api/edit-landing", requireAuth, editLimiter, async (req, res) => {
   const project_id = req.body.project_id;
   const instruction = sanitize(req.body.instruction, 2000);
+  const section_target = sanitize(req.body.section_target || "", 100);
 
   if (!project_id || !instruction) {
     return res.status(400).json({ error: "project_id and instruction are required" });
@@ -237,13 +250,10 @@ app.post("/api/edit-landing", requireAuth, editLimiter, async (req, res) => {
       return res.status(404).json({ error: "Landing page deliverable not found" });
     }
 
-    const { data: project } = await supabase
-      .from("projects")
-      .select("company_name, full_name")
-      .eq("id", project_id)
-      .single();
-
     const currentContent = deliverable.content || {};
+    const currentVersions = Array.isArray(currentContent.versions) ? currentContent.versions : [];
+    const snapshot = stripContentForSnapshot(currentContent);
+    const nextVersions = [...currentVersions, { content: snapshot, timestamp: new Date().toISOString(), instruction }].slice(-10);
 
     const system = `You are a precision landing page editor. Rules:
 1. Apply ONLY the requested changes — preserve everything else exactly
@@ -253,7 +263,8 @@ app.post("/api/edit-landing", requireAuth, editLimiter, async (req, res) => {
 5. Keep all field names identical to the input schema
 6. Return ONLY valid JSON — no markdown, no explanation, no code fences
 7. If the instruction is ambiguous, make the minimal reasonable change`;
-    const user = `Current content:\n${JSON.stringify(currentContent)}\n\nEdit instruction: ${instruction}\n\nReturn the complete updated JSON with the edits applied.`;
+    const sectionHint = section_target ? `\n\nThe user is specifically editing the ${section_target} section. Focus changes there.` : '';
+    const user = `Current content:\n${JSON.stringify(currentContent)}\n\nEdit instruction: ${instruction}${sectionHint}\n\nReturn the complete updated JSON with the edits applied.`;
 
     const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -292,9 +303,103 @@ app.post("/api/edit-landing", requireAuth, editLimiter, async (req, res) => {
       {
         instruction,
         timestamp: new Date().toISOString(),
-        sections_modified
+        sections_modified,
+        section_target: section_target || null
       }
     ];
+    updatedContent.versions = nextVersions;
+    updatedContent.template = updatedContent.template || currentContent.template || "saas";
+    updatedContent.deploy_url = currentContent.deploy_url || null;
+    updatedContent.github_url = currentContent.github_url || null;
+    updatedContent.last_published_content = currentContent.last_published_content || null;
+    updatedContent.last_published_at = currentContent.last_published_at || null;
+    updatedContent.last_published_url = currentContent.last_published_url || currentContent.deploy_url || null;
+
+    await supabase
+      .from("deliverables")
+      .update({ content: updatedContent })
+      .eq("id", deliverable.id);
+
+    return res.json({
+      preview_url: `/api/preview/${project_id}`,
+      content: updatedContent,
+      sections_modified
+    });
+  } catch (err) {
+    console.error("Edit landing error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/edit-landing/versions", requireAuth, async (req, res) => {
+  const project_id = sanitize(req.query.project_id, 200);
+  if (!project_id) {
+    return res.status(400).json({ error: "project_id is required" });
+  }
+
+  try {
+    const { data: deliverable, error } = await supabase
+      .from("deliverables")
+      .select("content")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    if (error || !deliverable) {
+      return res.status(404).json({ error: "Landing page deliverable not found" });
+    }
+
+    return res.json({ versions: Array.isArray(deliverable.content?.versions) ? deliverable.content.versions : [] });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/edit-landing/rollback", requireAuth, async (req, res) => {
+  const project_id = req.body.project_id;
+  const version_index = Number(req.body.version_index);
+
+  if (!project_id || Number.isNaN(version_index)) {
+    return res.status(400).json({ error: "project_id and version_index are required" });
+  }
+
+  try {
+    const { data: deliverable, error: deliverableError } = await supabase
+      .from("deliverables")
+      .select("*")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    if (deliverableError || !deliverable) {
+      return res.status(404).json({ error: "Landing page deliverable not found" });
+    }
+
+    const currentContent = deliverable.content || {};
+    const versions = Array.isArray(currentContent.versions) ? currentContent.versions : [];
+    const target = versions[version_index];
+    if (!target?.content) {
+      return res.status(400).json({ error: "Invalid version index" });
+    }
+
+    const restored = { ...target.content };
+    restored.versions = versions;
+    restored.edits = [
+      ...(Array.isArray(currentContent.edits) ? currentContent.edits : []),
+      {
+        instruction: `Rollback to version #${version_index + 1}`,
+        timestamp: new Date().toISOString(),
+        sections_modified: getSectionsModified(currentContent, restored),
+        section_target: null
+      }
+    ];
+    restored.template = restored.template || currentContent.template || "saas";
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("company_name, full_name")
+      .eq("id", project_id)
+      .single();
 
     const projectDir = path.join("/tmp/landing-projects", project_id);
     if (fs.existsSync(projectDir)) {
@@ -302,31 +407,177 @@ app.post("/api/edit-landing", requireAuth, editLimiter, async (req, res) => {
     }
 
     const meta = { company_name: project?.company_name || "", full_name: project?.full_name || "" };
-    await generateLandingProject(updatedContent, projectDir, meta);
+    await generateLandingProject(restored, projectDir, meta, restored.template);
     const urls = await deployLandingPage(projectDir, project?.company_name || project?.full_name || "project", deliverable.id);
 
-    updatedContent.deploy_url = urls.deploy_url;
-    updatedContent.github_url = urls.github_url;
+    restored.deploy_url = urls.deploy_url;
+    restored.github_url = urls.github_url;
+    restored.last_published_content = stripContentForSnapshot(restored);
+    restored.last_published_at = new Date().toISOString();
+    restored.last_published_url = urls.deploy_url;
 
     try { fs.rmSync(projectDir, { recursive: true }); } catch (e) {}
 
     await supabase
       .from("deliverables")
-      .update({ content: updatedContent })
+      .update({ content: restored })
       .eq("id", deliverable.id);
 
-    const changes_summary = sections_modified.length
-      ? `Updated sections: ${sections_modified.join(", ")}`
-      : "Updated landing page content.";
-
-    return res.json({
-      deploy_url: urls.deploy_url,
-      changes_summary,
-      sections_modified
-    });
+    return res.json({ ok: true, deploy_url: urls.deploy_url, content: restored });
   } catch (err) {
-    console.error("Edit landing error:", err.message);
+    console.error("Rollback error:", err.message);
     return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/edit-landing/switch-template", requireAuth, async (req, res) => {
+  const project_id = req.body.project_id;
+  const template = sanitize(req.body.template, 20) || "saas";
+
+  if (!project_id) {
+    return res.status(400).json({ error: "project_id is required" });
+  }
+
+  if (!['saas', 'marketplace', 'mobile'].includes(template)) {
+    return res.status(400).json({ error: "Invalid template" });
+  }
+
+  try {
+    const { data: deliverable, error: deliverableError } = await supabase
+      .from("deliverables")
+      .select("*")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    if (deliverableError || !deliverable) {
+      return res.status(404).json({ error: "Landing page deliverable not found" });
+    }
+
+    const currentContent = deliverable.content || {};
+    const updated = { ...currentContent, template };
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("company_name, full_name")
+      .eq("id", project_id)
+      .single();
+
+    const projectDir = path.join("/tmp/landing-projects", project_id);
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true });
+    }
+
+    const meta = { company_name: project?.company_name || "", full_name: project?.full_name || "" };
+    await generateLandingProject(updated, projectDir, meta, template);
+    const urls = await deployLandingPage(projectDir, project?.company_name || project?.full_name || "project", deliverable.id);
+
+    updated.deploy_url = urls.deploy_url;
+    updated.github_url = urls.github_url;
+    updated.last_published_content = stripContentForSnapshot(updated);
+    updated.last_published_at = new Date().toISOString();
+    updated.last_published_url = urls.deploy_url;
+
+    try { fs.rmSync(projectDir, { recursive: true }); } catch (e) {}
+
+    await supabase
+      .from("deliverables")
+      .update({ content: updated })
+      .eq("id", deliverable.id);
+
+    return res.json({ ok: true, deploy_url: urls.deploy_url, content: updated });
+  } catch (err) {
+    console.error("Template switch error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/edit-landing/publish", requireAuth, async (req, res) => {
+  const project_id = req.body.project_id;
+  if (!project_id) {
+    return res.status(400).json({ error: "project_id is required" });
+  }
+
+  try {
+    const { data: deliverable, error: deliverableError } = await supabase
+      .from("deliverables")
+      .select("*")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    if (deliverableError || !deliverable) {
+      return res.status(404).json({ error: "Landing page deliverable not found" });
+    }
+
+    const currentContent = deliverable.content || {};
+    const { data: project } = await supabase
+      .from("projects")
+      .select("company_name, full_name")
+      .eq("id", project_id)
+      .single();
+
+    const projectDir = path.join("/tmp/landing-projects", project_id);
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true });
+    }
+
+    const meta = { company_name: project?.company_name || "", full_name: project?.full_name || "" };
+    await generateLandingProject(currentContent, projectDir, meta, currentContent.template || "saas");
+    const urls = await deployLandingPage(projectDir, project?.company_name || project?.full_name || "project", deliverable.id);
+
+    currentContent.deploy_url = urls.deploy_url;
+    currentContent.github_url = urls.github_url;
+    currentContent.last_published_content = stripContentForSnapshot(currentContent);
+    currentContent.last_published_at = new Date().toISOString();
+    currentContent.last_published_url = urls.deploy_url;
+
+    try { fs.rmSync(projectDir, { recursive: true }); } catch (e) {}
+
+    await supabase
+      .from("deliverables")
+      .update({ content: currentContent })
+      .eq("id", deliverable.id);
+
+    return res.json({ ok: true, deploy_url: urls.deploy_url, content: currentContent });
+  } catch (err) {
+    console.error("Publish error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/preview/:project_id", async (req, res) => {
+  const project_id = sanitize(req.params.project_id, 200);
+  if (!project_id) {
+    return res.status(400).send("Missing project id");
+  }
+
+  try {
+    const { data: deliverable, error: deliverableError } = await supabase
+      .from("deliverables")
+      .select("*")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    if (deliverableError || !deliverable) {
+      return res.status(404).send("Landing page deliverable not found");
+    }
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("company_name, full_name")
+      .eq("id", project_id)
+      .single();
+
+    const content = deliverable.content || {};
+    const meta = { company_name: project?.company_name || "", full_name: project?.full_name || "" };
+    const html = renderLandingHTML(content, content.template || "saas", meta);
+
+    res.setHeader("Content-Type", "text/html");
+    return res.send(html);
+  } catch (err) {
+    return res.status(500).send("Failed to render preview");
   }
 });
 
