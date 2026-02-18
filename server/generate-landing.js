@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { injectAnalytics } = require('./analytics');
 
 function esc(str) {
   return (str || '').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
@@ -399,7 +400,7 @@ ${data.faq.map((item, i) => `  <details class="border ${theme.cardBorder} rounde
 </div>`;
 }
 
-async function generateLandingProject(content, projectDir, meta = {}, template) {
+async function generateLandingProject(content, projectDir, meta = {}, template, projectId) {
   const slug = (meta.company_name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const theme = getTemplateConfig(template || content?.template || 'saas');
   const data = getLandingData(content, meta);
@@ -466,6 +467,7 @@ async function generateLandingProject(content, projectDir, meta = {}, template) 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    ${analyticsScript}
   </body>
 </html>\n`);
 
@@ -486,6 +488,8 @@ function renderLandingHTML(content = {}, template = 'saas', meta = {}) {
   const faqHtml = buildFaqHtml(data, theme);
   const bodyMarkup = buildLandingMarkup(data, theme, { classAttr: 'class', faqMarkup: faqHtml });
 
+  // Analytics script injection
+  const analyticsScript = projectId ? injectAnalytics('', projectId).match(/<script>[\s\S]*?<\/script>/)?.[0] || '' : '';
   return `<!DOCTYPE html>
 <html lang="en">
   <head>

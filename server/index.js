@@ -6,6 +6,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { generateDeliverables, retrySingleDeliverable, repairJson } = require("./generate");
 const { generateLandingProject, renderLandingHTML } = require("./generate-landing");
 const { deployLandingPage } = require("./deploy");
+const { DomainManager } = require("./domains");
 const path = require("path");
 const fs = require("fs");
 const { randomUUID } = require("crypto");
@@ -407,7 +408,7 @@ app.post("/api/edit-landing/rollback", requireAuth, async (req, res) => {
     }
 
     const meta = { company_name: project?.company_name || "", full_name: project?.full_name || "" };
-    await generateLandingProject(restored, projectDir, meta, restored.template);
+    await generateLandingProject(restored, projectDir, meta, restored.template, project_id);
     const urls = await deployLandingPage(projectDir, project?.company_name || project?.full_name || "project", deliverable.id);
 
     restored.deploy_url = urls.deploy_url;
@@ -1142,6 +1143,231 @@ app.post("/api/waitlist", rateLimit({ windowMs: 60000, max: 3 }), async (req, re
 
     res.json({ ok: true });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Analytics Endpoints ---
+
+// Receive analytics events from landing pages (public, CORS-enabled)
+app.post("/api/analytics/track", async (req, res) => {
+  const { p: projectId, e: event, u: url, r: referrer, s: sessionId, t: timestamp, ...props } = req.body;
+  
+  if (!projectId || !event) {
+    return res.status(400).json({ error: "missing project_id or event" });
+  }
+
+  try {
+    const { error } = await supabase.from("analytics_events").insert({
+      project_id: projectId,
+      event_type: event,
+      url: url?.substring(0, 500) || null,
+      referrer: referrer?.substring(0, 500) || null,
+      session_id: sessionId?.substring(0, 100) || null,
+      properties: props,
+      created_at: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString()
+    });
+
+    if (error) {
+      // Table may not exist, log but don't fail
+      console.warn("Analytics insert failed:", error.message);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Analytics track error:", err);
+    res.json({ ok: true }); // Always return success to not block landing pages
+  }
+});
+
+// Get analytics stats for a project (protected)
+app.get("/api/analytics/:projectId", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const { days = 7 } = req.query;
+  
+  try {
+    const since = new Date(Date.now() - parseInt(days) * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Get pageviews
+    const { data: pageviews } = await supabase
+      .from("analytics_events")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("event_type", "pageview")
+      .gte("created_at", since);
+
+    // Get unique sessions
+    const { data: sessions } = await supabase
+      .from("analytics_events")
+      .select("session_id")
+      .eq("project_id", projectId)
+      .eq("event_type", "pageview")
+      .gte("created_at", since);
+
+    // Get CTA clicks
+    const { data: clicks } = await supabase
+      .from("analytics_events")
+      .select("id, properties")
+      .eq("project_id", projectId)
+      .eq("event_type", "cta_click")
+      .gte("created_at", since);
+
+    // Get daily breakdown
+    const { data: daily } = await supabase
+      .from("analytics_events")
+      .select("event_type, created_at")
+      .eq("project_id", projectId)
+      .gte("created_at", since);
+
+    const uniqueSessions = new Set(sessions?.map(s => s.session_id)).size;
+    
+    // Group by day for chart
+    const dailyStats = {};
+    daily?.forEach(e => {
+      const day = e.created_at.split('T')[0];
+      if (!dailyStats[day]) dailyStats[day] = { views: 0, clicks: 0 };
+      if (e.event_type === 'pageview') dailyStats[day].views++;
+      if (e.event_type === 'cta_click') dailyStats[day].clicks++;
+    });
+
+    res.json({
+      views: pageviews?.length || 0,
+      uniqueVisitors: uniqueSessions,
+      clicks: clicks?.length || 0,
+      ctr: pageviews?.length ? Math.round((clicks?.length || 0) / pageviews.length * 1000) / 10 : 0,
+      daily: Object.entries(dailyStats)
+        .sort()
+        .map(([date, stats]) => ({ date, ...stats }))
+    });
+  } catch (err) {
+    console.error("Analytics fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+// --- Custom Domain Endpoints ---
+
+// Check domain availability
+app.get("/api/domains/check", requireAuth, async (req, res) => {
+  const { domain } = req.query;
+  if (!domain) return res.status(400).json({ error: "domain is required" });
+  
+  const token = process.env.VERCEL_TOKEN;
+  if (!token) return res.status(500).json({ error: "Domain service not configured" });
+
+  try {
+    const manager = new DomainManager(token);
+    const result = await manager.checkDomain(domain.toLowerCase().trim());
+    res.json(result);
+  } catch (err) {
+    console.error("Domain check error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Configure domain for a project
+app.post("/api/domains/configure", requireAuth, async (req, res) => {
+  const { project_id, domain } = req.body;
+  if (!project_id || !domain) {
+    return res.status(400).json({ error: "project_id and domain are required" });
+  }
+
+  const token = process.env.VERCEL_TOKEN;
+  if (!token) return res.status(500).json({ error: "Domain service not configured" });
+
+  try {
+    // Get the Vercel project name for this landing page
+    const { data: deliverable } = await supabase
+      .from("deliverables")
+      .select("content")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    // Find or create deployment record to get Vercel project name
+    const githubUrl = deliverable?.content?.github_url || '';
+    const repoMatch = githubUrl.match(/github\.com\/[^/]+\/(.+?)(?:\.git)?$/);
+    const repoName = repoMatch ? repoMatch[1] : null;
+
+    if (!repoName) {
+      return res.status(400).json({ error: "No deployed landing page found for this project" });
+    }
+
+    const manager = new DomainManager(token);
+    const result = await manager.configureDomain(repoName, domain.toLowerCase().trim());
+
+    // Store domain config in Supabase
+    await supabase.from("custom_domains").upsert({
+      project_id,
+      domain: domain.toLowerCase().trim(),
+      status: result.status,
+      verification: result.verification,
+      dns_config: result.dns,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "domain" });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Domain configure error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify domain configuration
+app.post("/api/domains/verify", requireAuth, async (req, res) => {
+  const { project_id, domain } = req.body;
+  if (!project_id || !domain) {
+    return res.status(400).json({ error: "project_id and domain are required" });
+  }
+
+  const token = process.env.VERCEL_TOKEN;
+  if (!token) return res.status(500).json({ error: "Domain service not configured" });
+
+  try {
+    const { data: deliverable } = await supabase
+      .from("deliverables")
+      .select("content")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    const githubUrl = deliverable?.content?.github_url || '';
+    const repoMatch = githubUrl.match(/github\.com\/[^/]+\/(.+?)(?:\.git)?$/);
+    const repoName = repoMatch ? repoMatch[1] : null;
+
+    if (!repoName) {
+      return res.status(400).json({ error: "No deployed landing page found" });
+    }
+
+    const manager = new DomainManager(token);
+    const result = await manager.verifyDomain(repoName, domain.toLowerCase().trim());
+
+    // Update domain status
+    await supabase.from("custom_domains").update({
+      status: result.verified ? 'active' : 'pending',
+      updated_at: new Date().toISOString()
+    }).eq("domain", domain.toLowerCase().trim());
+
+    res.json(result);
+  } catch (err) {
+    console.error("Domain verify error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get domains for a project
+app.get("/api/domains/:projectId", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  
+  try {
+    const { data: domains } = await supabase
+      .from("custom_domains")
+      .select("*")
+      .eq("project_id", projectId);
+
+    res.json({ domains: domains || [] });
+  } catch (err) {
+    console.error("Domain list error:", err);
     res.status(500).json({ error: err.message });
   }
 });

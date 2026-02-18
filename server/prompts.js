@@ -70,6 +70,45 @@ const PERSONAL_BRAND_SCHEMA = `{
   "elevator_pitch": {"30_seconds": "string", "60_seconds": "string"}
 }`;
 
+const PITCH_DECK_SCHEMA = `{
+  "slides": [
+    {
+      "number": 1,
+      "type": "title|problem|solution|market|product|traction|business_model|competition|team|ask",
+      "title": "string",
+      "bullets": ["string"],
+      "speaker_notes": "string",
+      "visual_suggestion": "string"
+    }
+  ],
+  "narrative_arc": "string"
+}`;
+
+const COMPETITOR_ANALYSIS_SCHEMA = `{
+  "market_overview": {"size": "string", "growth_rate": "string", "key_trends": ["string"]},
+  "competitors": [
+    {
+      "name": "string",
+      "website": "string",
+      "founded": "string",
+      "funding": "string",
+      "headquarters": "string",
+      "target_audience": "string",
+      "key_features": ["string"],
+      "pricing": {"model": "string", "details": "string", "starting_price": "string"},
+      "strengths": ["string"],
+      "weaknesses": ["string"],
+      "positioning": "string"
+    }
+  ],
+  "comparison_matrix": {
+    "features": ["string"],
+    "rows": [{"competitor": "string", "cells": [{"feature": "string", "value": "string", "advantage": "boolean"}]}]
+  },
+  "gaps_opportunities": ["string"],
+  "differentiation_strategy": "string"
+}`;
+
 function getPrompts(type, { idea, stage, needs, company_name, full_name }) {
   const context = `Company: ${company_name || '(to be determined)'}\nFounder: ${full_name || 'Unknown'}\nIdea: ${idea}\nStage: ${stage || 'idea'}\nNeeds: ${needs || 'general guidance'}`;
 
@@ -178,6 +217,59 @@ Generate ALL of these:
 5. **ELEVATOR PITCH**: 30-second and 60-second versions.
 
 Every word must be about "${company_name || 'this startup'}" building "${idea}". No filler. Write like a founder who's excited but not cringey.`
+    },
+
+    pitch_deck: {
+      system: `You are a venture capital advisor who creates compelling 10-slide pitch decks. You know what investors look for: clear problem, unique solution, big market, strong team, and a specific ask. Return ONLY valid JSON matching this schema: ${PITCH_DECK_SCHEMA}. Each slide should have 3-5 bullets max. Speaker notes should be conversational, not scripted.`,
+      user: `Create a 10-slide pitch deck for:
+
+${context}
+
+Generate EXACTLY these 10 slides:
+
+1. **TITLE**: Company name, one-line description, founder name, contact info placeholder
+2. **PROBLEM**: What painful problem are you solving? Who has it? How big is the pain? 3-4 bullets, specific to "${idea}"
+3. **SOLUTION**: Your product/service in 1-2 sentences. Key capabilities (3 bullets). Why now?
+4. **MARKET**: TAM/SAM/SOM if known, or market size estimate. Growth trends. Why this market is attractive.
+5. **PRODUCT**: How it works (3 steps). Demo/walkthrough suggestion. Key features (3-4 bullets).
+6. **TRACTION**: Current status for stage ${stage || 'idea'}. Metrics if any, milestones achieved, what's next.
+7. **BUSINESS MODEL**: How you make money. Pricing. Unit economics (CAC, LTV if known). Path to profitability.
+8. **COMPETITION**: 2-3 real competitors. Your advantage. Why you'll win.
+9. **TEAM**: Founder's background ("${full_name || 'Founder'}"). Key skills. Gaps you're filling.
+10. **THE ASK**: What you're raising (if applicable). Use of funds (3-4 bullets). Next milestones. Contact CTA.
+
+For each slide include:
+- 3-5 punchy bullet points (not paragraphs)
+- Speaker notes: what the founder should say (conversational, 2-3 sentences)
+- Visual suggestion: what image/chart/graphic would work
+
+Make it specific to "${company_name || 'this startup'}" and "${idea}". No generic fluff. Investors see 100s of decks — make this memorable.`
+    },
+
+    competitor_analysis: {
+      system: `You are a market research analyst specializing in competitive intelligence. You find real companies, analyze their offerings honestly, and identify genuine opportunities. Be specific: name actual competitors, quote real pricing when possible, identify real weaknesses. Return ONLY valid JSON matching this schema: ${COMPETITOR_ANALYSIS_SCHEMA}.`,
+      user: `Create a comprehensive competitor analysis for:
+
+${context}
+
+Research and analyze 3-5 REAL competitors for "${idea}". For each competitor, provide:
+
+- Name and website
+- Founded year, funding status (if known), headquarters
+- Target audience (be specific)
+- Key features (4-6 specific capabilities)
+- Pricing model and starting price (be realistic for the industry)
+- 3 strengths they have
+- 3 weaknesses you can exploit
+- Their positioning in the market (how they describe themselves)
+
+Also include:
+1. **MARKET OVERVIEW**: Market size estimate, growth rate, 3-5 key trends affecting this space
+2. **COMPARISON MATRIX**: Create a feature comparison table with 6-8 key features across all competitors + your product
+3. **GAPS & OPPORTUNITIES**: 4-5 specific gaps in the market you can exploit
+4. **DIFFERENTIATION STRATEGY**: How "${company_name || 'this startup'}" should position against these competitors (2-3 paragraphs)
+
+Name REAL companies, not made-up ones. If you're uncertain about specific details, note that they're estimates. Focus on accuracy over impressiveness.`
     }
   };
 

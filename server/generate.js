@@ -7,7 +7,7 @@ const fs = require("fs");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-const DELIVERABLE_TYPES = ["brand_identity", "landing_page", "business_plan", "growth_strategy", "personal_brand"];
+const DELIVERABLE_TYPES = ["brand_identity", "landing_page", "business_plan", "growth_strategy", "personal_brand", "pitch_deck", "competitor_analysis"];
 
 function repairJson(raw) {
   // Strip markdown fences
@@ -158,7 +158,7 @@ async function generateDeliverables(projectId) {
           }
 
           const meta = { company_name: project.company_name || '', full_name: project.full_name || '' };
-          await generateLandingProject(content, projectDir, meta);
+          await generateLandingProject(content, projectDir, meta, null, deliverable.project_id);
           const urls = await deployLandingPage(projectDir, project.company_name || project.full_name || 'project', deliverable.id);
 
           content.deploy_url = urls.deploy_url;
@@ -218,7 +218,7 @@ async function retrySingleDeliverable(projectId, deliverableId) {
       const projectDir = path.join('/tmp/landing-projects', projectId);
       if (fs.existsSync(projectDir)) fs.rmSync(projectDir, { recursive: true });
       const meta = { company_name: project.company_name || '', full_name: project.full_name || '' };
-      await generateLandingProject(content, projectDir, meta);
+      await generateLandingProject(content, projectDir, meta, null, projectId);
       const urls = await deployLandingPage(projectDir, project.company_name || project.full_name || 'project', deliverableId);
       content.deploy_url = urls.deploy_url;
       content.github_url = urls.github_url;

@@ -3,6 +3,8 @@ import LandingPageView from './LandingPageView'
 import BusinessPlanView from './BusinessPlanView'
 import GrowthStrategyView from './GrowthStrategyView'
 import PersonalBrandView from './PersonalBrandView'
+import PitchDeckView from './PitchDeckView'
+import CompetitorAnalysisView from './CompetitorAnalysisView'
 
 const icons = {
   brand_identity: '🎨',
@@ -10,6 +12,8 @@ const icons = {
   business_plan: '📊',
   growth_strategy: '🚀',
   personal_brand: '🧑‍💼',
+  pitch_deck: '📑',
+  competitor_analysis: '🏆',
 }
 
 const titles = {
@@ -18,6 +22,8 @@ const titles = {
   business_plan: 'Business Plan',
   growth_strategy: 'Growth Strategy',
   personal_brand: 'Personal Brand Kit',
+  pitch_deck: 'Pitch Deck',
+  competitor_analysis: 'Competitor Analysis',
 }
 
 const badgeStyles = {
@@ -33,6 +39,8 @@ const views = {
   business_plan: BusinessPlanView,
   growth_strategy: GrowthStrategyView,
   personal_brand: PersonalBrandView,
+  pitch_deck: PitchDeckView,
+  competitor_analysis: CompetitorAnalysisView,
 }
 
 export default function DeliverableCard({ deliverable, onToggle, isExpanded, onRetry }) {
