@@ -6,6 +6,9 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
+import Editor from './pages/Editor'
+import Fleet from './pages/Fleet'
+import AgentProfile from './pages/AgentProfile'
 
 function App() {
   return (
@@ -17,6 +20,9 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/editor/:project_id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+          <Route path="/fleet" element={<Fleet />} />
+          <Route path="/fleet/:agentId" element={<AgentProfile />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

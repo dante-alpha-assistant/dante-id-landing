@@ -47,11 +47,9 @@ export default function Dashboard() {
     fetchDeliverables().then((data) => {
       setDeliverablesLoaded(true)
       if (!data || data.length === 0) {
-        fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_id: project.id })
-        }).catch(() => {})
+        import('../lib/api.js').then(({ apiPost }) => {
+          apiPost('/api/generate', { project_id: project.id }).catch(() => {})
+        })
       }
     })
   }, [project, deliverablesLoaded, fetchDeliverables])
@@ -89,12 +87,20 @@ export default function Dashboard() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#222]">
         <span className="text-xl font-bold tracking-tight">dante.</span>
-        <button
-          onClick={handleSignOut}
-          className="text-sm text-gray-400 hover:text-white transition-colors"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/fleet')}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Fleet
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -145,6 +151,11 @@ export default function Dashboard() {
                 deliverable={d}
                 isExpanded={!!expanded[d.id]}
                 onToggle={() => toggleCard(d.id)}
+                onRetry={() => {
+                  import('../lib/api.js').then(({ apiPost }) => {
+                    apiPost('/api/retry-deliverable', { deliverable_id: d.id, project_id: project.id })
+                  })
+                }}
               />
             ))}
           </div>

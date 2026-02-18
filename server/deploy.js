@@ -5,7 +5,7 @@ const path = require('path');
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 async function deployLandingPage(projectDir, projectName, deliverableId) {
-  const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'landing';
+  const slug = (projectName || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'landing';
   const repoName = slug + '-landing';
   
   try {
@@ -15,13 +15,18 @@ async function deployLandingPage(projectDir, projectName, deliverableId) {
     execSync('git add -A', { cwd: projectDir, stdio: 'pipe' });
     execSync('git commit -m "Initial landing page"', { cwd: projectDir, stdio: 'pipe', env: { ...process.env, GIT_AUTHOR_NAME: 'dante-id', GIT_AUTHOR_EMAIL: 'noreply@dante.id', GIT_COMMITTER_NAME: 'dante-id', GIT_COMMITTER_EMAIL: 'noreply@dante.id' } });
     
+    // Get the current branch name
+    const branch = execSync('git branch --show-current', { cwd: projectDir, encoding: 'utf8', stdio: 'pipe' }).trim() || 'master';
+    
     // Create repo (may already exist)
     try {
       execSync(`gh repo create dante-alpha-assistant/${repoName} --public --source=. --push`, { cwd: projectDir, stdio: 'pipe', env: { ...process.env, GH_TOKEN: ghToken } });
     } catch (e) {
       // Repo might exist, try pushing anyway
-      execSync(`git remote add origin https://${ghToken}@github.com/dante-alpha-assistant/${repoName}.git`, { cwd: projectDir, stdio: 'pipe' });
-      execSync('git push -u origin main --force', { cwd: projectDir, stdio: 'pipe' });
+      try {
+        execSync(`git remote add origin https://${ghToken}@github.com/dante-alpha-assistant/${repoName}.git`, { cwd: projectDir, stdio: 'pipe' });
+      } catch (e2) { /* remote may already exist */ }
+      execSync(`git push -u origin ${branch} --force`, { cwd: projectDir, stdio: 'pipe' });
     }
     
     console.log(`GitHub repo: dante-alpha-assistant/${repoName}`);
@@ -47,6 +52,28 @@ async function deployLandingPage(projectDir, projectName, deliverableId) {
     // output is the deployment URL
     const deployUrl = output.split('\n').pop().trim();
     console.log(`Deployed to: ${deployUrl}`);
+    
+    // Disable Vercel Authentication so landing pages are publicly accessible
+    try {
+      // Use Vercel API to disable deployment protection (ssoProtection blocks public access)
+      const res = await fetch(`https://api.vercel.com/v9/projects/${repoName}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${vercelToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ssoProtection: null
+        })
+      });
+      if (res.ok) {
+        console.log('Disabled deployment protection for', repoName);
+      } else {
+        console.warn('Failed to disable protection:', res.status, await res.text());
+      }
+    } catch (protErr) {
+      console.warn('Could not disable deployment protection:', protErr.message);
+    }
     
     return { 
       github_url: `https://github.com/dante-alpha-assistant/${repoName}`,

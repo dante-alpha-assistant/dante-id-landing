@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signUp = (email, password) =>
-    supabase.auth.signUp({ email, password })
+    supabase.auth.signUp({ email, password, options: { emailRedirectTo: 'https://dante.id/login' } })
 
   const signIn = (email, password) =>
     supabase.auth.signInWithPassword({ email, password })

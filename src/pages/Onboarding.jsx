@@ -99,11 +99,8 @@ export default function Onboarding() {
       if (dbError) throw dbError;
       // Fire and forget — trigger deliverable generation
       if (insertData?.[0]?.id) {
-        fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_id: insertData[0].id })
-        }).catch(() => {});
+        const { apiPost } = await import('../lib/api.js');
+        apiPost('/api/generate', { project_id: insertData[0].id }).catch(() => {});
       }
       window.location.href = '/dashboard';
     } catch (e) {

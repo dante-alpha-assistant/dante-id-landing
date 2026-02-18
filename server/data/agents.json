@@ -1,0 +1,50 @@
+[
+  {
+    "id": "neo",
+    "name": "Neo",
+    "emoji": "\ud83d\udd76\ufe0f",
+    "model": "gpt-5.2",
+    "host": "165.22.252.79",
+    "gateway": "http://localhost:18789",
+    "gatewayToken": "3f96d14d49491b032030e9f4a8dd7d9f985d2a7669e83f67",
+    "role": "Builder / Coder",
+    "workspace": "/root/.openclaw/workspace",
+    "discordBotId": "1471821951663214737"
+  },
+  {
+    "id": "alpha",
+    "name": "Alpha",
+    "emoji": "\ud83e\udde0",
+    "model": "claude-opus-4-6",
+    "host": "100.83.183.6",
+    "gateway": "http://100.83.183.6:18789",
+    "gatewayToken": "d9c0930af6860aceacb9e06528b575baa594f161d0da1eb2",
+    "role": "Project Manager",
+    "workspace": null,
+    "discordBotId": "1473014065503666268"
+  },
+  {
+    "id": "beta",
+    "name": "Beta",
+    "emoji": "\ud83d\udd37",
+    "model": "kimi-k2.5",
+    "host": "159.65.235.128",
+    "gateway": "http://159.65.235.128:18789",
+    "gatewayToken": "",
+    "role": "Content / UX",
+    "workspace": null,
+    "discordBotId": "1473023028890833019"
+  },
+  {
+    "id": "mu",
+    "name": "Mu",
+    "emoji": "\ud83d\udee0\ufe0f",
+    "model": "kimi-k2.5",
+    "host": "165.22.180.183",
+    "gateway": "http://165.22.180.183:18789",
+    "gatewayToken": "mu-gw-tok-2026",
+    "role": "Builder (Neo clone)",
+    "workspace": null,
+    "discordBotId": "1473666156068999190"
+  }
+]

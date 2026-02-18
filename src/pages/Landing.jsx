@@ -18,7 +18,7 @@ const steps = [
     number: "02",
     title: "Meet your AI team",
     description:
-      "We assemble a team of specialized agents — strategist, designer, developer, legal, growth — tailored to your startup.",
+      "We assemble a team of AI agents — brand strategist, copywriter, business planner, and growth advisor — tailored to your startup.",
   },
   {
     number: "03",
@@ -30,34 +30,35 @@ const steps = [
 
 const features = [
   {
-    title: "Strategy & Planning",
+    title: "Brand Identity",
     description:
-      "Market research, business model, competitive analysis, and a pitch-ready business plan.",
+      "Name suggestions, color palette, typography, taglines, and a complete brand voice guide.",
   },
   {
-    title: "Brand & Design",
+    title: "Landing Page",
     description:
-      "Logo, color palette, typography, brand guidelines, and a complete visual identity.",
+      "AI-generated, conversion-optimized landing page — built, deployed, and live on its own URL.",
   },
   {
-    title: "Website & Product",
+    title: "Business Plan",
     description:
-      "Landing page, product UI, deployment, and domain setup — all built for you.",
+      "Executive summary, market analysis, revenue model, competitive landscape, and quarterly milestones.",
+  },
+  {
+    title: "Growth Strategy",
+    description:
+      "90-day tactical playbook with channel strategy, budget allocation, and weekly action items.",
+  },
+  {
+    title: "Personal Brand Kit",
+    description:
+      "Twitter/X launch thread, LinkedIn post, Product Hunt copy, founder bio, and elevator pitch — ready to post.",
   },
   {
     title: "Legal & Compliance",
     description:
       "Terms of service, privacy policy, entity guidance, and contractor agreements.",
-  },
-  {
-    title: "Payments & Finance",
-    description:
-      "Stripe integration, pricing strategy, invoicing setup, and basic bookkeeping.",
-  },
-  {
-    title: "Growth & Launch",
-    description:
-      "Launch strategy, social media presence, SEO fundamentals, and a content calendar.",
+    coming: true,
   },
 ]
 
@@ -80,7 +81,7 @@ const faqItems = [
   {
     question: "What is dante.?",
     answer:
-      "dante. is an AI-powered startup builder. You describe your idea, and a team of specialized AI agents builds your business — strategy, branding, website, legal, payments, and growth.",
+      "dante. is an AI-powered startup builder. You describe your idea, and a team of AI agents builds your brand identity, landing page, business plan, and growth strategy — in minutes.",
   },
   {
     question: "How is this different from ChatGPT?",
@@ -136,13 +137,30 @@ export default function Landing() {
     return () => observer.disconnect()
   }, [])
 
-  const handleSubmit = (event, source) => {
+  const [waitlistStatus, setWaitlistStatus] = useState(null)
+
+  const handleSubmit = async (event, source) => {
     event.preventDefault()
     const email = source === "hero" ? heroEmail : ctaEmail
     if (!email) return
-    console.log("Waitlist signup:", email)
-    if (source === "hero") setHeroEmail("")
-    if (source === "cta") setCtaEmail("")
+    setWaitlistStatus("sending")
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source })
+      })
+      if (res.ok) {
+        setWaitlistStatus("success")
+        if (source === "hero") setHeroEmail("")
+        if (source === "cta") setCtaEmail("")
+      } else {
+        setWaitlistStatus("error")
+      }
+    } catch {
+      setWaitlistStatus("error")
+    }
+    setTimeout(() => setWaitlistStatus(null), 4000)
   }
 
   return (
@@ -292,16 +310,21 @@ export default function Landing() {
                 Everything you need to launch.
               </h2>
               <p className="text-secondary reveal" style={{ fontSize: "18px", "--delay": "200ms" }}>
-                Six specialized AI agents, one unified team.
+                Five AI agents build your startup. One more coming soon.
               </p>
             </div>
             <div className="grid-2x3" style={{ marginTop: "48px" }}>
               {features.map((feature, index) => (
-                <div key={feature.title} className="card card-lift reveal" style={{ "--delay": `${index * 100}ms` }}>
-                  <div className="card-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-                    </svg>
+                <div key={feature.title} className="card card-lift reveal" style={{ "--delay": `${index * 100}ms`, opacity: feature.coming ? 0.5 : 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div className="card-icon">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+                      </svg>
+                    </div>
+                    {feature.coming && (
+                      <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", color: "var(--color-text-muted)" }}>Coming soon</span>
+                    )}
                   </div>
                   <h3 className="heading-md" style={{ fontSize: "18px" }}>
                     {feature.title}

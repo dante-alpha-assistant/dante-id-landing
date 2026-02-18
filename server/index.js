@@ -1,18 +1,167 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { generateDeliverables } = require("./generate");
+const rateLimit = require("express-rate-limit");
+const { createClient } = require("@supabase/supabase-js");
+const { generateDeliverables, retrySingleDeliverable, repairJson } = require("./generate");
+const { generateLandingProject } = require("./generate-landing");
+const { deployLandingPage } = require("./deploy");
+const path = require("path");
+const fs = require("fs");
+const { randomUUID } = require("crypto");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-app.post("/api/generate", (req, res) => {
+// --- CORS: only allow dante.id ---
+app.use(cors({
+  origin: ["https://dante.id", "http://localhost:5173"],
+  methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
+  credentials: true
+}));
+
+app.use(express.json({ limit: "100kb" }));
+
+// --- Shared Supabase client ---
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+// --- Input validation helper ---
+function sanitize(str, maxLen = 500) {
+  if (typeof str !== "string") return "";
+  return str.trim().slice(0, maxLen);
+}
+
+const dataDir = path.join(__dirname, "data");
+const agentsFile = path.join(dataDir, "agents.json");
+const tasksFile = path.join(dataDir, "fleet-tasks.json");
+const metricsFile = path.join(dataDir, "metrics.json");
+
+function readJson(filePath, fallback) {
+  try {
+    if (!fs.existsSync(filePath)) return fallback;
+    const raw = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(raw || "null") ?? fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function writeJson(filePath, data) {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+function ensureMetricsShape(metrics, agents = []) {
+  const shaped = { ...(metrics || {}) };
+  agents.forEach((agent) => {
+    if (!shaped[agent.id]) {
+      shaped[agent.id] = { tasksCompleted: 0, messagesSent: 0, lastSeen: null, uptimeChecks: [] };
+    }
+    if (!Array.isArray(shaped[agent.id].uptimeChecks)) {
+      shaped[agent.id].uptimeChecks = [];
+    }
+  });
+  return shaped;
+}
+
+function getSectionsModified(before = {}, after = {}) {
+  const ignored = new Set(["deploy_url", "github_url", "edits"]);
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  const changed = [];
+  for (const key of keys) {
+    if (ignored.has(key)) continue;
+    const beforeVal = before ? before[key] : undefined;
+    const afterVal = after ? after[key] : undefined;
+    if (JSON.stringify(beforeVal) !== JSON.stringify(afterVal)) {
+      changed.push(key);
+    }
+  }
+  return changed;
+}
+
+// --- Health check ---
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
+// --- Stale generation recovery on startup ---
+(async () => {
+  try {
+    const { data } = await supabase
+      .from("deliverables")
+      .update({ status: "failed" })
+      .in("status", ["generating", "pending"])
+      .select("id");
+    if (data?.length) {
+      console.log(`Recovered ${data.length} stale deliverables → failed`);
+    }
+  } catch (e) {
+    console.error("Stale recovery error:", e.message);
+  }
+})();
+
+// --- Rate limiter for generation endpoints ---
+const genLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Try again in a minute." }
+});
+
+const editLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many edit requests. Try again in a minute." }
+});
+
+// --- Auth middleware: verify Supabase JWT + project ownership ---
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing authorization token" });
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+    req.user = user;
+
+    // If request has project_id, verify ownership
+    const projectId = req.body.project_id;
+    if (projectId) {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("id, user_id")
+        .eq("id", projectId)
+        .single();
+
+      if (!project || project.user_id !== user.id) {
+        return res.status(403).json({ error: "Not your project" });
+      }
+    }
+
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Auth verification failed" });
+  }
+}
+
+// --- Protected generation endpoints ---
+
+app.post("/api/generate", requireAuth, genLimiter, (req, res) => {
   const { project_id } = req.body;
   if (!project_id) {
     return res.status(400).json({ error: "project_id is required" });
   }
 
-  // Fire and forget
   generateDeliverables(project_id).catch((err) => {
     console.error("Generation error:", err);
   });
@@ -20,7 +169,733 @@ app.post("/api/generate", (req, res) => {
   res.status(202).json({ message: "Generation started", project_id });
 });
 
-// Error handling middleware
+app.post("/api/regenerate", requireAuth, genLimiter, async (req, res) => {
+  const { project_id } = req.body;
+  if (!project_id) {
+    return res.status(400).json({ error: "project_id is required" });
+  }
+
+  try {
+    const { error } = await supabase
+      .from("deliverables")
+      .delete()
+      .eq("project_id", project_id);
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to clear deliverables" });
+    }
+
+    generateDeliverables(project_id).catch((err) => {
+      console.error("Regeneration error:", err);
+    });
+
+    res.status(202).json({ message: "Regeneration started", project_id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/retry-deliverable", requireAuth, genLimiter, async (req, res) => {
+  const { deliverable_id, project_id } = req.body;
+  if (!deliverable_id || !project_id) {
+    return res.status(400).json({ error: "deliverable_id and project_id required" });
+  }
+
+  try {
+    await supabase
+      .from("deliverables")
+      .update({ status: "pending", content: null })
+      .eq("id", deliverable_id);
+
+    retrySingleDeliverable(project_id, deliverable_id).catch(err => {
+      console.error("Retry error:", err);
+    });
+
+    res.status(202).json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/edit-landing", requireAuth, editLimiter, async (req, res) => {
+  const project_id = req.body.project_id;
+  const instruction = sanitize(req.body.instruction, 2000);
+
+  if (!project_id || !instruction) {
+    return res.status(400).json({ error: "project_id and instruction are required" });
+  }
+
+  try {
+    const { data: deliverable, error: deliverableError } = await supabase
+      .from("deliverables")
+      .select("*")
+      .eq("project_id", project_id)
+      .eq("type", "landing_page")
+      .single();
+
+    if (deliverableError || !deliverable) {
+      return res.status(404).json({ error: "Landing page deliverable not found" });
+    }
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("company_name, full_name")
+      .eq("id", project_id)
+      .single();
+
+    const currentContent = deliverable.content || {};
+
+    const system = `You are a precision landing page editor. Rules:
+1. Apply ONLY the requested changes — preserve everything else exactly
+2. Return the FULL updated content JSON (same schema, all sections)
+3. Never invent content the user didn't ask for
+4. Never remove sections unless explicitly asked
+5. Keep all field names identical to the input schema
+6. Return ONLY valid JSON — no markdown, no explanation, no code fences
+7. If the instruction is ambiguous, make the minimal reasonable change`;
+    const user = `Current content:\n${JSON.stringify(currentContent)}\n\nEdit instruction: ${instruction}\n\nReturn the complete updated JSON with the edits applied.`;
+
+    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+
+    const aiData = await aiRes.json();
+    if (!aiData.choices || !aiData.choices[0]) {
+      console.error("AI returned no choices:", JSON.stringify(aiData).substring(0, 500));
+      return res.status(500).json({ error: "AI returned no output" });
+    }
+
+    const raw = aiData.choices[0].message.content;
+    let updatedContent;
+    try {
+      updatedContent = repairJson(raw);
+    } catch (e) {
+      console.error("AI JSON parse failed:", e.message);
+      return res.status(500).json({ error: "Failed to parse AI response" });
+    }
+
+    const sections_modified = getSectionsModified(currentContent, updatedContent);
+    updatedContent.edits = [
+      ...(Array.isArray(currentContent.edits) ? currentContent.edits : []),
+      {
+        instruction,
+        timestamp: new Date().toISOString(),
+        sections_modified
+      }
+    ];
+
+    const projectDir = path.join("/tmp/landing-projects", project_id);
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true });
+    }
+
+    const meta = { company_name: project?.company_name || "", full_name: project?.full_name || "" };
+    await generateLandingProject(updatedContent, projectDir, meta);
+    const urls = await deployLandingPage(projectDir, project?.company_name || project?.full_name || "project", deliverable.id);
+
+    updatedContent.deploy_url = urls.deploy_url;
+    updatedContent.github_url = urls.github_url;
+
+    try { fs.rmSync(projectDir, { recursive: true }); } catch (e) {}
+
+    await supabase
+      .from("deliverables")
+      .update({ content: updatedContent })
+      .eq("id", deliverable.id);
+
+    const changes_summary = sections_modified.length
+      ? `Updated sections: ${sections_modified.join(", ")}`
+      : "Updated landing page content.";
+
+    return res.json({
+      deploy_url: urls.deploy_url,
+      changes_summary,
+      sections_modified
+    });
+  } catch (err) {
+    console.error("Edit landing error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Fleet endpoints (internal, no auth) ---
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
+
+function loadAgents() {
+  return readJson(agentsFile, []);
+}
+
+function stripSecrets(agent) {
+  const { gatewayToken, ...safe } = agent;
+  return safe;
+}
+
+async function notifyAgentTask(agent, task) {
+  if (!agent || !agent.gateway || !agent.gatewayToken) return;
+  try {
+    await fetch(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${agent.gatewayToken}`
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: {
+          action: "wake",
+          text: `New task assigned: [${task.priority}] ${task.title}\n\n${task.description}`,
+          mode: "now"
+        }
+      })
+    });
+  } catch (err) {
+    console.error("Failed to notify agent:", err);
+  }
+}
+
+app.get("/api/fleet/agents", (req, res) => {
+  return res.json(loadAgents().map(stripSecrets));
+});
+
+app.get("/api/fleet/agents/:id", (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  return res.json(stripSecrets(agent));
+});
+
+app.get("/api/fleet/agents/:id/status", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.json({ online: false });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({ tool: "session_status", parameters: {} })
+    }, 5000);
+    if (!resp.ok) throw new Error("gateway_unreachable");
+    const data = await resp.json();
+    return res.json({ online: true, statusText: data?.result?.details?.statusText || "Online" });
+  } catch (err) {
+    return res.json({ online: false });
+  }
+});
+
+app.get("/api/fleet/agents/:id/memory", (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.workspace) return res.json({ available: false });
+
+  try {
+    const memoryPath = path.join(agent.workspace, "MEMORY.md");
+    const soulPath = path.join(agent.workspace, "SOUL.md");
+    const memory = fs.existsSync(memoryPath) ? fs.readFileSync(memoryPath, "utf8") : "";
+    const soul = fs.existsSync(soulPath) ? fs.readFileSync(soulPath, "utf8") : "";
+    return res.json({ available: true, memory, soul });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to read memory" });
+  }
+});
+
+app.put("/api/fleet/agents/:id/memory", (req, res) => {
+  const { file, content } = req.body || {};
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.workspace) return res.status(400).json({ error: "Remote editing not supported yet" });
+
+  if (!file || !["MEMORY.md", "SOUL.md"].includes(file)) {
+    return res.status(400).json({ error: "file must be MEMORY.md or SOUL.md" });
+  }
+
+  try {
+    const target = path.join(agent.workspace, file);
+    fs.writeFileSync(target, typeof content === "string" ? content : "");
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to write memory" });
+  }
+});
+
+app.get("/api/fleet/agents/:id/memory/daily", (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.workspace) return res.status(400).json({ error: "Remote editing not supported yet" });
+
+  try {
+    const memoryDir = path.join(agent.workspace, "memory");
+    if (!fs.existsSync(memoryDir)) return res.json({ files: [] });
+    const entries = fs.readdirSync(memoryDir).filter((name) => /^\d{4}-\d{2}-\d{2}\.md$/.test(name));
+    const files = entries
+      .sort((a, b) => b.localeCompare(a))
+      .map((name) => {
+        const filePath = path.join(memoryDir, name);
+        const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+        return { file: `memory/${name}`, content };
+      });
+    return res.json({ files });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to read daily notes" });
+  }
+});
+
+app.get("/api/fleet/agents/:id/memory/:file(*)", (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.workspace) return res.status(400).json({ error: "Remote editing not supported yet" });
+
+  const file = req.params.file;
+  const allowedRoot = ["MEMORY.md", "SOUL.md"].includes(file);
+  const allowedDaily = file.startsWith("memory/") && file.endsWith(".md") && !file.includes("..") && !file.includes("\\");
+  if (!allowedRoot && !allowedDaily) {
+    return res.status(400).json({ error: "Invalid file" });
+  }
+
+  try {
+    const target = path.join(agent.workspace, file);
+    if (!fs.existsSync(target)) return res.status(404).json({ error: "File not found" });
+    const content = fs.readFileSync(target, "utf8");
+    return res.json({ file, content });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to read file" });
+  }
+});
+
+app.get("/api/fleet/agents/:id/cron", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({ tool: "cron", parameters: { action: "list" } })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron list failed" });
+    return res.json({ jobs: data?.jobs || data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron list failed" });
+  }
+});
+
+app.post("/api/fleet/agents/:id/cron", async (req, res) => {
+  const job = req.body || {};
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: { action: "add", job }
+      })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron add failed" });
+    return res.json({ ok: true, result: data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron add failed" });
+  }
+});
+
+app.put("/api/fleet/agents/:id/cron/:jobId", async (req, res) => {
+  const patch = req.body || {};
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: { action: "update", jobId: req.params.jobId, patch }
+      })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron update failed" });
+    return res.json({ ok: true, result: data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron update failed" });
+  }
+});
+
+app.delete("/api/fleet/agents/:id/cron/:jobId", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: { action: "remove", jobId: req.params.jobId }
+      })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron remove failed" });
+    return res.json({ ok: true, result: data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron remove failed" });
+  }
+});
+
+app.get("/api/fleet/agents/:id/cron/:jobId/history", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: { action: "runs", jobId: req.params.jobId }
+      })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron history failed" });
+    return res.json({ ok: true, runs: data?.runs || data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron history failed" });
+  }
+});
+
+app.post("/api/fleet/agents/:id/cron/:jobId/toggle", async (req, res) => {
+  const { enabled } = req.body;
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: {
+          action: "update",
+          jobId: req.params.jobId,
+          patch: { enabled: !!enabled }
+        }
+      })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron update failed" });
+    return res.json({ ok: true, result: data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron update failed" });
+  }
+});
+
+app.post("/api/fleet/agents/:id/cron/:jobId/run", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.gateway) return res.status(400).json({ error: "Agent has no gateway" });
+
+  try {
+    const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+      },
+      body: JSON.stringify({
+        tool: "cron",
+        parameters: { action: "run", jobId: req.params.jobId }
+      })
+    }, 5000);
+
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error || "cron run failed" });
+    return res.json({ ok: true, result: data });
+  } catch (err) {
+    return res.status(500).json({ error: "cron run failed" });
+  }
+});
+
+app.get("/api/fleet/agents/:id/activity", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+  if (!agent.discordBotId) return res.json([]);
+
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) return res.json([]);
+
+  const channelId = "1471822299203371030";
+  try {
+    const resp = await fetchWithTimeout(`https://discord.com/api/v10/channels/${channelId}/messages?limit=50`, {
+      headers: { Authorization: `Bot ${token}` }
+    }, 5000);
+    if (!resp.ok) return res.json([]);
+    const data = await resp.json();
+    const items = (Array.isArray(data) ? data : [])
+      .filter((msg) => msg?.author?.id === agent.discordBotId)
+      .map((msg) => ({
+        id: msg.id,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        channel: channelId
+      }));
+    return res.json(items);
+  } catch (err) {
+    return res.json([]);
+  }
+});
+
+app.get("/api/fleet/agents/:id/metrics", async (req, res) => {
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === req.params.id);
+  if (!agent) return res.status(404).json({ error: "Agent not found" });
+
+  const tasks = readJson(tasksFile, []);
+  const tasksCompleted = tasks.filter((t) => t.agentId === agent.id && t.status === "done").length;
+
+  const metrics = ensureMetricsShape(readJson(metricsFile, {}), agents);
+  const uptimeChecks = Array.isArray(metrics[agent.id]?.uptimeChecks) ? metrics[agent.id].uptimeChecks : [];
+  const lastSeen = metrics[agent.id]?.lastSeen || null;
+
+  const recentChecks = uptimeChecks.slice(-24);
+  const uptime = recentChecks.length
+    ? Math.round((recentChecks.filter((c) => c.online).length / recentChecks.length) * 100)
+    : 0;
+
+  let messagesSent = 0;
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (token && agent.discordBotId) {
+    const channelId = "1471822299203371030";
+    try {
+      const resp = await fetchWithTimeout(`https://discord.com/api/v10/channels/${channelId}/messages?limit=50`, {
+        headers: { Authorization: `Bot ${token}` }
+      }, 5000);
+      if (resp.ok) {
+        const data = await resp.json();
+        const since = Date.now() - 24 * 60 * 60 * 1000;
+        messagesSent = (Array.isArray(data) ? data : []).filter((msg) => {
+          if (msg?.author?.id !== agent.discordBotId) return false;
+          const ts = Date.parse(msg.timestamp);
+          return Number.isFinite(ts) && ts >= since;
+        }).length;
+      }
+    } catch (err) {
+      messagesSent = 0;
+    }
+  }
+
+  return res.json({ tasksCompleted, messagesSent, lastSeen, uptime });
+});
+
+app.post("/api/fleet/metrics/check", async (req, res) => {
+  const agents = loadAgents();
+  const metrics = ensureMetricsShape(readJson(metricsFile, {}), agents);
+  const now = new Date().toISOString();
+
+  const results = await Promise.all(agents.map(async (agent) => {
+    let online = false;
+    if (agent.gateway) {
+      try {
+        const resp = await fetchWithTimeout(`${agent.gateway}/tools/invoke`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(agent.gatewayToken ? { "Authorization": `Bearer ${agent.gatewayToken}` } : {})
+          },
+          body: JSON.stringify({ tool: "session_status", parameters: {} })
+        }, 5000);
+        online = resp.ok;
+      } catch (err) {
+        online = false;
+      }
+    }
+
+    const agentMetrics = metrics[agent.id] || { tasksCompleted: 0, messagesSent: 0, lastSeen: null, uptimeChecks: [] };
+    agentMetrics.uptimeChecks = Array.isArray(agentMetrics.uptimeChecks) ? agentMetrics.uptimeChecks : [];
+    agentMetrics.uptimeChecks.push({ ts: now, online });
+    if (agentMetrics.uptimeChecks.length > 200) {
+      agentMetrics.uptimeChecks = agentMetrics.uptimeChecks.slice(-200);
+    }
+    if (online) agentMetrics.lastSeen = now;
+    metrics[agent.id] = agentMetrics;
+
+    return { id: agent.id, online };
+  }));
+
+  writeJson(metricsFile, metrics);
+  return res.json({ ok: true, results });
+});
+
+app.get("/api/fleet/tasks", (req, res) => {
+  const tasks = readJson(tasksFile, []);
+  const { agent, status } = req.query;
+  let filtered = tasks;
+  if (agent) filtered = filtered.filter((t) => t.agentId === agent);
+  if (status) filtered = filtered.filter((t) => t.status === status);
+  return res.json(filtered);
+});
+
+app.post("/api/fleet/tasks", (req, res) => {
+  const { title, description, priority, agentId } = req.body;
+  if (!title || !agentId) {
+    return res.status(400).json({ error: "title and agentId are required" });
+  }
+  const tasks = readJson(tasksFile, []);
+  const now = new Date().toISOString();
+  const task = {
+    id: randomUUID(),
+    title: sanitize(title, 200),
+    description: sanitize(description || "", 2000),
+    priority: sanitize(priority || "P2", 3) || "P2",
+    agentId: sanitize(agentId, 50),
+    status: "backlog",
+    createdAt: now,
+    updatedAt: now
+  };
+  tasks.push(task);
+  writeJson(tasksFile, tasks);
+
+  if (["backlog", "in_progress"].includes(task.status)) {
+    const agents = loadAgents();
+    const agent = agents.find((a) => a.id === task.agentId);
+    notifyAgentTask(agent, task);
+  }
+
+  return res.status(201).json(task);
+});
+
+app.post("/api/fleet/tasks/:id/notify", (req, res) => {
+  const tasks = readJson(tasksFile, []);
+  const task = tasks.find((t) => t.id === req.params.id);
+  if (!task) return res.status(404).json({ error: "Task not found" });
+  const agents = loadAgents();
+  const agent = agents.find((a) => a.id === task.agentId);
+  notifyAgentTask(agent, task);
+  return res.json({ ok: true });
+});
+
+app.patch("/api/fleet/tasks/:id", (req, res) => {
+  const tasks = readJson(tasksFile, []);
+  const idx = tasks.findIndex((t) => t.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Task not found" });
+
+  const updates = req.body || {};
+  const updated = {
+    ...tasks[idx],
+    title: updates.title ? sanitize(updates.title, 200) : tasks[idx].title,
+    description: typeof updates.description === "string" ? sanitize(updates.description, 2000) : tasks[idx].description,
+    priority: updates.priority ? sanitize(updates.priority, 3) : tasks[idx].priority,
+    status: updates.status ? sanitize(updates.status, 20) : tasks[idx].status,
+    updatedAt: new Date().toISOString()
+  };
+
+  tasks[idx] = updated;
+  writeJson(tasksFile, tasks);
+  return res.json(updated);
+});
+
+app.delete("/api/fleet/tasks/:id", (req, res) => {
+  const tasks = readJson(tasksFile, []);
+  const idx = tasks.findIndex((t) => t.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Task not found" });
+  const [removed] = tasks.splice(idx, 1);
+  writeJson(tasksFile, tasks);
+  return res.json({ ok: true, removed });
+});
+
+// --- Public endpoints ---
+
+app.post("/api/waitlist", rateLimit({ windowMs: 60000, max: 3 }), async (req, res) => {
+  const email = sanitize(req.body.email, 254);
+  const source = sanitize(req.body.source || "website", 50);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "valid email required" });
+  }
+
+  try {
+    const { error } = await supabase
+      .from("waitlist")
+      .upsert({ email: email.toLowerCase().trim(), source: source || "website" }, { onConflict: "email" });
+
+    if (error && error.code === "42P01") {
+      console.error("waitlist table does not exist");
+      return res.status(500).json({ error: "waitlist table not configured" });
+    }
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Error handling ---
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal server error" });
