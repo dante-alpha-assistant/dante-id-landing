@@ -2,6 +2,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { getPrompts } = require("./prompts");
 const { generateLandingProject } = require("./generate-landing");
 const { deployLandingPage } = require("./deploy");
+const { notifyDeliverablesComplete } = require("./email");
 const path = require("path");
 const fs = require("fs");
 
@@ -192,6 +193,11 @@ async function generateDeliverables(projectId) {
     .eq("id", projectId);
 
   console.log(`Project ${projectId} generation complete`);
+
+  // Send email notification
+  notifyDeliverablesComplete(supabase, projectId).catch((err) =>
+    console.error("Email notification error:", err.message)
+  );
 }
 
 async function retrySingleDeliverable(projectId, deliverableId) {
@@ -230,6 +236,11 @@ async function retrySingleDeliverable(projectId, deliverableId) {
 
   await supabase.from("deliverables").update({ content, status: "completed" }).eq("id", deliverableId);
   console.log(`Retry completed: ${deliverable.type}`);
+
+  // Check if all deliverables are now done and notify
+  notifyDeliverablesComplete(supabase, projectId).catch((err) =>
+    console.error("Email notification error:", err.message)
+  );
 }
 
 module.exports = { generateDeliverables, retrySingleDeliverable, repairJson };
