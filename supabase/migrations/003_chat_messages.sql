@@ -51,15 +51,7 @@ CREATE POLICY "Users can delete their project chat messages"
     )
   );
 
--- Add updated_at trigger
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Add updated_at trigger (function created in 001_projects.sql)
 CREATE TRIGGER update_chat_messages_updated_at
   BEFORE UPDATE ON chat_messages
   FOR EACH ROW
