@@ -96,7 +96,7 @@ export default function ProjectList() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-bold text-[#33ff00] group-hover:text-[#33ff00] truncate pr-2">
-                    {p.company_name || p.full_name || 'Untitled Project'}
+                    {p.name || p.company_name || p.full_name || 'Untitled Project'}
                   </h3>
                   <span className="text-[10px] text-[#1a6b1a] whitespace-nowrap">
                     {new Date(p.created_at).toLocaleDateString()}

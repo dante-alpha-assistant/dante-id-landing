@@ -264,7 +264,7 @@ export default function Dashboard() {
         </span>
         <div className="flex items-center gap-3">
           <span className="text-sm text-[#22aa00] hidden sm:inline">
-            {project.company_name || project.full_name || 'PROJECT'}
+            {project.name || project.company_name || project.full_name || 'PROJECT'}
           </span>
           <button
             onClick={() => navigate('/dashboard')}
@@ -293,7 +293,7 @@ export default function Dashboard() {
         {/* Pipeline Card */}
         <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 mb-8">
           <div className="text-xs text-[#1a6b1a] mb-4">
-            +--- SOFTWARE FACTORY: {(project.company_name || project.full_name || 'PROJECT').toUpperCase()} ---+
+            +--- SOFTWARE FACTORY: {(project.name || project.company_name || project.full_name || 'PROJECT').toUpperCase()} ---+
           </div>
 
           <div className="mb-6">
@@ -398,7 +398,7 @@ export default function Dashboard() {
         <CofounderChat
           projectId={project.id}
           context={{
-            project: { name: project.company_name, idea: project.idea, stage: project.stage },
+            project: { name: project.name || project.company_name, idea: project.idea, stage: project.stage },
             deliverables: deliverables.filter(d => d.status === 'completed').map(d => ({ type: d.type, summary: d.type }))
           }}
         />

@@ -146,6 +146,14 @@ Generate a complete PRD for this product.`;
       return res.status(500).json({ error: "Failed to save PRD" });
     }
 
+    // Auto-set project name from PRD title if not already set
+    if (content?.title) {
+      const { data: proj } = await supabase.from("projects").select("name").eq("id", project_id).single();
+      if (!proj?.name) {
+        await supabase.from("projects").update({ name: content.title }).eq("id", project_id);
+      }
+    }
+
     return res.json({ prd });
   } catch (err) {
     console.error("Generate PRD error:", err.message);
