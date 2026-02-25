@@ -67,8 +67,10 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
       
       console.log('[AI] Response status:', res.status);
       
-      // Read body as text first with its own timeout
-      const bodyText = await res.text();
+      // Read body as text with a 120s body timeout
+      const bodyPromise = res.text();
+      const bodyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Body read timeout after 120s')), 120000));
+      const bodyText = await Promise.race([bodyPromise, bodyTimeout]);
       clearTimeout(timeout);
       
       console.log('[AI] Body received, length:', bodyText.length);
@@ -238,7 +240,9 @@ Project: ${project?.company_name || project?.full_name || "Unknown"}
 
 Generate concise, working code for this feature. Focus on core logic, keep files short.`;
 
+    console.log('[Builder] Calling AI for feature:', feature.name);
     const result = await callAI(CODE_GEN_SYSTEM, userPrompt);
+    console.log('[Builder] AI returned, files:', (result.files || []).length, 'keys:', Object.keys(result).join(','));
 
     const files = result.files || [];
     const logs = [
@@ -247,7 +251,8 @@ Generate concise, working code for this feature. Focus on core logic, keep files
     ];
 
     // Update build
-    const { data: build } = await supabase
+    console.log('[Builder] Saving', files.length, 'files to build', buildId);
+    const { data: build, error: updateErr } = await supabase
       .from("builds")
       .update({
         status: "review",
@@ -258,6 +263,7 @@ Generate concise, working code for this feature. Focus on core logic, keep files
       .eq("id", buildId)
       .select()
       .single();
+    if (updateErr) console.error('[Builder] DB update error:', updateErr.message || updateErr);
 
     // Update project status
     await supabase.from("projects").update({ status: "building" }).eq("id", project_id);
