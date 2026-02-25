@@ -21,6 +21,7 @@ const STAGES = [
 export default function Onboarding() {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
+  const [isReturning, setIsReturning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -30,6 +31,23 @@ export default function Onboarding() {
     stage: '',
     needs: [],
   });
+
+  // Returning users: skip Step 0 (profile), pre-fill from existing project
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('projects')
+      .select('full_name, company_name')
+      .eq('user_id', user.id)
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setIsReturning(true);
+          setForm(f => ({ ...f, fullName: data[0].full_name || '', companyName: data[0].company_name || '' }));
+          setStep(1); // Skip to idea
+        }
+      });
+  }, [user]);
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -93,12 +111,14 @@ export default function Onboarding() {
     'w-full bg-[#0a0a0a] border border-[#1f521f] px-4 py-3 text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] transition font-mono caret-[#33ff00]';
 
   const stepLabels = ['USER_INFO', 'PROJECT_IDEA', 'PROJECT_STAGE', 'REQUIREMENTS'];
+  const displayStep = isReturning ? step : step + 1;
+  const displayTotal = isReturning ? 3 : 4;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-mono">
       <div className="w-full max-w-lg border border-[#1f521f] p-8 bg-[#0f0f0f]">
-        <div className="text-xs text-[#1a6b1a] mb-2">┌── STEP {step + 1}/4: {stepLabels[step]} ──┐</div>
-        <ProgressBar currentStep={step} totalSteps={4} />
+        <div className="text-xs text-[#1a6b1a] mb-2">┌── STEP {displayStep}/{displayTotal}: {stepLabels[step]} ──┐</div>
+        <ProgressBar currentStep={isReturning ? step - 1 : step} totalSteps={displayTotal} />
 
         {step === 0 && (
           <OnboardingStep title="Your Info" subtitle="Initialize operator profile">

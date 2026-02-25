@@ -9,6 +9,8 @@ export default function ProjectList() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const [progress, setProgress] = useState({}) // { projectId: { step, label } }
+
   useEffect(() => {
     if (!user) return
     supabase
@@ -16,9 +18,30 @@ export default function ProjectList() {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         setProjects(data || [])
         setLoading(false)
+
+        // Fetch pipeline progress for each project
+        const prog = {}
+        for (const p of (data || [])) {
+          const [prd, feat, bp, builds, tests, deploys] = await Promise.all([
+            supabase.from('prds').select('id').eq('project_id', p.id).limit(1),
+            supabase.from('features').select('id').eq('project_id', p.id),
+            supabase.from('blueprints').select('id').eq('project_id', p.id),
+            supabase.from('builds').select('id').eq('project_id', p.id),
+            supabase.from('test_results').select('id').eq('project_id', p.id),
+            supabase.from('deployments').select('id').eq('project_id', p.id).eq('status', 'live'),
+          ])
+          const fc = (feat.data || []).length
+          if ((deploys.data || []).length > 0) prog[p.id] = { step: 5, label: 'DEPLOYED' }
+          else if ((tests.data || []).length >= fc && fc > 0) prog[p.id] = { step: 4, label: 'TESTED' }
+          else if ((builds.data || []).length >= fc && fc > 0) prog[p.id] = { step: 3, label: 'BUILT' }
+          else if ((bp.data || []).length >= fc && fc > 0) prog[p.id] = { step: 2, label: 'BLUEPRINTED' }
+          else if ((prd.data || []).length > 0) prog[p.id] = { step: 1, label: 'PRD DONE' }
+          else prog[p.id] = { step: 0, label: 'NEW' }
+        }
+        setProgress(prog)
       })
   }, [user])
 
@@ -86,9 +109,12 @@ export default function ProjectList() {
                   {p.idea || p.description || 'No description'}
                 </p>
                 <div className="flex gap-1">
-                  {['R', 'F', 'B', 'I', 'D'].map((step, i) => (
-                    <div key={i} className="w-6 h-1 bg-[#1f521f]" />
+                  {['R', 'F', 'B', 'I', 'D'].map((label, i) => (
+                    <div key={i} className={`w-6 h-1.5 ${i < (progress[p.id]?.step || 0) ? 'bg-[#33ff00]' : 'bg-[#1f521f]'}`} />
                   ))}
+                  <span className="text-[10px] text-[#22aa00] ml-2">
+                    {progress[p.id] ? `${progress[p.id].step}/5 ${progress[p.id].label}` : '...'}
+                  </span>
                 </div>
                 <p className="text-[10px] text-[#1a6b1a] mt-2">[ OPEN → ]</p>
               </button>
