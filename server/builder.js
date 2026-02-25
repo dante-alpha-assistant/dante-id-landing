@@ -98,24 +98,32 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate WORKING, SELF-CONTAINED code based on the technical blueprint.
+const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate WORKING, DEPLOYABLE code based on the technical blueprint.
+
+TECH STACK (MANDATORY — no exceptions):
+- Frontend: React 18 + Vite + plain JavaScript (.jsx files, NOT TypeScript)
+- Styling: Tailwind CSS
+- Backend: Express.js (plain .js files, NOT TypeScript)
+- Data: SQLite via better-sqlite3 (file-based, zero config, works everywhere)
+- No TypeScript. No .ts or .tsx files. Plain JS only.
 
 CRITICAL RULES:
-- Every import MUST resolve to a file you create in this generation. Do NOT import components/modules that don't exist.
-- Every API endpoint referenced in frontend code MUST have a corresponding backend implementation.
-- If a feature requires WebSocket/real-time, implement it with HTTP polling as fallback — NEVER leave it missing.
-- For external integrations (Slack, email, etc.), implement a working mock that returns realistic data — NEVER use console.log stubs.
-- All CRUD operations must be complete: create, read, update, AND delete. No partial implementations.
-- Include proper error handling, loading states, and edge cases.
-- Generate key files with real logic — not scaffolding, not stubs, not TODOs.
+- Every import MUST resolve to a file you create in this generation
+- Every API endpoint referenced in frontend code MUST have a backend implementation
+- The code MUST pass \`npm run build\` without errors
+- Include a valid package.json with all dependencies and these scripts:
+  "dev": "vite", "build": "vite build", "preview": "vite preview", "start": "node server/index.js"
+- Include a valid vite.config.js with React plugin and proxy to localhost:3001
+- Include an index.html with the Vite entry point
+- For external integrations (Slack, email, etc.), implement working mocks with realistic data
+- All CRUD operations must be complete: create, read, update, AND delete
 - Keep files concise (under 100 lines each where possible)
-- Include a package.json with dependencies
 - Max 10 files per feature — focus on completeness over breadth
 
 Return JSON: {
-  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "jsx|ts|py|sql|json|etc"}],
+  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "jsx|js|json|html|css|sql"}],
   "summary": "What was generated and key decisions made",
-  "setup_instructions": "How to run this"
+  "setup_instructions": "npm install && npm run dev"
 }`;
 
 // --- POST /generate-code ---
