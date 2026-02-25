@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import { useAuth } from "../contexts/AuthContext"
 
 const navLinks = [
   { label: "HOW IT WORKS", href: "#how-it-works" },
@@ -102,6 +103,8 @@ const faqItems = [
 ]
 
 export default function Landing() {
+  const { user } = useAuth()
+  const ctaLink = user ? "/dashboard" : "/signup"
   const [heroEmail, setHeroEmail] = useState("")
   const [ctaEmail, setCtaEmail] = useState("")
   const [openIndex, setOpenIndex] = useState(null)
@@ -177,7 +180,7 @@ export default function Landing() {
             >
               [≡]
             </button>
-            <Link to="/signup" className="text-sm border border-[#33ff00] text-[#33ff00] px-4 py-2 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
+            <Link to={ctaLink} className="text-sm border border-[#33ff00] text-[#33ff00] px-4 py-2 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
               [ GET STARTED ]
             </Link>
           </div>
