@@ -173,11 +173,11 @@ router.post("/deploy", requireAuth, async (req, res) => {
       // Get project name
       const { data: project } = await supabase
         .from("projects")
-        .select("company_name")
+        .select("name, company_name")
         .eq("id", project_id)
         .single();
 
-      const projectName = (project?.company_name || "project")
+      const projectName = (project?.name || project?.company_name || "project")
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "-")
         .replace(/-+/g, "-")
