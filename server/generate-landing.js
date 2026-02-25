@@ -457,12 +457,15 @@ async function generateLandingProject(content, projectDir, meta = {}, template, 
     <meta name="description" content="${esc(content?.meta?.description || data.subheadline)}" />
     <meta property="og:title" content="${data.companyName} — ${esc(content?.meta?.title || data.headline)}" />
     <meta property="og:description" content="${esc(content?.meta?.description || data.subheadline)}" />
-    <meta property="og:image" content="/og.svg" />
+    <meta property="og:image" content="${esc(content?.meta?.og_image || '/og.svg')}" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="${data.companyName}" />
+    ${content?.deploy_url ? `<meta property="og:url" content="${esc(content.deploy_url)}" />` : ''}
+    ${content?.deploy_url ? `<link rel="canonical" href="${esc(content.deploy_url)}" />` : ''}
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${data.companyName}" />
-    <meta name="twitter:description" content="${esc(data.subheadline)}" />
-    <meta name="twitter:image" content="/og.svg" />
+    <meta name="twitter:title" content="${data.companyName} — ${esc(content?.meta?.title || data.headline)}" />
+    <meta name="twitter:description" content="${esc(content?.meta?.description || data.subheadline)}" />
+    <meta name="twitter:image" content="${esc(content?.meta?.og_image || '/og.svg')}" />
   </head>
   <body>
     <div id="root"></div>
@@ -497,6 +500,19 @@ function renderLandingHTML(content = {}, template = 'saas', meta = {}) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${data.companyName} — ${esc(content?.meta?.description || data.headline)}</title>
     <meta name="description" content="${esc(content?.meta?.description || data.subheadline)}" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${data.companyName} — ${esc(data.headline)}" />
+    <meta property="og:description" content="${esc(content?.meta?.description || data.subheadline)}" />
+    <meta property="og:site_name" content="${data.companyName}" />
+    ${content?.deploy_url ? `<meta property="og:url" content="${esc(content.deploy_url)}" />` : ''}
+    ${content?.meta?.og_image ? `<meta property="og:image" content="${esc(content.meta.og_image)}" />` : ''}
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${data.companyName} — ${esc(data.headline)}" />
+    <meta name="twitter:description" content="${esc(content?.meta?.description || data.subheadline)}" />
+    ${content?.meta?.og_image ? `<meta name="twitter:image" content="${esc(content.meta.og_image)}" />` : ''}
+    <link rel="canonical" href="${esc(content?.deploy_url || '')}" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       html { scroll-behavior: smooth; }

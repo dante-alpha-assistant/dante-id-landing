@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import DeliverableCard from '../components/DeliverableCard'
+import CofounderChat from '../components/CofounderChat'
+import AnalyticsDashboard from '../components/AnalyticsDashboard'
+import DomainManager from '../components/DomainManager'
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
@@ -12,6 +15,7 @@ export default function Dashboard() {
   const [deliverables, setDeliverables] = useState([])
   const [expanded, setExpanded] = useState({})
   const [deliverablesLoaded, setDeliverablesLoaded] = useState(false)
+  const [activeTab, setActiveTab] = useState('deliverables')
 
   useEffect(() => {
     if (!user) return
@@ -143,30 +147,79 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Deliverables */}
-        <h2 className="text-lg font-semibold mb-4">Your Deliverables</h2>
-        {deliverables.length === 0 ? (
-          <p className="text-gray-400 animate-pulse text-center py-8">
-            ✨ Your AI team is being assembled...
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {deliverables.map((d) => (
-              <DeliverableCard
-                key={d.id}
-                deliverable={d}
-                isExpanded={!!expanded[d.id]}
-                onToggle={() => toggleCard(d.id)}
-                onRetry={() => {
-                  import('../lib/api.js').then(({ apiPost }) => {
-                    apiPost('/api/retry-deliverable', { deliverable_id: d.id, project_id: project.id })
-                  })
-                }}
-              />
-            ))}
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-[#222]">
+          {[
+            { key: 'deliverables', label: 'Deliverables', icon: '📦' },
+            { key: 'analytics', label: 'Analytics', icon: '📊' },
+            { key: 'domains', label: 'Domains', icon: '🌐' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === tab.key
+                  ? 'text-white border-blue-500'
+                  : 'text-gray-400 border-transparent hover:text-white'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'deliverables' && (
+          <>
+            <h2 className="text-lg font-semibold mb-4">Your Deliverables</h2>
+            {deliverables.length === 0 ? (
+              <p className="text-gray-400 animate-pulse text-center py-8">
+                ✨ Your AI team is being assembled...
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {deliverables.map((d) => (
+                  <DeliverableCard
+                    key={d.id}
+                    deliverable={d}
+                    isExpanded={!!expanded[d.id]}
+                    onToggle={() => toggleCard(d.id)}
+                    onRetry={() => {
+                      import('../lib/api.js').then(({ apiPost }) => {
+                        apiPost('/api/retry-deliverable', { deliverable_id: d.id, project_id: project.id })
+                      })
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+            <AnalyticsDashboard projectId={project.id} />
+          </div>
+        )}
+
+        {activeTab === 'domains' && (
+          <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+            <DomainManager projectId={project.id} />
           </div>
         )}
       </div>
+
+      {/* AI Co-founder Chat */}
+      {project && (
+        <CofounderChat 
+          projectId={project.id} 
+          context={{
+            project: { name: project.company_name, idea: project.idea, stage: project.stage },
+            deliverables: deliverables.filter(d => d.status === 'completed').map(d => ({ type: d.type, summary: d.type }))
+          }}
+        />
+      )}
     </div>
   )
 }

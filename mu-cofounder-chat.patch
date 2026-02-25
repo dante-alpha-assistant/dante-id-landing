@@ -1,0 +1,589 @@
+From 805f9f24b2271c1d3d57161b4897749bbe6080e1 Mon Sep 17 00:00:00 2001
+From: Mu Agent <mu@dante.id>
+Date: Wed, 18 Feb 2026 19:40:03 +0000
+Subject: [PATCH] feat: AI Co-founder Chat - persistent chat with full business
+ context
+
+---
+ server/index.js                           | 215 ++++++++++++++++++++
+ src/components/CofounderChat.jsx          | 237 ++++++++++++++++++++++
+ src/pages/Dashboard.jsx                   |  12 ++
+ supabase/migrations/003_chat_messages.sql |  66 ++++++
+ 4 files changed, 530 insertions(+)
+ create mode 100644 src/components/CofounderChat.jsx
+ create mode 100644 supabase/migrations/003_chat_messages.sql
+
+diff --git a/server/index.js b/server/index.js
+index 78ea8a2..fc0904d 100644
+--- a/server/index.js
++++ b/server/index.js
+@@ -1146,6 +1146,221 @@ app.post("/api/waitlist", rateLimit({ windowMs: 60000, max: 3 }), async (req, re
+   }
+ });
+ 
++// --- AI Co-founder Chat Endpoints ---
++
++// Get chat history for a project
++app.get("/api/chat/:projectId", requireAuth, async (req, res) => {
++  const { projectId } = req.params;
++  const { limit = 50 } = req.query;
++
++  try {
++    const { data: messages, error } = await supabase
++      .from("chat_messages")
++      .select("id, role, content, created_at")
++      .eq("project_id", projectId)
++      .order("created_at", { ascending: false })
++      .limit(parseInt(limit));
++
++    if (error) throw error;
++
++    // Get project context for system message
++    const { data: project } = await supabase
++      .from("projects")
++      .select("*")
++      .eq("id", projectId)
++      .single();
++
++    const { data: deliverables } = await supabase
++      .from("deliverables")
++      .select("type, content")
++      .eq("project_id", projectId)
++      .eq("status", "completed");
++
++    res.json({
++      messages: (messages || []).reverse(),
++      context: {
++        project: { name: project?.company_name, idea: project?.idea, stage: project?.stage },
++        deliverables: (deliverables || []).map(d => ({ type: d.type, summary: summarizeDeliverable(d) }))
++      }
++    });
++  } catch (err) {
++    console.error("Chat history error:", err);
++    res.status(500).json({ error: err.message });
++  }
++});
++
++// Send message to AI co-founder
++app.post("/api/chat/:projectId", requireAuth, rateLimit({ windowMs: 60000, max: 20 }), async (req, res) => {
++  const { projectId } = req.params;
++  const { message } = req.body;
++
++  if (!message || message.trim().length === 0) {
++    return res.status(400).json({ error: "message is required" });
++  }
++
++  try {
++    // Save user message
++    const { data: userMsg, error: userError } = await supabase
++      .from("chat_messages")
++      .insert({ project_id: projectId, role: "user", content: message.trim() })
++      .select()
++      .single();
++
++    if (userError) throw userError;
++
++    // Get recent context (last 10 messages)
++    const { data: recentMessages } = await supabase
++      .from("chat_messages")
++      .select("role, content")
++      .eq("project_id", projectId)
++      .order("created_at", { ascending: false })
++      .limit(10);
++
++    // Get project and deliverables for context
++    const { data: project } = await supabase
++      .from("projects")
++      .select("*")
++      .eq("id", projectId)
++      .single();
++
++    const { data: deliverables } = await supabase
++      .from("deliverables")
++      .select("type, content")
++      .eq("project_id", projectId)
++      .eq("status", "completed");
++
++    // Build AI prompt with full business context
++    const systemPrompt = buildCofounderSystemPrompt(project, deliverables);
++    const aiMessages = [
++      { role: "system", content: systemPrompt },
++      ...(recentMessages || []).reverse().map(m => ({ role: m.role, content: m.content })),
++      { role: "user", content: message.trim() }
++    ];
++
++    // Call AI
++    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
++      method: "POST",
++      headers: {
++        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
++        "Content-Type": "application/json"
++      },
++      body: JSON.stringify({
++        model: "google/gemini-2.5-flash",
++        messages: aiMessages,
++        temperature: 0.7,
++        max_tokens: 2000
++      })
++    });
++
++    const aiData = await aiRes.json();
++    const aiResponse = aiData.choices?.[0]?.message?.content || "I'm not sure how to help with that right now.";
++
++    // Save AI response
++    const { data: aiMsg } = await supabase
++      .from("chat_messages")
++      .insert({ project_id: projectId, role: "assistant", content: aiResponse })
++      .select()
++      .single();
++
++    res.json({
++      user_message: userMsg,
++      assistant_message: aiMsg,
++      context_used: deliverables?.length || 0
++    });
++  } catch (err) {
++    console.error("Chat message error:", err);
++    res.status(500).json({ error: err.message });
++  }
++});
++
++// Clear chat history
++app.delete("/api/chat/:projectId", requireAuth, async (req, res) => {
++  const { projectId } = req.params;
++
++  try {
++    await supabase
++      .from("chat_messages")
++      .delete()
++      .eq("project_id", projectId);
++
++    res.json({ ok: true });
++  } catch (err) {
++    res.status(500).json({ error: err.message });
++  }
++});
++
++// Helper: Build system prompt with full business context
++function buildCofounderSystemPrompt(project, deliverables) {
++  const dMap = {};
++  (deliverables || []).forEach(d => { dMap[d.type] = d.content; });
++
++  let prompt = `You are an experienced startup co-founder and advisor. You're helping ${project?.full_name || 'the founder'} with their startup ${project?.company_name || ''}.
++
++Your role is to provide strategic advice, answer questions, challenge assumptions, and help them think through decisions. Be direct, practical, and actionable — like a real co-founder would be.
++
++Here's what you know about their business:
++
++`;
++
++  if (project?.idea) {
++    prompt += `**The Idea:** ${project.idea}\n\n`;
++  }
++  if (project?.stage) {
++    prompt += `**Current Stage:** ${project.stage}\n\n`;
++  }
++
++  if (dMap.business_plan?.executive_summary) {
++    prompt += `**Business Summary:** ${dMap.business_plan.executive_summary}\n\n`;
++  }
++
++  if (dMap.brand_identity?.taglines?.[0]) {
++    prompt += `**Positioning:** "${dMap.brand_identity.taglines[0].text}"\n\n`;
++  }
++
++  if (dMap.competitor_analysis?.competitors?.length > 0) {
++    const comps = dMap.competitor_analysis.competitors.slice(0, 3).map(c => c.name).join(', ');
++    prompt += `**Key Competitors:** ${comps}\n\n`;
++  }
++
++  if (dMap.growth_strategy?.channel_strategy?.length > 0) {
++    const channels = dMap.growth_strategy.channel_strategy.slice(0, 2).map(c => c.channel).join(', ');
++    prompt += `**Growth Focus:** ${channels}\n\n`;
++  }
++
++  prompt += `When answering:
++1. Reference specific details from their business context when relevant
++2. Give concrete next steps, not just high-level advice
++3. Challenge weak assumptions gently but directly
++4. Prioritize speed and validation over perfection
++5. If they ask about something not in your context, tell them you need more info
++
++Current date: ${new Date().toISOString().split('T')[0]}`;
++
++  return prompt;
++}
++
++// Helper: Summarize deliverable for context list
++function summarizeDeliverable(d) {
++  switch (d.type) {
++    case 'brand_identity':
++      return d.content?.taglines?.[0]?.text || 'Brand strategy completed';
++    case 'landing_page':
++      return d.content?.hero?.headline || 'Landing page created';
++    case 'business_plan':
++      return d.content?.executive_summary?.slice(0, 100) + '...' || 'Business plan complete';
++    case 'growth_strategy':
++      return `${d.content?.channel_strategy?.length || 0} growth channels identified`;
++    case 'personal_brand':
++      return 'Launch content ready';
++    case 'pitch_deck':
++      return `${d.content?.slides?.length || 0}-slide pitch deck ready`;
++    case 'competitor_analysis':
++      return `${d.content?.competitors?.length || 0} competitors analyzed`;
++    default:
++      return 'Completed';
++  }
++}
++
+ // --- Error handling ---
+ app.use((err, req, res, next) => {
+   console.error("Unhandled error:", err);
+diff --git a/src/components/CofounderChat.jsx b/src/components/CofounderChat.jsx
+new file mode 100644
+index 0000000..4d5dc7c
+--- /dev/null
++++ b/src/components/CofounderChat.jsx
+@@ -0,0 +1,237 @@
++import { useState, useRef, useEffect } from 'react'
++import { supabase } from '../lib/supabase'
++
++export default function CofounderChat({ projectId, context }) {
++  const [messages, setMessages] = useState([])
++  const [input, setInput] = useState('')
++  const [loading, setLoading] = useState(false)
++  const [isOpen, setIsOpen] = useState(false)
++  const [hasNewMessages, setHasNewMessages] = useState(false)
++  const messagesEndRef = useRef(null)
++  const inputRef = useRef(null)
++
++  // Load initial messages
++  useEffect(() => {
++    if (!projectId || !isOpen) return
++    loadMessages()
++    subscribeToMessages()
++  }, [projectId, isOpen])
++
++  // Auto-scroll to bottom
++  useEffect(() => {
++    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
++  }, [messages])
++
++  const loadMessages = async () => {
++    try {
++      const { data: { session } } = await supabase.auth.getSession()
++      const res = await fetch(`/api/chat/${projectId}`, {
++        headers: { 'Authorization': `Bearer ${session.access_token}` }
++      })
++      if (res.ok) {
++        const data = await res.json()
++        setMessages(data.messages || [])
++      }
++    } catch (err) {
++      console.error('Failed to load messages:', err)
++    }
++  }
++
++  const subscribeToMessages = () => {
++    // Real-time subscription would go here if using Supabase realtime
++    // For now we poll every 10s when chat is open
++    const interval = setInterval(() => {
++      if (isOpen) loadMessages()
++    }, 10000)
++    return () => clearInterval(interval)
++  }
++
++  const sendMessage = async (e) => {
++    e.preventDefault()
++    if (!input.trim() || loading) return
++
++    const userMsg = input.trim()
++    setInput('')
++    setLoading(true)
++
++    // Optimistically add user message
++    setMessages(prev => [...prev, { id: 'temp', role: 'user', content: userMsg, created_at: new Date().toISOString() }])
++
++    try {
++      const { data: { session } } = await supabase.auth.getSession()
++      const res = await fetch(`/api/chat/${projectId}`, {
++        method: 'POST',
++        headers: {
++          'Authorization': `Bearer ${session.access_token}`,
++          'Content-Type': 'application/json'
++        },
++        body: JSON.stringify({ message: userMsg })
++      })
++
++      if (res.ok) {
++        const data = await res.json()
++        // Replace temp message with actual, add AI response
++        setMessages(prev => [
++          ...prev.filter(m => m.id !== 'temp'),
++          data.user_message,
++          data.assistant_message
++        ])
++      } else {
++        // Remove temp message on error
++        setMessages(prev => prev.filter(m => m.id !== 'temp'))
++        alert('Failed to send message')
++      }
++    } catch (err) {
++      setMessages(prev => prev.filter(m => m.id !== 'temp'))
++      console.error('Send error:', err)
++    } finally {
++      setLoading(false)
++      inputRef.current?.focus()
++    }
++  }
++
++  const clearChat = async () => {
++    if (!confirm('Clear all chat history?')) return
++    try {
++      const { data: { session } } = await supabase.auth.getSession()
++      await fetch(`/api/chat/${projectId}`, {
++        method: 'DELETE',
++        headers: { 'Authorization': `Bearer ${session.access_token}` }
++      })
++      setMessages([])
++    } catch (err) {
++      console.error('Clear error:', err)
++    }
++  }
++
++  const formatTime = (iso) => {
++    const d = new Date(iso)
++    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
++  }
++
++  if (!isOpen) {
++    return (
++      <button
++        onClick={() => setIsOpen(true)}
++        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-500 rounded-full shadow-lg flex items-center justify-center transition-colors z-50"
++      >
++        <span className="text-2xl">💬</span>
++        {hasNewMessages && (
++          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-[#0a0a0a]" />
++        )}
++      </button>
++    )
++  }
++
++  return (
++    <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-[#111] border border-[#333] rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
++      {/* Header */}
++      <div className="flex items-center justify-between px-4 py-3 border-b border-[#333] bg-[#0a0a0a]">
++        <div className="flex items-center gap-2">
++          <span className="text-xl">🕶️</span>
++          <div>
++            <span className="font-medium text-white text-sm">AI Co-founder</span>
++            <span className="block text-xs text-gray-500">Ask me anything</span>
++          </div>
++        </div>
++        <div className="flex items-center gap-2">
++          <button
++            onClick={clearChat}
++            className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 rounded"
++            title="Clear chat"
++          >
++            Clear
++          </button>
++          <button
++            onClick={() => setIsOpen(false)}
++            className="text-gray-400 hover:text-white text-lg leading-none"
++          >
++            ×
++          </button>
++        </div>
++      </div>
++
++      {/* Context summary */}
++      {context?.deliverables?.length > 0 && (
++        <div className="px-4 py-2 bg-blue-900/20 border-b border-[#333]">
++          <span className="text-xs text-blue-400">
++            Knows: {context.deliverables.map(d => {
++              const names = { brand_identity: 'Brand', landing_page: 'Landing', business_plan: 'Plan', growth_strategy: 'Growth', personal_brand: 'Content', pitch_deck: 'Pitch', competitor_analysis: 'Competitors' }
++              return names[d.type] || d.type
++            }).join(', ')}
++          </span>
++        </div>
++      )}
++
++      {/* Messages */}
++      <div className="flex-1 overflow-y-auto p-4 space-y-4">
++        {messages.length === 0 && (
++          <div className="text-center text-gray-500 py-8">
++            <p className="text-sm mb-2">👋 Hi! I'm your AI co-founder.</p>
++            <p className="text-xs">Ask me about strategy, review your pitch deck, or brainstorm growth ideas.</p>
++          </div>
++        )}
++        
++        {messages.map((msg) => (
++          <div
++            key={msg.id}
++            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
++          >
++            <div
++              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
++                msg.role === 'user'
++                  ? 'bg-blue-600 text-white rounded-br-md'
++                  : 'bg-[#222] text-gray-200 rounded-bl-md border border-[#333]'
++              }`}
++            >
++              <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
++              <span className={`text-[10px] mt-1 block ${msg.role === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
++                {formatTime(msg.created_at)}
++              </span>
++            </div>
++          </div>
++        ))}
++        
++        {loading && (
++          <div className="flex justify-start">
++            <div className="bg-[#222] border border-[#333] rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2">
++              <div className="flex gap-1">
++                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
++                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
++                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
++              </div>
++              <span className="text-xs text-gray-500">Thinking...</span>
++            </div>
++          </div>
++        )}
++        
++        <div ref={messagesEndRef} />
++      </div>
++
++      {/* Input */}
++      <form onSubmit={sendMessage} className="p-3 border-t border-[#333] bg-[#0a0a0a]">
++        <div className="flex gap-2">
++          <input
++            ref={inputRef}
++            type="text"
++            value={input}
++            onChange={(e) => setInput(e.target.value)}
++            placeholder="Ask about your business..."
++            className="flex-1 bg-[#222] border border-[#333] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
++            disabled={loading}
++          />
++          <button
++            type="submit"
++            disabled={loading || !input.trim()}
++            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
++          >
++            Send
++          </button>
++        </div>
++        <p className="text-[10px] text-gray-600 mt-2 text-center">
++          Context includes all your deliverables
++        </p>
++      </form>
++    </div>
++  )
++}
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+index 034295f..12a0be0 100644
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
+ import { useAuth } from '../contexts/AuthContext'
+ import { supabase } from '../lib/supabase'
+ import DeliverableCard from '../components/DeliverableCard'
++import CofounderChat from '../components/CofounderChat'
+ 
+ export default function Dashboard() {
+   const { user, signOut } = useAuth()
+@@ -161,6 +162,17 @@ export default function Dashboard() {
+           </div>
+         )}
+       </div>
++
++      {/* AI Co-founder Chat */}
++      {project && (
++        <CofounderChat 
++          projectId={project.id} 
++          context={{
++            project: { name: project.company_name, idea: project.idea, stage: project.stage },
++            deliverables: deliverables.filter(d => d.status === 'completed').map(d => ({ type: d.type, summary: d.type }))
++          }}
++        />
++      )}
+     </div>
+   )
+ }
+diff --git a/supabase/migrations/003_chat_messages.sql b/supabase/migrations/003_chat_messages.sql
+new file mode 100644
+index 0000000..42604b2
+--- /dev/null
++++ b/supabase/migrations/003_chat_messages.sql
+@@ -0,0 +1,66 @@
++-- AI Co-founder Chat: chat_messages table
++-- Run this in Supabase SQL Editor
++
++-- Create chat_messages table
++CREATE TABLE IF NOT EXISTS chat_messages (
++  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
++  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
++  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
++  content TEXT NOT NULL,
++  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
++  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
++);
++
++-- Indexes for performance
++CREATE INDEX IF NOT EXISTS idx_chat_messages_project_id ON chat_messages(project_id);
++CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
++
++-- Row Level Security (RLS) policies
++ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
++
++-- Allow users to read their own project's messages
++CREATE POLICY "Users can read their project chat messages"
++  ON chat_messages FOR SELECT
++  USING (
++    EXISTS (
++      SELECT 1 FROM projects
++      WHERE projects.id = chat_messages.project_id
++      AND projects.user_id = auth.uid()
++    )
++  );
++
++-- Allow users to insert messages to their own project
++CREATE POLICY "Users can insert chat messages to their project"
++  ON chat_messages FOR INSERT
++  WITH CHECK (
++    EXISTS (
++      SELECT 1 FROM projects
++      WHERE projects.id = chat_messages.project_id
++      AND projects.user_id = auth.uid()
++    )
++  );
++
++-- Allow users to delete their own project's messages (for clearing chat)
++CREATE POLICY "Users can delete their project chat messages"
++  ON chat_messages FOR DELETE
++  USING (
++    EXISTS (
++      SELECT 1 FROM projects
++      WHERE projects.id = chat_messages.project_id
++      AND projects.user_id = auth.uid()
++    )
++  );
++
++-- Add updated_at trigger
++CREATE OR REPLACE FUNCTION update_updated_at_column()
++RETURNS TRIGGER AS $$
++BEGIN
++  NEW.updated_at = NOW();
++  RETURN NEW;
++END;
++$$ LANGUAGE plpgsql;
++
++CREATE TRIGGER update_chat_messages_updated_at
++  BEFORE UPDATE ON chat_messages
++  FOR EACH ROW
++  EXECUTE FUNCTION update_updated_at_column();
+-- 
+2.43.0
+

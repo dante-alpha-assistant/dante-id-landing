@@ -10,6 +10,7 @@ import Editor from './pages/Editor'
 import Fleet from './pages/Fleet'
 import AgentProfile from './pages/AgentProfile'
 import Refinery from './pages/Refinery'
+import Pricing from './pages/Pricing'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/editor/:project_id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
           <Route path="/refinery/:project_id" element={<ProtectedRoute><Refinery /></ProtectedRoute>} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/fleet/:agentId" element={<AgentProfile />} />
         </Routes>
