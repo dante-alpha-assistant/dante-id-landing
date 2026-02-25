@@ -127,6 +127,21 @@ export default function Refinery() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Pre-fill idea from project
+  useEffect(() => {
+    async function loadProjectIdea() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data: project } = await supabase
+        .from('projects')
+        .select('idea')
+        .eq('id', project_id)
+        .single()
+      if (project?.idea && !ideaText) setIdeaText(project.idea)
+    }
+    loadProjectIdea()
+  }, [project_id])
+
   const generatePrd = async () => {
     if (!ideaText.trim()) return
     setAiLoading(true)

@@ -88,11 +88,15 @@ export default function Foundry() {
     setAiLoading(false)
   }
 
+  const [batchProgress, setBatchProgress] = useState(null) // { current, total, featureName }
+
   const generateAll = async () => {
     const missing = features.filter(f => !blueprints[f.id])
     if (missing.length === 0) return
     setAiLoading(true)
-    for (const f of missing) {
+    for (let i = 0; i < missing.length; i++) {
+      const f = missing[i]
+      setBatchProgress({ current: i + 1, total: missing.length, featureName: f.name })
       try {
         const res = await apiCall(API_BASE_FOUNDRY, '/generate-blueprint', {
           method: 'POST',
@@ -105,6 +109,7 @@ export default function Foundry() {
         console.error(`Generate blueprint for ${f.name} failed:`, err)
       }
     }
+    setBatchProgress(null)
     setAiLoading(false)
   }
 
@@ -169,7 +174,11 @@ export default function Foundry() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
           <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-3">
             <div className="text-[#33ff00] terminal-blink text-lg">[PROCESSING...]</div>
-            <p className="text-sm text-[#22aa00]">AI is thinking...</p>
+            {batchProgress ? (
+              <p className="text-sm text-[#22aa00]">Generating blueprint {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
+            ) : (
+              <p className="text-sm text-[#22aa00]">AI is thinking...</p>
+            )}
           </div>
         </div>
       )}
