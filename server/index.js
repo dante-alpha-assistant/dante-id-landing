@@ -156,6 +156,50 @@ app.get("/api/projects", requireAuth, async (req, res) => {
   res.json({ projects: data || [] });
 });
 
+// --- POST /api/projects/:id/resume — advance to next pipeline step ---
+app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
+  try {
+    const { data: project } = await supabase.from("projects").select("*").eq("id", req.params.id).eq("user_id", req.user.id).single();
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const pipeline = {
+      pending: { next: "refining", module: "refinery", endpoint: "/api/refinery/generate" },
+      refining: { next: "designed", module: "foundry", endpoint: "/api/foundry/generate-all-architecture" },
+      designed: { next: "planning", module: "planner", endpoint: "/api/planner/generate-all-work-orders" },
+      planning: { next: "building", module: "builder", endpoint: "/api/builder/build-all" },
+      building: { next: "tested", module: "inspector", endpoint: "/api/inspector/run-tests" },
+      tested: { next: "live", module: "deployer", endpoint: "/api/deployer/deploy" },
+    };
+
+    const step = pipeline[project.status];
+    if (!step) return res.json({ status: project.status, message: "Project is already live or completed" });
+
+    // Forward to the appropriate module endpoint
+    const body = { project_id: req.params.id };
+    if (project.status === "pending") body.idea = project.idea;
+
+    const token = req.headers.authorization;
+    const moduleRes = await fetch(`http://localhost:3001${step.endpoint}`, {
+      method: "POST",
+      headers: { "Authorization": token, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = await moduleRes.text();
+    let parsed;
+    try { parsed = JSON.parse(result); } catch { parsed = { raw: result.slice(0, 500) }; }
+
+    return res.status(moduleRes.status).json({
+      resumed: true,
+      from_status: project.status,
+      next_status: step.next,
+      module: step.module,
+      result: parsed,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/projects", requireAuth, async (req, res) => {
   const { company_name, idea, stage, needs } = req.body;
   if (!idea) return res.status(400).json({ error: "idea is required" });
