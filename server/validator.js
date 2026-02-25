@@ -61,6 +61,17 @@ router.post("/submit-feedback", requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- GET /:project_id --- (convenience alias)
+router.get("/:project_id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await supabase.from("feedback")
+      .select("*, features(name)")
+      .eq("project_id", req.params.project_id)
+      .order("created_at", { ascending: false });
+    res.json({ feedback: data || [] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // --- GET /:project_id/feedback ---
 router.get("/:project_id/feedback", requireAuth, async (req, res) => {
   try {

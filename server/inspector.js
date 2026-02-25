@@ -285,6 +285,19 @@ Analyze each code file against the test specifications. Generate comprehensive t
   }
 });
 
+// --- GET /:project_id --- (convenience alias)
+router.get("/:project_id", requireAuth, async (req, res) => {
+  try {
+    const { data: results } = await supabase
+      .from("test_results")
+      .select("*, features(name, priority)")
+      .eq("project_id", req.params.project_id)
+      .order("created_at");
+    const mapped = (results || []).map(r => ({ ...r, feature_name: r.features?.name || "Unknown" }));
+    return res.json({ results: mapped });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
 // --- GET /:project_id/results ---
 router.get("/:project_id/results", requireAuth, async (req, res) => {
   try {

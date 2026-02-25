@@ -280,6 +280,18 @@ router.post("/deploy", requireAuth, async (req, res) => {
   }
 });
 
+// --- GET /:project_id --- (convenience alias)
+router.get("/:project_id", requireAuth, async (req, res) => {
+  try {
+    const { data: deployments } = await supabase
+      .from("deployments")
+      .select("id, target, status, url, vercel_url, canonical_path, created_at")
+      .eq("project_id", req.params.project_id)
+      .order("created_at", { ascending: false });
+    return res.json({ deployments: deployments || [] });
+  } catch (err) { return res.status(500).json({ error: err.message }); }
+});
+
 // --- GET /:project_id/deployments ---
 router.get("/:project_id/deployments", requireAuth, async (req, res) => {
   try {
