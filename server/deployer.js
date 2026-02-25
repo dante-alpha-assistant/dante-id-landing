@@ -227,6 +227,15 @@ router.post("/deploy", requireAuth, async (req, res) => {
           });
         }
 
+        // Disable deployment protection so URLs are publicly accessible
+        if (vercelData.projectId) {
+          await fetch(`https://api.vercel.com/v9/projects/${vercelData.projectId}`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${vercelToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ ssoProtection: null }),
+          }).catch(() => {});
+        }
+
         // Always use the project name as the canonical Vercel URL
         const vercelUrl = `https://${projectName}.vercel.app`;
         const canonicalUrl = `https://dante.id${canonicalPath}`;
