@@ -117,7 +117,8 @@ import { defineConfig } from 'vite'; import react from '@vitejs/plugin-react'; e
 
 4. package.json with scripts: "dev": "vite", "build": "tsc -b && vite build", "start": "tsx server/index.ts"
    Must include: react, react-dom, @vitejs/plugin-react, vite, typescript, tailwindcss, express, better-sqlite3
-   Must include devDeps: @types/react, @types/react-dom, @types/express, @types/better-sqlite3
+   Put ALL deps in "dependencies" (NOT devDependencies) — Vercel skips devDeps in production builds.
+   Include: @types/react, @types/react-dom, @types/express, @types/better-sqlite3, vite, typescript, @vitejs/plugin-react
 
 CRITICAL RULES:
 - Every import MUST resolve to a file you create. No phantom imports.
