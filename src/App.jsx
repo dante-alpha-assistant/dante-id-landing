@@ -11,6 +11,7 @@ import Fleet from './pages/Fleet'
 import AgentProfile from './pages/AgentProfile'
 import Refinery from './pages/Refinery'
 import Foundry from './pages/Foundry'
+import Builder from './pages/Builder'
 import Pricing from './pages/Pricing'
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
           <Route path="/editor/:project_id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
           <Route path="/refinery/:project_id" element={<ProtectedRoute><Refinery /></ProtectedRoute>} />
           <Route path="/foundry/:project_id" element={<ProtectedRoute><Foundry /></ProtectedRoute>} />
+          <Route path="/builder/:project_id" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/fleet/:agentId" element={<AgentProfile />} />

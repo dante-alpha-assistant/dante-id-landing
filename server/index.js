@@ -113,6 +113,9 @@ app.use("/api/refinery", require("./refinery"));
 // --- Foundry module ---
 app.use("/api/foundry", require("./foundry"));
 
+// --- Builder module ---
+app.use("/api/builder", require("./builder"));
+
 // --- Health check ---
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
