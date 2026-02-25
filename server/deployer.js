@@ -66,8 +66,9 @@ router.post("/deploy", requireAuth, async (req, res) => {
       .eq("project_id", project_id);
 
     if (testResults && testResults.length > 0) {
+      // Check for failed tests with blockers in the results JSONB
       const blockers = testResults.filter(
-        (t) => t.status === "failed" && t.severity === "blocker"
+        (t) => t.status === "failed" || (Array.isArray(t.results) && t.results.some(r => r.status === "fail"))
       );
       if (blockers.length > 0) {
         logs.push(logEntry(`Quality gate FAILED: ${blockers.length} blocker(s) found`));

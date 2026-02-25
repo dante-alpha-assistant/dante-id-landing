@@ -279,7 +279,7 @@ router.post("/create-repo", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "project_id and repo_name are required" });
   }
 
-  const githubToken = process.env.GITHUB_TOKEN;
+  const githubToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
   if (!githubToken) {
     return res.status(500).json({ error: "GitHub token not configured" });
   }
