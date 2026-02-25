@@ -98,30 +98,39 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate WORKING, DEPLOYABLE code based on the technical blueprint.
+const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate WORKING, DEPLOYABLE TypeScript code based on the technical blueprint.
 
-TECH STACK (MANDATORY — no exceptions):
-- Frontend: React 18 + Vite + plain JavaScript (.jsx files, NOT TypeScript)
+TECH STACK (MANDATORY):
+- Frontend: React 18 + Vite + TypeScript (.tsx for components, .ts for utils)
 - Styling: Tailwind CSS
-- Backend: Express.js (plain .js files, NOT TypeScript)
-- Data: SQLite via better-sqlite3 (file-based, zero config, works everywhere)
-- No TypeScript. No .ts or .tsx files. Plain JS only.
+- Backend: Express.js + TypeScript (.ts files)
+- Data: SQLite via better-sqlite3
+
+MANDATORY FILES (always include these):
+1. tsconfig.json:
+{"compilerOptions":{"target":"ES2020","module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":false,"skipLibCheck":true,"esModuleInterop":true,"allowSyntheticDefaultImports":true,"forceConsistentCasingInFileNames":true,"resolveJsonModule":true,"isolatedModules":true,"noEmit":true,"outDir":"./dist","baseUrl":".","paths":{"@/*":["./src/*"]}},"include":["src"],"exclude":["node_modules","dist"]}
+
+2. vite.config.ts:
+import { defineConfig } from 'vite'; import react from '@vitejs/plugin-react'; export default defineConfig({ plugins: [react()], server: { proxy: { '/api': 'http://localhost:3001' } } });
+
+3. index.html with <div id="root"></div> and <script type="module" src="/src/main.tsx"></script>
+
+4. package.json with scripts: "dev": "vite", "build": "tsc -b && vite build", "start": "tsx server/index.ts"
+   Must include: react, react-dom, @vitejs/plugin-react, vite, typescript, tailwindcss, express, better-sqlite3
+   Must include devDeps: @types/react, @types/react-dom, @types/express, @types/better-sqlite3
 
 CRITICAL RULES:
-- Every import MUST resolve to a file you create in this generation
-- Every API endpoint referenced in frontend code MUST have a backend implementation
-- The code MUST pass \`npm run build\` without errors
-- Include a valid package.json with all dependencies and these scripts:
-  "dev": "vite", "build": "vite build", "preview": "vite preview", "start": "node server/index.js"
-- Include a valid vite.config.js with React plugin and proxy to localhost:3001
-- Include an index.html with the Vite entry point
-- For external integrations (Slack, email, etc.), implement working mocks with realistic data
-- All CRUD operations must be complete: create, read, update, AND delete
-- Keep files concise (under 100 lines each where possible)
-- Max 10 files per feature — focus on completeness over breadth
+- Every import MUST resolve to a file you create. No phantom imports.
+- Every API endpoint in frontend MUST have a backend implementation.
+- Use \`any\` type freely to avoid complex type errors. DO NOT create elaborate type hierarchies.
+- Do NOT use generic type parameters on Express Request/Response — use plain \`req: any, res: any\`.
+- The code MUST pass \`tsc -b && vite build\` without errors.
+- For external integrations, implement working mocks with realistic data.
+- All CRUD: create, read, update, AND delete.
+- Max 10 files per feature.
 
 Return JSON: {
-  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "jsx|js|json|html|css|sql"}],
+  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "tsx|ts|json|html|css"}],
   "summary": "What was generated and key decisions made",
   "setup_instructions": "npm install && npm run dev"
 }`;
