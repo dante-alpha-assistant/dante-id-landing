@@ -147,10 +147,13 @@ Generate minimal, targeted work orders to implement the requested changes.`;
           await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
         } else {
           await supabase.from("iterations").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", iterationId);
+          await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
         }
       } catch (err) {
         console.error("[Iterate] Error:", err.message);
         await supabase.from("iterations").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", iterationId);
+        // Restore project to live on failure
+        await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
       }
     })();
 
