@@ -48,7 +48,7 @@ router.get("/projects", requireAdmin, async (req, res) => {
       supabase.from("work_orders").select("project_id").in("project_id", ids),
       supabase.from("builds").select("project_id").in("project_id", ids),
       supabase.from("test_results").select("project_id").in("project_id", ids),
-      supabase.from("deployments").select("project_id").in("project_id", ids),
+      supabase.from("deployments").select("project_id, url, vercel_url, status").in("project_id", ids),
     ]);
 
     const count = (data, pid) => (data || []).filter(r => r.project_id === pid).length;
@@ -77,6 +77,9 @@ router.get("/projects", requireAdmin, async (req, res) => {
       deployments: count(deployRes.data, p.id),
       created_at: p.created_at,
       updated_at: p.updated_at,
+      deploy_url: ((deployRes.data || []).find(d => d.project_id === p.id && d.status === 'live') || {}).vercel_url
+        || ((deployRes.data || []).find(d => d.project_id === p.id && d.status === 'live') || {}).url
+        || null,
     }));
 
     res.json({ projects: result, total_users: Object.keys(userEmails).length });

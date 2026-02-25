@@ -119,7 +119,11 @@ export default function AdminDashboard() {
                 <tr key={p.id}
                   onClick={() => setExpanded(expanded === p.id ? null : p.id)}
                   className="border-b border-[#1f521f]/50 hover:bg-[#33ff00]/5 cursor-pointer transition-colors">
-                  <td className="py-2 px-2 font-bold text-[#33ff00]">{p.name}</td>
+                  <td className="py-2 px-2 font-bold text-[#33ff00]">
+                    {p.deploy_url ? (
+                      <a href={p.deploy_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="hover:underline">{p.name} 🔗</a>
+                    ) : p.name}
+                  </td>
                   <td className="py-2 px-2 text-[#22aa00] text-xs">{p.user_email}</td>
                   <td className="py-2 px-2">
                     <div className="flex gap-0.5">
@@ -149,6 +153,9 @@ export default function AdminDashboard() {
                       <p><span className="text-[#1a6b1a]">ID:</span> <span className="text-[#22aa00]">{p.id}</span></p>
                       <p><span className="text-[#1a6b1a]">Idea:</span> <span className="text-[#22aa00]">{p.idea || 'N/A'}</span></p>
                       <p><span className="text-[#1a6b1a]">Pipeline:</span> <span className="text-[#33ff00]">{p.features}F → {p.blueprints}BP → {p.work_orders}WO → {p.builds}B → {p.tests}T → {p.deployments}D</span></p>
+                      {p.deploy_url && (
+                        <p><span className="text-[#1a6b1a]">Live URL:</span> <a href={p.deploy_url} target="_blank" rel="noopener noreferrer" className="text-[#33ff00] hover:underline">{p.deploy_url}</a></p>
+                      )}
                       <div className="flex gap-2 mt-2">
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/refinery/${p.id}`) }}
                           className="text-[10px] border border-[#1f521f] px-2 py-0.5 hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
