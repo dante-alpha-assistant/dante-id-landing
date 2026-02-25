@@ -116,7 +116,7 @@ Return JSON: {
 
 // --- POST /generate-code ---
 router.post("/generate-code", requireAuth, async (req, res) => {
-  const { feature_id, project_id } = req.body;
+  const { feature_id, project_id, work_order_id } = req.body;
   if (!feature_id || !project_id) {
     return res.status(400).json({ error: "feature_id and project_id are required" });
   }
@@ -181,8 +181,26 @@ router.post("/generate-code", requireAuth, async (req, res) => {
       buildId = newBuild.id;
     }
 
+    // Fetch work orders for this feature (if any)
+    let workOrders = [];
+    if (work_order_id) {
+      const { data: wo } = await supabase.from("work_orders").select("*").eq("id", work_order_id).single();
+      if (wo) workOrders = [wo];
+    } else {
+      const { data: wos } = await supabase.from("work_orders").select("*").eq("feature_id", feature_id).eq("project_id", project_id).order("phase");
+      workOrders = wos || [];
+    }
+
     // Build user prompt
     const techStack = prd?.content?.tech_stack || project?.tech_stack || "React + Node.js";
+    const woContext = workOrders.length > 0
+      ? `\n\n## Work Orders (Implementation Plan)\n${workOrders.map(wo => `### ${wo.title} (Phase ${wo.phase}, ${wo.priority})
+${wo.description || ""}
+Files to create: ${JSON.stringify(wo.files_to_create || [])}
+Files to modify: ${JSON.stringify(wo.files_to_modify || [])}
+Acceptance criteria: ${JSON.stringify(wo.acceptance_criteria || [])}`).join("\n\n")}`
+      : "";
+
     const userPrompt = `Feature: ${feature.name}
 Description: ${feature.description || ""}
 Priority: ${feature.priority || "medium"}
@@ -190,6 +208,7 @@ Acceptance Criteria: ${JSON.stringify(feature.acceptance_criteria || [])}
 
 Technical Blueprint:
 ${JSON.stringify(blueprint.content, null, 2)}
+${woContext}
 
 Tech Stack Context: ${typeof techStack === 'string' ? techStack : JSON.stringify(techStack)}
 Project: ${project?.company_name || project?.full_name || "Unknown"}
