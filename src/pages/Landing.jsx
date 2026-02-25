@@ -198,25 +198,25 @@ export default function Landing() {
 
       <main>
         {/* Hero */}
-        <section className="py-24 px-6" id="top">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+        <section className="py-12 sm:py-24 px-4 sm:px-6" id="top">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-center">
             <div>
               <p className="text-xs text-[#1a6b1a] mb-4 reveal" style={{ "--delay": "0ms" }}>
                 // AI STARTUP BUILDER
               </p>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Build your startup in days, not months.
               </h1>
-              <p className="text-[#22aa00] mt-6 text-lg leading-relaxed reveal" style={{ "--delay": "200ms" }}>
+              <p className="text-[#22aa00] mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed reveal" style={{ "--delay": "200ms" }}>
                 dante.id gives you a full AI team — strategist, designer, developer, lawyer — that builds your business while you focus on your vision.
               </p>
               <form
-                className="flex gap-3 mt-8 reveal"
+                className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8 reveal"
                 style={{ "--delay": "300ms" }}
                 onSubmit={(event) => handleSubmit(event, "hero")}
               >
                 <input
-                  className="flex-1 px-4 py-3 bg-[#0a0a0a] border border-[#1f521f] text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] font-mono caret-[#33ff00]"
+                  className="flex-1 px-4 py-3 bg-[#0a0a0a] border border-[#1f521f] text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] font-mono caret-[#33ff00] min-w-0"
                   type="email"
                   placeholder="user@email.com"
                   value={heroEmail}
@@ -281,11 +281,11 @@ export default function Landing() {
         </section>
 
         {/* How it works */}
-        <section className="py-24 px-6" id="how-it-works">
+        <section className="py-12 sm:py-24 px-4 sm:px-6" id="how-it-works">
           <div className="max-w-6xl mx-auto">
             <div className="text-center max-w-2xl mx-auto mb-16">
               <p className="text-xs text-[#1a6b1a] mb-2 reveal">// HOW IT WORKS</p>
-              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 From idea to launch, end-to-end.
               </h2>
               <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "200ms" }}>
@@ -295,7 +295,7 @@ export default function Landing() {
             <div className="grid md:grid-cols-3 gap-6">
               {steps.map((step, index) => (
                 <div key={step.title} className="border border-[#1f521f] bg-[#0f0f0f] p-6 reveal" style={{ "--delay": `${index * 100}ms` }}>
-                  <div className="text-3xl font-bold text-[#33ff00]" style={glowStyle}>{step.number}</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#33ff00]" style={glowStyle}>{step.number}</div>
                   <h3 className="text-lg font-bold mt-4 text-[#33ff00]">{step.title}</h3>
                   <p className="text-[#22aa00] text-sm mt-3">{step.description}</p>
                 </div>
@@ -309,7 +309,7 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center max-w-2xl mx-auto mb-16">
               <p className="text-xs text-[#1a6b1a] mb-2 reveal">// WHAT YOU GET</p>
-              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Everything you need to launch.
               </h2>
               <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "200ms" }}>
@@ -341,7 +341,7 @@ export default function Landing() {
         <section className="py-24 px-6 border-t border-[#1f521f]">
           <div className="max-w-4xl mx-auto text-center">
             <p className="text-xs text-[#1a6b1a] mb-2 reveal">// SEE IT IN ACTION</p>
-            <h2 className="text-3xl font-bold mb-8 reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-8 reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
               Watch your team build.
             </h2>
             <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 text-left space-y-4 reveal" style={{ "--delay": "200ms" }}>
@@ -366,10 +366,10 @@ export default function Landing() {
 
         {/* Stats */}
         <section className="py-24 px-6 border-t border-[#1f521f]" id="pricing">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-center">
             <div>
               <p className="text-xs text-[#1a6b1a] mb-2 reveal">// BUILT DIFFERENT</p>
-              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Built by AI agents, for human founders.
               </h2>
               <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "200ms" }}>
@@ -379,7 +379,7 @@ export default function Landing() {
             <div className="grid grid-cols-3 gap-6">
               {stats.map((stat, index) => (
                 <div key={stat.label} className="text-center reveal" style={{ "--delay": `${index * 100}ms` }}>
-                  <div className="text-3xl font-bold text-[#33ff00]" style={glowStyle}>{stat.value}</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#33ff00]" style={glowStyle}>{stat.value}</div>
                   <div className="text-[#22aa00] text-xs mt-2">{stat.label}</div>
                 </div>
               ))}
@@ -392,7 +392,7 @@ export default function Landing() {
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-12">
               <p className="text-xs text-[#1a6b1a] mb-2 reveal">// FAQ</p>
-              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Questions?
               </h2>
             </div>
@@ -419,7 +419,7 @@ export default function Landing() {
         {/* CTA */}
         <section className="py-24 px-6 border-t border-[#1f521f]" id="waitlist">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl font-bold reveal" style={glowStyle}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold reveal" style={glowStyle}>
               Ready to build?
             </h2>
             <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "100ms" }}>
