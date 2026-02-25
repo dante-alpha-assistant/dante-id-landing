@@ -43,39 +43,57 @@ async function requireAuth(req, res, next) {
 // --- AI call helper ---
 async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      signal: controller.signal,
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "anthropic/claude-sonnet-4.6",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        response_format: { type: "json_object" }
-      })
-    });
-
-    clearTimeout(timeout);
-    const data = await res.json();
-    if (!data.choices || !data.choices[0]) {
-      console.error("AI returned no choices:", JSON.stringify(data).substring(0, 500));
-      if (attempt < maxRetries) continue;
-      throw new Error("AI returned no choices");
-    }
-
-    const raw = data.choices[0].message.content;
     try {
-      return repairJson(raw);
-    } catch (e) {
-      console.error(`JSON parse attempt ${attempt + 1} failed:`, e.message);
-      if (attempt >= maxRetries) throw e;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => { console.log("[AI] Aborting after 120s"); controller.abort(); }, 120000);
+      
+      console.log('[AI] Attempt', attempt + 1, 'calling OpenRouter...');
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        signal: controller.signal,
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "anthropic/claude-sonnet-4",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          stream: false
+        })
+      });
+      
+      console.log('[AI] Response status:', res.status);
+      
+      // Read body as text first with its own timeout
+      const bodyText = await res.text();
+      clearTimeout(timeout);
+      
+      console.log('[AI] Body received, length:', bodyText.length);
+      
+      const data = JSON.parse(bodyText);
+      if (!data.choices || !data.choices[0]) {
+        console.error("[AI] No choices:", bodyText.substring(0, 500));
+        if (attempt < maxRetries) continue;
+        throw new Error("AI returned no choices");
+      }
+
+      const raw = data.choices[0].message.content;
+      console.log('[AI] Content length:', raw?.length);
+      try {
+        return repairJson(raw);
+      } catch (e) {
+        console.error('[AI] JSON parse failed:', e.message);
+        if (attempt >= maxRetries) throw e;
+      }
+    } catch (err) {
+      console.error('[AI] Error on attempt', attempt + 1, ':', err.message);
+      if (err.name === 'AbortError') {
+        console.error('[AI] Request aborted (timeout)');
+      }
+      if (attempt >= maxRetries) throw err;
     }
   }
 }

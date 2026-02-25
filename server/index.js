@@ -140,6 +140,7 @@ app.post("/api/projects", requireAuth, async (req, res) => {
     .from("projects")
     .insert({
       user_id: req.user.id,
+      full_name: req.body.full_name || "User",
       company_name: company_name || null,
       idea: idea.trim().slice(0, 2000),
       stage: stage || "idea",
