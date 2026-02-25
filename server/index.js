@@ -119,6 +119,9 @@ app.use("/api/builder", require("./builder"));
 // --- Inspector module ---
 app.use("/api/inspector", require("./inspector"));
 
+// --- Deployer module ---
+app.use("/api/deployer", require("./deployer"));
+
 // --- Health check ---
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });

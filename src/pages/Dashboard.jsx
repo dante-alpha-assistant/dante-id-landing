@@ -156,6 +156,12 @@ export default function Dashboard() {
             >
               [ INSPECTOR ]
             </button>
+            <button
+              onClick={() => navigate(`/deployer/${project.id}`)}
+              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
+            >
+              [ DEPLOY ]
+            </button>
           </div>
           {needs.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
