@@ -43,7 +43,10 @@ async function requireAuth(req, res, next) {
 // --- AI call helper ---
 async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      signal: controller.signal,
       method: "POST",
       headers: {
         "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
@@ -59,6 +62,7 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
       })
     });
 
+    clearTimeout(timeout);
     const data = await res.json();
     if (!data.choices || !data.choices[0]) {
       console.error("AI returned no choices:", JSON.stringify(data).substring(0, 500));
