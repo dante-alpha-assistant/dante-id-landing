@@ -140,6 +140,19 @@ app.get("/api/projects", requireAuth, async (req, res) => {
     .eq("user_id", req.user.id)
     .order("created_at", { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
+
+  // Attach deploy URLs for live projects
+  const projectIds = (data || []).map(p => p.id);
+  if (projectIds.length > 0) {
+    const { data: deps } = await supabase.from("deployments")
+      .select("project_id, url, vercel_url")
+      .in("project_id", projectIds)
+      .eq("status", "live");
+    const urlMap = {};
+    (deps || []).forEach(d => { urlMap[d.project_id] = d.vercel_url || d.url; });
+    (data || []).forEach(p => { p.deploy_url = urlMap[p.id] || null; });
+  }
+
   res.json({ projects: data || [] });
 });
 
