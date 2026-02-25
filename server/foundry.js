@@ -461,10 +461,13 @@ router.post("/generate-all-architecture", aiLimiter, requireAuth, async (req, re
     await fetch(`${base}/generate-system-diagrams`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
 
     // 3. Feature blueprints
-    const { data: features } = await supabase.from("features").select("id").eq("project_id", project_id);
+    const { data: features } = await supabase.from("features").select("id, name").eq("project_id", project_id);
     console.log(`[Foundry All] Generating ${(features || []).length} blueprints for ${project_id}`);
     for (const f of (features || [])) {
-      await fetch(`${base}/generate-blueprint`, { method: "POST", headers, body: JSON.stringify({ feature_id: f.id }) });
+      console.log(`[Foundry All] Blueprint for feature ${f.id} (${f.name})`);
+      const bpRes = await fetch(`${base}/generate-blueprint`, { method: "POST", headers, body: JSON.stringify({ feature_id: f.id }) });
+      const bpText = await bpRes.text().catch(() => "");
+      console.log(`[Foundry All] Blueprint response: ${bpRes.status} ${bpText.slice(0, 200)}`);
     }
 
     // Update project status
