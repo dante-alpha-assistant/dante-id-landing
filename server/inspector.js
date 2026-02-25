@@ -270,6 +270,9 @@ Analyze each code file against the test specifications. Generate comprehensive t
       return res.json({ test_result: inserted, summary: aiResult.summary, blockers });
     }
 
+    // Update project status
+    await supabase.from("projects").update({ status: "tested" }).eq("id", project_id);
+
     return res.json({ test_result: testResult, summary: aiResult.summary, blockers });
   } catch (err) {
     console.error("Run tests error:", err.message);

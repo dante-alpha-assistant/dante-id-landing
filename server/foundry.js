@@ -196,6 +196,9 @@ Generate a complete technical blueprint for implementing this feature.`;
       blueprint = inserted;
     }
 
+    // Update project status
+    await supabase.from("projects").update({ status: "designed" }).eq("id", project_id);
+
     return res.json({ blueprint });
   } catch (err) {
     console.error("Generate blueprint error:", err.message);

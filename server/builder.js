@@ -217,6 +217,9 @@ Generate concise, working code for this feature. Focus on core logic, keep files
       .select()
       .single();
 
+    // Update project status
+    await supabase.from("projects").update({ status: "building" }).eq("id", project_id);
+
     return res.json({ build: { ...build, summary: result.summary, setup_instructions: result.setup_instructions } });
   } catch (err) {
     console.error("Generate code error:", err.message);

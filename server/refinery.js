@@ -208,6 +208,9 @@ Order by priority (critical first). Be specific and actionable.`;
       .eq("prd_id", prd_id)
       .order("sort_order");
 
+    // Update project status
+    await supabase.from("projects").update({ status: "refining" }).eq("id", project_id);
+
     return res.json({ features: saved || [] });
   } catch (err) {
     console.error("Extract features error:", err.message);
