@@ -155,16 +155,22 @@ export default function ProjectList() {
                           🔗 {deployUrls[p.id]}
                         </a>
                       )}
-                      <div className="text-[10px] text-[#33ff00]">
-                        {info.step < 6
-                          ? `[ CONTINUE → ${STAGES[Math.min(info.step, 5)].full.toUpperCase()} ]`
-                          : '[ ITERATE → ]'
-                        }
+                      <div className="flex gap-2 items-center text-[10px]">
+                        <span className="text-[#33ff00]">
+                          {info.step < 6
+                            ? `[ CONTINUE → ${STAGES[Math.min(info.step, 5)].full.toUpperCase()} ]`
+                            : '[ ITERATE → ]'
+                          }
+                        </span>
                       </div>
                     </>
                   )
                 })()}
               </button>
+              <button
+                onClick={() => navigate(`/usage/${p.id}`)}
+                className="absolute top-3 right-3 text-[10px] border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors z-10"
+              >[ 💰 ]</button>
             ))}
           </div>
         )}
