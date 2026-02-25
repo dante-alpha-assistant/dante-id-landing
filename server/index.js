@@ -116,6 +116,9 @@ app.use("/api/foundry", require("./foundry"));
 // --- Builder module ---
 app.use("/api/builder", require("./builder"));
 
+// --- Inspector module ---
+app.use("/api/inspector", require("./inspector"));
+
 // --- Health check ---
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
