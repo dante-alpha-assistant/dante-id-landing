@@ -306,8 +306,8 @@ router.post("/create-repo", requireAuth, async (req, res) => {
 
     const org = "dante-alpha-assistant";
 
-    // 1. Create repo
-    const createRes = await fetch(`https://api.github.com/orgs/${org}/repos`, {
+    // 1. Create repo (user account, not org)
+    const createRes = await fetch(`https://api.github.com/user/repos`, {
       method: "POST",
       headers: {
         Authorization: `token ${githubToken}`,
