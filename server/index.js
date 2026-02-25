@@ -110,6 +110,9 @@ function stripContentForSnapshot(content = {}) {
 // --- Refinery module ---
 app.use("/api/refinery", require("./refinery"));
 
+// --- Foundry module ---
+app.use("/api/foundry", require("./foundry"));
+
 // --- Health check ---
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
