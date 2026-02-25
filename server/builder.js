@@ -297,6 +297,43 @@ Generate concise, working code for this feature. Focus on core logic, keep files
   }
 });
 
+// --- POST /build-all ---
+router.post("/build-all", requireAuth, async (req, res) => {
+  const { project_id } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id is required" });
+
+  try {
+    const { data: features } = await supabase.from("features").select("id, name").eq("project_id", project_id).order("sort_order");
+    if (!features?.length) return res.status(400).json({ error: "No features found" });
+
+    const token = req.headers.authorization;
+    const CONCURRENCY = 3;
+    const results = [];
+
+    for (let i = 0; i < features.length; i += CONCURRENCY) {
+      const batch = features.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map(f =>
+          fetch("http://localhost:3001/api/builder/generate-code", {
+            method: "POST",
+            headers: { Authorization: token, "Content-Type": "application/json" },
+            body: JSON.stringify({ project_id, feature_id: f.id }),
+          }).then(r => r.json())
+        )
+      );
+      results.push(...batchResults.map((r, j) => ({
+        feature: batch[j].name,
+        status: r.status === "fulfilled" ? "ok" : "error",
+        files: r.status === "fulfilled" ? (r.value?.build?.files?.length || 0) : 0,
+      })));
+    }
+
+    return res.json({ built: results.length, results });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // --- GET /:project_id/builds ---
 router.get("/:project_id/builds", requireAuth, async (req, res) => {
   try {
