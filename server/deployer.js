@@ -129,7 +129,12 @@ router.post("/deploy", requireAuth, async (req, res) => {
       file: path,
       data: content,
     }));
-    logs.push(logEntry(`${files.length} files assembled`));
+    // Inject vercel.json for SPA routing if missing
+    if (!fileMap["vercel.json"]) {
+      fileMap["vercel.json"] = JSON.stringify({ rewrites: [{ source: "/(.*)", destination: "/index.html" }] });
+    }
+
+    logs.push(logEntry(`${Object.keys(fileMap).length} files assembled`));
 
     // Create deployment record
     const { data: deployment, error: insertErr } = await supabase

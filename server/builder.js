@@ -129,6 +129,7 @@ MANDATORY FILES:
 7. tailwind.config.js + postcss.config.js
 8. supabase/migration.sql: CREATE TABLE statements + Row Level Security policies + indexes. Use UUID primary keys with gen_random_uuid(). Include RLS: ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY for auth.uid().
 9. .env.example: VITE_SUPABASE_URL=your-project-url, VITE_SUPABASE_ANON_KEY=your-anon-key
+10. vercel.json: {"rewrites":[{"source":"/(.*)", "destination":"/index.html"}]}
 
 DATA OPERATIONS (use Supabase client, NOT fetch):
 - Read: supabase.from('table').select('*').eq('user_id', user.id)
