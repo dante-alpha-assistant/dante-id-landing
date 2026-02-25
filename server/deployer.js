@@ -227,13 +227,44 @@ router.post("/deploy", requireAuth, async (req, res) => {
           });
         }
 
-        // Disable deployment protection so URLs are publicly accessible
+        // Set project-level env vars (required for Vite build) + disable deployment protection
         if (vercelData.projectId) {
+          const supabaseUrl = process.env.SUPABASE_URL || "https://lessxkxujvcmublgwdaa.supabase.co";
+          const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxlc3N4a3h1anZjbXVibGd3ZGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNjE0NjUsImV4cCI6MjA4NjkzNzQ2NX0.HoGHrO4MHc06V1WXYQQTRERHvQaShWOPb3gW4DV7G1A";
+          const envVars = [
+            { key: "VITE_SUPABASE_URL", value: supabaseUrl, target: ["production", "preview", "development"], type: "plain" },
+            { key: "VITE_SUPABASE_ANON_KEY", value: supabaseAnon, target: ["production", "preview", "development"], type: "plain" },
+          ];
+          for (const env of envVars) {
+            await fetch(`https://api.vercel.com/v10/projects/${vercelData.projectId}/env`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${vercelToken}`, "Content-Type": "application/json" },
+              body: JSON.stringify(env),
+            }).catch(() => {});
+          }
           await fetch(`https://api.vercel.com/v9/projects/${vercelData.projectId}`, {
             method: "PATCH",
             headers: { Authorization: `Bearer ${vercelToken}`, "Content-Type": "application/json" },
             body: JSON.stringify({ ssoProtection: null }),
           }).catch(() => {});
+          logs.push(logEntry("Vercel env vars set + protection disabled"));
+
+          // Redeploy so env vars take effect in the Vite build
+          logs.push(logEntry("Redeploying with env vars..."));
+          const redeployRes = await fetch("https://api.vercel.com/v13/deployments", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${vercelToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: projectName,
+              files,
+              target: "production",
+              projectSettings: { framework: "vite", buildCommand: "npm install && npm run build", outputDirectory: "dist" },
+            }),
+          });
+          const redeployData = await redeployRes.json();
+          if (redeployRes.ok && redeployData.url) {
+            logs.push(logEntry(`Redeploy triggered: ${redeployData.url}`));
+          }
         }
 
         // Always use the project name as the canonical Vercel URL
