@@ -218,10 +218,8 @@ router.post("/deploy", requireAuth, async (req, res) => {
           });
         }
 
-        // Use production alias (projectname.vercel.app) not preview hash URL
-        const vercelUrl = vercelData.alias?.length > 0 
-          ? `https://${vercelData.alias[0]}` 
-          : `https://${projectName}.vercel.app`;
+        // Always use the project name as the canonical Vercel URL
+        const vercelUrl = `https://${projectName}.vercel.app`;
         const canonicalUrl = `https://dante.id${canonicalPath}`;
         logs.push(logEntry(`Vercel URL: ${vercelUrl}`));
         logs.push(logEntry(`Canonical URL: ${canonicalUrl}`));
