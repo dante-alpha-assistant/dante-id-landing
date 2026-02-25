@@ -51,6 +51,15 @@ export default function Planner() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Auto-generate work orders when user arrives with 0 WOs but has features
+  const [autoTriggered, setAutoTriggered] = useState(false)
+  useEffect(() => {
+    if (!loading && !autoTriggered && workOrders.length === 0 && features.length > 0 && !aiLoading) {
+      setAutoTriggered(true)
+      generateAll()
+    }
+  }, [loading, workOrders.length, features.length])
+
   const generateAll = async () => {
     setAiLoading(true)
     setBatchProgress({ current: 0, total: 1, featureName: 'Generating work orders...' })
