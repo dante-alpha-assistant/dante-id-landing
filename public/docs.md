@@ -1,334 +1,417 @@
-# dante.id — AI Agent API Documentation
+# dante.id — AI Agent API Reference
 
-> Software factory API optimized for autonomous AI agent consumption.
-> Base URL: `https://dante.id/api`
-> Auth: Bearer JWT from Supabase Auth
+> This documentation is optimized for AI agents. It contains everything needed to use dante.id end-to-end via API to create software from an idea.
+
+## QUICK START (E2E WORKFLOW)
+
+```
+1. POST /api/auth/signup        → Create account → { token }
+2. POST /api/auth/login         → Get JWT        → { token }
+3. POST /api/onboarding/start   → Create project → { project_id }
+4. POST /api/refinery/generate-prd     → Generate PRD from idea
+5. POST /api/refinery/extract-features → Extract features from PRD
+6. POST /api/foundry/generate-foundation      → Architecture doc
+7. POST /api/foundry/generate-system-diagrams → ERD + diagrams
+8. POST /api/foundry/generate-blueprint       → Per-feature blueprint (repeat for each feature)
+9. POST /api/planner/generate-all-work-orders → Work orders for all features
+10. POST /api/builder/generate-code           → Code gen per feature (repeat)
+11. POST /api/inspector/run-tests             → AI QA per feature (repeat)
+12. POST /api/auth/github/connect             → Connect user's GitHub (OAuth)
+13. POST /api/builder/create-repo             → Push code to user's GitHub
+14. POST /api/deployer/deploy                 → Deploy to production
+```
+
+All endpoints require `Authorization: Bearer <jwt_token>` unless noted.
+All request/response bodies are JSON. Set `Content-Type: application/json`.
+Long-running endpoints (PRD, blueprints, code gen) may take 30-120 seconds.
 
 ---
 
 ## AUTHENTICATION
 
-### Register / Login
+### Sign Up
 ```
-POST https://lessxkxujvcmublgwdaa.supabase.co/auth/v1/signup
-POST https://lessxkxujvcmublgwdaa.supabase.co/auth/v1/token?grant_type=password
-Headers: apikey: <supabase_anon_key>, Content-Type: application/json
-Body: { "email": "...", "password": "..." }
-Response: { "access_token": "JWT", "user": { "id": "..." } }
+POST /api/auth/signup
+Body: { "email": "user@example.com", "password": "min8chars" }
+Response: { "token": "jwt...", "user": { "id": "uuid", "email": "..." } }
 ```
 
-All `/api/*` endpoints require `Authorization: Bearer <JWT>`.
+### Log In
+```
+POST /api/auth/login  
+Body: { "email": "user@example.com", "password": "..." }
+Response: { "token": "jwt...", "user": { "id": "uuid", "email": "..." } }
+```
 
-### GitHub OAuth (optional, for repo creation)
+Use the token in all subsequent requests:
 ```
-GET  /api/auth/github/connect    → { url: "https://github.com/login/oauth/..." }
-GET  /api/auth/github/status     → { connected: bool, github_username: string }
-DELETE /api/auth/github/disconnect → { disconnected: true }
+Authorization: Bearer <token>
 ```
-Redirect user to `url` for OAuth. Callback stores encrypted token. Builder uses it for repo creation.
 
 ---
 
-## PIPELINE OVERVIEW
+## PROJECT LIFECYCLE
 
+### Create Project (Onboarding)
 ```
-Refinery → Foundry → Planner → Builder → Inspector → Deployer → Validator
-    ↑                                                              |
-    └──────────────── feedback loop ◄──────────────────────────────┘
-```
-
-Each stage has: generate endpoint (POST), read endpoint (GET), status tracking.
-Project status auto-advances: `pending → refining → designed → planning → building → tested → live`
-
----
-
-## 1. PROJECTS
-
-### Create Project
-```
-POST /api/projects
-Body: { "full_name": "string", "idea": "string", "stage": "idea|building|launched" }
-Response: { "project": { "id": "uuid", "status": "pending", ... } }
+POST /api/onboarding/start
+Body: { 
+  "idea": "A habit tracker app with streaks and gamification",
+  "name": "HabitTrack",
+  "stage": "idea"    // "idea" | "building" | "launched"
+}
+Response: { "project_id": "uuid", "name": "HabitTrack" }
 ```
 
 ### List Projects
 ```
 GET /api/projects
-Response: { "projects": [{ "id", "name", "status", "idea", "created_at", ... }] }
+Response: [{ "id": "uuid", "name": "...", "status": "pending", "created_at": "..." }, ...]
+```
+
+### Project Status Values (auto-updated by pipeline)
+```
+pending  → Project created, nothing done
+refining → Refinery complete (PRD + features exist)
+designed → Foundry complete (blueprints exist)  
+planning → Planner complete (work orders exist)
+building → Builder complete (code generated)
+tested   → Inspector complete (tests run)
+live     → Deployer complete (deployed)
 ```
 
 ---
 
-## 2. REFINERY (PRD + Feature Extraction)
+## MODULE 1: REFINERY (Idea → PRD → Features)
 
 ### Generate PRD
 ```
 POST /api/refinery/generate-prd
-Body: { "project_id": "uuid", "idea_description": "string", "context": "optional string" }
-Response: { "prd": { "id", "content": { "title", "overview", "features", "tech_stack", ... } } }
-Timeout: ~40s. Auto-sets project name from PRD title.
+Body: { "project_id": "uuid" }
+Note: Uses the idea from onboarding. Takes ~40 seconds.
+Response: { "prd": { "content": "...", "sections": [...] } }
+```
+
+### Get PRD
+```
+GET /api/refinery/:project_id/prd
+Response: { "content": "markdown PRD", "sections": [...] }
+```
+
+### Update PRD
+```
+PUT /api/refinery/:project_id/prd
+Body: { "content": "updated markdown" }
+```
+
+### Refine PRD (AI iteration)
+```
+POST /api/refinery/refine
+Body: { "project_id": "uuid", "feedback": "Add mobile support" }
+Response: { "prd": { "content": "refined markdown..." } }
 ```
 
 ### Extract Features
 ```
 POST /api/refinery/extract-features
-Body: { "project_id": "uuid", "prd_id": "uuid" }
-Response: { "features": [{ "id", "name", "description", "priority", "acceptance_criteria" }] }
-Timeout: ~20s. Sets project status → "refining".
+Body: { "project_id": "uuid" }
+Note: Takes ~19 seconds. Generates 4-8 discrete features.
+Response: { "features": [{ "id": "uuid", "name": "...", "description": "...", "sort_order": 1 }, ...] }
 ```
 
-### Read Features
+### Get Features
 ```
 GET /api/refinery/:project_id/features
-Response: { "features": [...] }
+Response: [{ "id": "uuid", "name": "...", "description": "...", "sort_order": 1 }, ...]
 ```
 
-### Read PRD
+### Update Features
 ```
-GET /api/refinery/:project_id/prd
-Response: { "prd": { "id", "content", "version" } }
+PUT /api/refinery/:project_id/features
+Body: { "features": [{ "id": "uuid", "name": "...", "description": "..." }] }
 ```
 
 ---
 
-## 3. FOUNDRY (Architecture + Blueprints)
+## MODULE 2: FOUNDRY (Features → Architecture → Blueprints)
 
-Three document types generated in order: Foundation → System Diagrams → Feature Blueprints.
-
-### Generate Foundation (once per project)
+### Generate Foundation (project-wide architecture)
 ```
 POST /api/foundry/generate-foundation
 Body: { "project_id": "uuid" }
-Response: { "foundation": { "content": { "tech_stack", "architecture", "conventions", "security", "constraints", "deployment" } } }
-Timeout: ~30s.
+Response: { "document": { "id": "uuid", "type": "foundation", "content": "..." } }
 ```
 
-### Generate System Diagrams (once per project)
+### Generate System Diagrams (ERD + architecture)
 ```
 POST /api/foundry/generate-system-diagrams
 Body: { "project_id": "uuid" }
-Response: { "system_diagrams": { "content": { "erd": { "mermaid": "..." }, "architecture": { "mermaid": "..." }, "data_flow": { "mermaid": "..." } } } }
-Timeout: ~30s. Requires Foundation to exist first for best results.
+Response: { "document": { "id": "uuid", "type": "system_diagrams", "content": "..." } }
 ```
 
-### Generate Feature Blueprint (per feature)
+### Generate Feature Blueprint
 ```
 POST /api/foundry/generate-blueprint
-Body: { "feature_id": "uuid", "project_id": "uuid" }
-Response: { "blueprint": { "content": { "api", "ui", "data_model", "tests" } } }
-Timeout: ~60s. Sets project status → "designed" when first blueprint created.
+Body: { "project_id": "uuid", "feature_id": "uuid" }
+Note: Takes ~65 seconds per feature. Generate for each feature.
+Response: { "blueprint": { "id": "uuid", "feature_id": "uuid", "content": "..." } }
 ```
 
-### Generate All Blueprints
+### Get All Documents (foundation + diagrams)
 ```
-POST /api/foundry/generate-all
-Body: { "project_id": "uuid" }
-Response: { "generated": N, "skipped": M }
-Generates blueprints for all features missing them. Parallel (3 concurrent).
+GET /api/foundry/:project_id/documents
+Response: [{ "id": "uuid", "type": "foundation|system_diagrams", "content": "..." }]
 ```
 
-### Read Documents
+### Get All Blueprints
 ```
-GET /api/foundry/:project_id/documents   → { "foundation": {...}, "system_diagrams": {...} }
-GET /api/foundry/:project_id/blueprints  → { "blueprints": [{ "feature_id", "content", "version" }] }
-GET /api/foundry/:project_id/blueprints/:feature_id → { "blueprint": {...} }
+GET /api/foundry/:project_id/blueprints
+Response: [{ "id": "uuid", "feature_id": "uuid", "content": "...", "status": "complete" }]
+```
+
+### Get Single Blueprint
+```
+GET /api/foundry/:project_id/blueprints/:feature_id
+Response: { "id": "uuid", "feature_id": "uuid", "content": "..." }
+```
+
+### Refine Blueprint (AI iteration)
+```
+POST /api/foundry/refine-blueprint
+Body: { "project_id": "uuid", "feature_id": "uuid", "feedback": "Add caching layer" }
+Response: { "blueprint": { "content": "refined..." } }
 ```
 
 ---
 
-## 4. PLANNER (Work Orders)
+## MODULE 3: PLANNER (Blueprints → Work Orders)
 
-### Generate Work Orders (per feature)
+### Generate Work Orders for Single Feature
 ```
 POST /api/planner/generate-work-orders
-Body: { "project_id": "uuid", "feature_id": "uuid", "blueprint_id": "uuid" }
-Response: { "work_orders": [{ "title", "description", "phase", "priority", "files_to_create", "files_to_modify", "dependencies", "acceptance_criteria" }] }
-Clears existing WOs for that feature before inserting. Timeout: ~40s.
+Body: { "project_id": "uuid", "feature_id": "uuid" }
+Response: { "work_orders": [{ "id": "uuid", "title": "...", "phase": 1, "files_to_create": [...], "files_to_modify": [...], "acceptance_criteria": [...] }] }
 ```
 
-### Generate All Work Orders
+### Generate Work Orders for ALL Features
 ```
 POST /api/planner/generate-all-work-orders
 Body: { "project_id": "uuid" }
-Response: { "count": N }
-Clears ALL project WOs and regenerates for all features. Sets status → "planning".
+Note: Takes ~33 seconds. Generates 3-6 work orders per feature, phased.
+Response: { "work_orders": [...] }
 ```
 
-### Read Work Orders
+### Get Work Orders
 ```
 GET /api/planner/:project_id/work-orders
-Response: { "work_orders": [{ "id", "title", "phase", "priority", "status", "feature_id", "files_to_create", "files_to_modify", "acceptance_criteria", "estimated_complexity" }] }
+Response: [{ "id": "uuid", "feature_id": "uuid", "title": "...", "description": "...", "phase": 1, "status": "pending", "files_to_create": [...], "files_to_modify": [...], "acceptance_criteria": [...] }]
 ```
 
 ### Update Work Order Status
 ```
 PATCH /api/planner/work-orders/:id/status
-Body: { "status": "pending|in_progress|done|blocked" }
+Body: { "status": "in_progress" | "completed" | "pending" }
 ```
 
 ---
 
-## 5. BUILDER (Code Generation)
+## MODULE 4: BUILDER (Work Orders → Code)
 
-### Generate Code (per feature, optionally scoped by work order)
+### Generate Code
 ```
 POST /api/builder/generate-code
-Body: { "feature_id": "uuid", "project_id": "uuid", "work_order_id": "optional uuid" }
-Response: { "build": { "id", "files": [{ "path", "content", "language" }], "status": "review" } }
-If work_order_id provided: generates code scoped to that WO's file list.
-If omitted: fetches all WOs for the feature and includes them as context.
-Timeout: ~180s. Sets status → "building".
+Body: { 
+  "project_id": "uuid", 
+  "feature_id": "uuid",
+  "work_order_id": "uuid"  // optional, scopes code gen to specific WO
+}
+Note: Takes ~90 seconds. Generates scaffolding + core logic.
+Response: { "build": { "id": "uuid", "feature_id": "uuid", "files": [{ "path": "src/...", "content": "..." }], "status": "complete" } }
 ```
 
-### Generate All
+### Get All Builds
 ```
-POST /api/builder/generate-all
-Body: { "project_id": "uuid" }
-Generates code for all features without builds. Parallel (3 concurrent).
-Auto-creates GitHub repo after completion if GitHub is connected.
+GET /api/builder/:project_id/builds
+Response: [{ "id": "uuid", "feature_id": "uuid", "status": "complete", "files": [...] }]
 ```
 
-### Create GitHub Repo
+### Get Feature Build  
+```
+GET /api/builder/:project_id/builds/:feature_id
+Response: { "id": "uuid", "files": [{ "path": "...", "content": "..." }] }
+```
+
+### Create GitHub Repo (requires GitHub OAuth connection)
 ```
 POST /api/builder/create-repo
-Body: { "project_id": "uuid", "repo_name": "string", "description": "string" }
-Response: { "repo_url": "https://github.com/user/repo", "files_committed": N }
-Uses user's GitHub token if connected, falls back to service account.
-```
-
-### Read Builds
-```
-GET /api/builder/:project_id/builds → { builds: [{ "build_id", "feature_id", "feature_name", "status", "file_count" }] }
-GET /api/builder/:project_id/builds/:feature_id → { "build": { "files": [...], "logs": [...] } }
+Body: { "project_id": "uuid", "repo_name": "my-app" }
+Note: Creates repo in the user's connected GitHub account. Commits all generated files.
+Response: { "repo_url": "https://github.com/username/my-app", "files_committed": 8 }
 ```
 
 ---
 
-## 6. INSPECTOR (AI Code Review + Static Analysis)
+## MODULE 5: INSPECTOR (Code → Test Results)
 
 ### Run Tests
 ```
 POST /api/inspector/run-tests
 Body: { "project_id": "uuid", "feature_id": "uuid" }
-Response: { "result": { "score", "passed", "failed", "issues": [...], "suggestions": [...] } }
-Runs static analysis (syntax, JSON, lint) + AI review. Timeout: ~120s. Sets status → "tested".
+Note: Takes ~30 seconds. AI reviews code against blueprint.
+Response: { "result": { "id": "uuid", "feature_id": "uuid", "score": 72, "status": "failed", "issues": [...], "suggestions": [...] } }
 ```
 
-### Read Results
+### Get All Results
 ```
-GET /api/inspector/:project_id/results → { results: [{ "feature_id", "score", "passed", "failed" }] }
-GET /api/inspector/:project_id/results/:feature_id → { "result": { full detail } }
+GET /api/inspector/:project_id/results
+Response: [{ "id": "uuid", "feature_id": "uuid", "score": 72, "status": "passed|failed", "issues": [...] }]
+```
+
+### Get Feature Results
+```
+GET /api/inspector/:project_id/results/:feature_id
+Response: { "score": 72, "status": "failed", "issues": [...], "suggestions": [...] }
+```
+
+### Get Fix Suggestion
+```
+POST /api/inspector/fix-suggestion
+Body: { "project_id": "uuid", "feature_id": "uuid", "issue_id": "uuid" }
+Response: { "suggestion": { "description": "...", "code_changes": [...] } }
 ```
 
 ---
 
-## 7. DEPLOYER (Vercel Deployment)
+## MODULE 6: DEPLOYER (Code → Production)
 
 ### Deploy
 ```
 POST /api/deployer/deploy
 Body: { "project_id": "uuid" }
-Response: { "deployment": { "id", "url", "status": "live" } }
-Sets status → "live".
+Response: { "deployment": { "id": "uuid", "url": "https://...", "status": "live" } }
 ```
 
-### Read Deployments
+### Get Deployments
 ```
-GET /api/deployer/:project_id/deployments → { deployments: [{ "id", "url", "status", "created_at" }] }
+GET /api/deployer/:project_id/deployments
+Response: [{ "id": "uuid", "url": "...", "status": "live", "created_at": "..." }]
 ```
 
 ### Rollback
 ```
 POST /api/deployer/rollback
-Body: { "deployment_id": "uuid" }
+Body: { "project_id": "uuid", "deployment_id": "uuid" }
 ```
 
 ---
 
-## 8. VALIDATOR (Feedback Loop)
+## GITHUB INTEGRATION
 
-### Submit Feedback
+### Check Connection Status
 ```
-POST /api/validator/submit-feedback
-Body: { "project_id": "uuid", "feature_id": "optional uuid", "type": "bug|improvement|question|approval", "title": "string", "description": "optional string" }
-Response: { "feedback": { "id", "status": "open" } }
-```
-
-### Read Feedback
-```
-GET /api/validator/:project_id/feedback → { feedback: [{ "id", "type", "title", "status", "features": { "name" } }] }
+GET /api/auth/github/status
+Response: { "connected": true, "github_username": "octocat" }
+  OR:     { "connected": false }
 ```
 
-### Update Feedback Status
+### Connect GitHub (OAuth flow)
 ```
-PATCH /api/validator/feedback/:id/status
-Body: { "status": "open|in_progress|resolved|wont_fix" }
+GET /api/auth/github/connect
+Response: { "url": "https://github.com/login/oauth/authorize?..." }
+Note: Redirect user to this URL. After authorization, GitHub calls back 
+      to /api/auth/github/callback which stores the encrypted token.
 ```
 
-### AI Analysis → Generate Work Orders
+### Disconnect GitHub
 ```
-POST /api/validator/analyze-feedback
-Body: { "project_id": "uuid" }
-Response: { "tickets": [created work orders], "summary": "string", "feedback_processed": N }
-Analyzes open feedback, groups into tickets, creates work orders in Planner.
-Marks processed feedback as "in_progress". This closes the feedback loop.
+DELETE /api/auth/github/disconnect
+Response: { "success": true }
 ```
 
 ---
 
-## COMPLETE E2E FLOW (for AI agents)
+## COMPLETE E2E SCRIPT (for AI agents)
 
 ```python
+import requests, time
+
+BASE = "https://dante.id/api"
+
 # 1. Auth
-token = login(email, password)
+r = requests.post(f"{BASE}/auth/signup", json={"email": "agent@example.com", "password": "securepass123"})
+token = r.json()["token"]
+h = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 # 2. Create project
-project = POST /api/projects { idea: "..." }
+r = requests.post(f"{BASE}/onboarding/start", json={"idea": "A habit tracker with streaks and social accountability", "name": "HabitFlow", "stage": "idea"}, headers=h)
+pid = r.json()["project_id"]
 
 # 3. Refinery
-prd = POST /api/refinery/generate-prd { project_id, idea_description }
-features = POST /api/refinery/extract-features { project_id, prd_id }
+requests.post(f"{BASE}/refinery/generate-prd", json={"project_id": pid}, headers=h, timeout=120)
+requests.post(f"{BASE}/refinery/extract-features", json={"project_id": pid}, headers=h, timeout=60)
+features = requests.get(f"{BASE}/refinery/{pid}/features", headers=h).json()
 
-# 4. Foundry (auto-cascades: foundation → diagrams → blueprints)
-POST /api/foundry/generate-foundation { project_id }
-POST /api/foundry/generate-system-diagrams { project_id }
-POST /api/foundry/generate-all { project_id }  # all feature blueprints
+# 4. Foundry
+requests.post(f"{BASE}/foundry/generate-foundation", json={"project_id": pid}, headers=h, timeout=120)
+requests.post(f"{BASE}/foundry/generate-system-diagrams", json={"project_id": pid}, headers=h, timeout=120)
+for f in features:
+    requests.post(f"{BASE}/foundry/generate-blueprint", json={"project_id": pid, "feature_id": f["id"]}, headers=h, timeout=120)
 
 # 5. Planner
-POST /api/planner/generate-all-work-orders { project_id }
+requests.post(f"{BASE}/planner/generate-all-work-orders", json={"project_id": pid}, headers=h, timeout=120)
 
 # 6. Builder
-POST /api/builder/generate-all { project_id }
-POST /api/builder/create-repo { project_id, repo_name }  # if GitHub connected
+for f in features:
+    requests.post(f"{BASE}/builder/generate-code", json={"project_id": pid, "feature_id": f["id"]}, headers=h, timeout=180)
 
 # 7. Inspector
-for feature in features:
-    POST /api/inspector/run-tests { project_id, feature_id }
+for f in features:
+    requests.post(f"{BASE}/inspector/run-tests", json={"project_id": pid, "feature_id": f["id"]}, headers=h, timeout=60)
 
-# 8. Deployer
-POST /api/deployer/deploy { project_id }
-
-# 9. Validator (feedback loop)
-POST /api/validator/submit-feedback { project_id, type: "improvement", title: "..." }
-POST /api/validator/analyze-feedback { project_id }  # → creates new work orders
-# Loop back to step 5 (Planner) for next iteration
+# 8. GitHub + Deploy
+requests.post(f"{BASE}/builder/create-repo", json={"project_id": pid, "repo_name": "habitflow"}, headers=h)
+requests.post(f"{BASE}/deployer/deploy", json={"project_id": pid}, headers=h)
 ```
+
+---
+
+## TIMING EXPECTATIONS
+
+| Operation | Typical Duration |
+|-----------|-----------------|
+| Generate PRD | ~40 seconds |
+| Extract Features | ~19 seconds |
+| Generate Foundation | ~30 seconds |
+| Generate System Diagrams | ~30 seconds |
+| Generate Blueprint (per feature) | ~65 seconds |
+| Generate All Work Orders | ~33 seconds |
+| Generate Code (per feature) | ~90 seconds |
+| Run Tests (per feature) | ~30 seconds |
+| Create GitHub Repo | ~5 seconds |
+| Deploy | ~15 seconds |
+| **Full E2E (6 features)** | **~12-15 minutes** |
+
+Set HTTP timeouts to at least 180 seconds for generation endpoints.
 
 ---
 
 ## RATE LIMITS
-- AI endpoints: 5 requests/minute per IP
-- Read endpoints: unlimited
-- Auth: standard Supabase limits
+- AI generation endpoints: 1 concurrent request per user
+- Auth endpoints: 10 requests/minute
+- Read endpoints (GET): No limit
 
-## TIMEOUTS
-- Refinery: 120s
-- Foundry: 120s per blueprint
-- Planner: 240s
-- Builder: 180s per feature
-- Inspector: 120s
-- Nginx proxy: 300s
+## ERROR RESPONSES
+```json
+{ "error": "Error message description" }
+```
+HTTP status codes: 400 (bad request), 401 (unauthorized), 404 (not found), 429 (rate limited), 500 (server error), 504 (timeout)
 
-## ERROR HANDLING
-All errors return `{ "error": "message" }` with appropriate HTTP status codes.
-Common: 400 (bad params), 401 (no/bad token), 403 (not your project), 404 (not found), 429 (rate limited), 500 (server error).
+---
+
+## BASE URL
+```
+https://dante.id/api
+```
+
+## PLATFORM
+dante.id — AI-native software factory. From idea to deployed production software.
