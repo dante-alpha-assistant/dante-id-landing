@@ -8,6 +8,7 @@ export default function ProjectList() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [ghStatus, setGhStatus] = useState(null)
 
   const STAGES = [
     { key: 'refinery', label: 'R', full: 'Refinery', route: id => `/refinery/${id}` },
@@ -31,6 +32,10 @@ export default function ProjectList() {
 
   useEffect(() => {
     if (!user) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) fetch('/api/auth/github/status', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then(r => r.json()).then(setGhStatus).catch(() => setGhStatus({ connected: false }))
+    })
     supabase
       .from('projects')
       .select('*')
@@ -57,6 +62,18 @@ export default function ProjectList() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-bold">dante.id <span className="text-[#22aa00] text-sm font-normal">// projects</span></h1>
           <div className="flex items-center gap-4">
+            {ghStatus?.connected ? (
+              <span className="text-[10px] text-[#22aa00] border border-[#1f521f] px-2 py-1">✓ {ghStatus.github_username}</span>
+            ) : ghStatus !== null ? (
+              <button onClick={async () => {
+                const { data: { session } } = await supabase.auth.getSession()
+                const res = await fetch('/api/auth/github/connect', { headers: { Authorization: `Bearer ${session.access_token}` } })
+                const data = await res.json()
+                if (data.url) window.location.href = data.url
+              }} className="text-[10px] text-[#ffb000] border border-[#ffb000] px-2 py-1 hover:bg-[#ffb000] hover:text-[#0a0a0a] transition-colors">
+                [ 🔗 CONNECT GITHUB ]
+              </button>
+            ) : null}
             <span className="text-xs text-[#1a6b1a]">{user?.email}</span>
             <button onClick={signOut} className="text-xs text-[#22aa00] hover:text-[#33ff00] border border-[#1f521f] px-2 py-1 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
               [ LOGOUT ]

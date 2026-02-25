@@ -276,6 +276,28 @@ export default function Builder() {
     setRepoLoading(false)
   }
 
+  // GitHub connection status
+  const [ghStatus, setGhStatus] = useState(null) // { connected, github_username }
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+        const res = await fetch('/api/auth/github/status', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        setGhStatus(await res.json())
+      } catch (e) { setGhStatus({ connected: false }) }
+    })()
+  }, [])
+
+  const connectGitHub = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/auth/github/connect', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch (e) { console.error('GitHub connect failed:', e) }
+  }
+
   const fileTree = useMemo(() => currentBuild ? buildFileTree(currentBuild.files) : null, [currentBuild])
   const hasBuilds = Object.keys(buildsMap).length > 0
   const eligibleCount = features.filter(f => !buildsMap[f.id]).length
@@ -304,14 +326,21 @@ export default function Builder() {
           <span className="text-sm text-[#22aa00] uppercase">Builder</span>
         </div>
         <div className="flex items-center gap-3">
-          {hasBuilds && (
+          {hasBuilds && (ghStatus?.connected ? (
             <button
               onClick={() => setShowRepoModal(true)}
               className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
             >
-              [ CREATE GITHUB REPO ]
+              [ PUSH TO GITHUB → {ghStatus.github_username} ]
             </button>
-          )}
+          ) : (
+            <button
+              onClick={connectGitHub}
+              className="px-3 py-1.5 border border-[#ffb000] text-[#ffb000] hover:bg-[#ffb000] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
+            >
+              [ 🔗 CONNECT GITHUB ]
+            </button>
+          ))}
           <button
             onClick={() => navigate('/dashboard')}
             className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
@@ -339,7 +368,8 @@ export default function Builder() {
       {showRepoModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
           <div className="bg-[#0f0f0f] border border-[#1f521f] p-6 w-[400px]">
-            <h3 className="text-lg font-semibold mb-4 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>CREATE GITHUB REPOSITORY</h3>
+            <h3 className="text-lg font-semibold mb-2 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>CREATE GITHUB REPOSITORY</h3>
+            {ghStatus?.github_username && <p className="text-xs text-[#22aa00] mb-4">Pushing to <span className="text-[#33ff00] font-bold">github.com/{ghStatus.github_username}</span></p>}
             <input
               className="w-full bg-[#0d0d0d] border border-[#1f521f] px-3 py-2 text-sm text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] mb-4 font-mono"
               style={{ caretColor: '#33ff00' }}
