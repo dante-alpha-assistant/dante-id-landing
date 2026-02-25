@@ -51,7 +51,9 @@ export default function Foundry() {
   const [systemDiagrams, setSystemDiagrams] = useState(null)
   const [foundationLoading, setFoundationLoading] = useState(false)
   const [diagramsLoading, setDiagramsLoading] = useState(false)
-  const [activeSection, setActiveSection] = useState(null) // foundation | diagrams | features — set after data loads
+  const [activeSection, setActiveSection] = useState(null)
+  const [autoFlowRunning, setAutoFlowRunning] = useState(false)
+  const [autoFlowStep, setAutoFlowStep] = useState(0) // 0=idle, 1=foundation, 2=diagrams, 3=blueprints, 4=done
 
   const fetchData = useCallback(async () => {
     const [featRes, bpRes, docsRes] = await Promise.all([
@@ -102,6 +104,60 @@ export default function Foundry() {
     } catch (err) { console.error('Generate diagrams failed:', err) }
     setDiagramsLoading(false)
   }
+
+  // One-click "Generate All Architecture" cascade
+  const generateAllArchitecture = async () => {
+    setAutoFlowRunning(true)
+
+    // Step 1: Foundation
+    setAutoFlowStep(1)
+    setActiveSection('foundation')
+    setFoundationLoading(true)
+    try {
+      const res = await apiCall(API_BASE_FOUNDRY, '/generate-foundation', { method: 'POST', body: JSON.stringify({ project_id }) })
+      if (res.foundation) setFoundation(res.foundation)
+    } catch (err) { console.error('Auto-flow foundation failed:', err) }
+    setFoundationLoading(false)
+
+    // Step 2: System Diagrams
+    setAutoFlowStep(2)
+    setActiveSection('diagrams')
+    setDiagramsLoading(true)
+    try {
+      const res = await apiCall(API_BASE_FOUNDRY, '/generate-system-diagrams', { method: 'POST', body: JSON.stringify({ project_id }) })
+      if (res.system_diagrams) setSystemDiagrams(res.system_diagrams)
+    } catch (err) { console.error('Auto-flow diagrams failed:', err) }
+    setDiagramsLoading(false)
+
+    // Step 3: Feature Blueprints
+    setAutoFlowStep(3)
+    setActiveSection('features')
+    setAiLoading(true)
+    const missing = features.filter(f => !blueprints[f.id])
+    for (let i = 0; i < missing.length; i++) {
+      setBatchProgress({ current: i + 1, total: missing.length, featureName: missing[i].name })
+      try {
+        const res = await apiCall(API_BASE_FOUNDRY, '/generate-blueprint', {
+          method: 'POST', body: JSON.stringify({ feature_id: missing[i].id, project_id })
+        })
+        if (res.blueprint) setBlueprintsMap(prev => ({ ...prev, [missing[i].id]: res.blueprint }))
+      } catch (err) { console.error('Auto-flow blueprint failed:', err) }
+    }
+    setBatchProgress(null)
+    setAiLoading(false)
+
+    setAutoFlowStep(4)
+    setAutoFlowRunning(false)
+  }
+
+  // Auto-start if user lands with nothing generated
+  const [autoStarted, setAutoStarted] = useState(false)
+  useEffect(() => {
+    if (!loading && !autoStarted && !foundation && !systemDiagrams && features.length > 0 && Object.keys(blueprints).length === 0) {
+      setAutoStarted(true)
+      generateAllArchitecture()
+    }
+  }, [loading, foundation, systemDiagrams, features.length])
 
   const generateBlueprint = async (featureId) => {
     setAiLoading(true)
@@ -205,13 +261,37 @@ export default function Foundry() {
         </button>
       </div>
 
-      {/* AI Loading overlay */}
-      {aiLoading && (
+      {/* AI Loading overlay with auto-flow progress */}
+      {(aiLoading || foundationLoading || diagramsLoading) && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-3">
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-4 min-w-[320px]">
             <div className="text-[#33ff00] terminal-blink text-lg">[PROCESSING...]</div>
-            {batchProgress ? (
+            {autoFlowRunning ? (
+              <div className="w-full space-y-2">
+                {[
+                  { step: 1, label: 'Foundation' },
+                  { step: 2, label: 'System Diagrams' },
+                  { step: 3, label: 'Feature Blueprints' },
+                ].map(s => (
+                  <div key={s.step} className="flex items-center gap-2 text-xs">
+                    <span className={autoFlowStep > s.step ? 'text-[#33ff00]' : autoFlowStep === s.step ? 'text-[#33ff00] terminal-blink' : 'text-[#1a6b1a]'}>
+                      {autoFlowStep > s.step ? '✓' : autoFlowStep === s.step ? '►' : '○'}
+                    </span>
+                    <span className={autoFlowStep >= s.step ? 'text-[#33ff00]' : 'text-[#1a6b1a]'}>
+                      Step {s.step}/3: {s.label}
+                    </span>
+                    {autoFlowStep === 3 && s.step === 3 && batchProgress && (
+                      <span className="text-[#22aa00]">({batchProgress.current}/{batchProgress.total})</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : batchProgress ? (
               <p className="text-sm text-[#22aa00]">Generating blueprint {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
+            ) : foundationLoading ? (
+              <p className="text-sm text-[#22aa00]">Generating foundation document...</p>
+            ) : diagramsLoading ? (
+              <p className="text-sm text-[#22aa00]">Generating system diagrams...</p>
             ) : (
               <p className="text-sm text-[#22aa00]">AI is thinking...</p>
             )}
@@ -277,12 +357,19 @@ export default function Foundry() {
               </button>
             </div>
           ) : (
-            <div className="max-w-2xl mx-auto text-center py-20">
-              <p className="text-[#22aa00] mb-6">No foundation document yet. Generate project-wide architecture decisions.</p>
-              <button onClick={generateFoundation} disabled={foundationLoading}
-                className="px-6 py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 transition-colors">
-                {foundationLoading ? '[ GENERATING... ]' : '[ GENERATE FOUNDATION ]'}
-              </button>
+            <div className="max-w-2xl mx-auto text-center py-20 space-y-6">
+              <p className="text-[#22aa00] mb-2">No foundation document yet. Generate project-wide architecture decisions.</p>
+              <div className="flex flex-col items-center gap-3">
+                <button onClick={generateAllArchitecture} disabled={foundationLoading || autoFlowRunning}
+                  className="px-8 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 transition-colors">
+                  {autoFlowRunning ? '[ GENERATING... ]' : '[ GENERATE ALL ARCHITECTURE ]'}
+                </button>
+                <p className="text-[10px] text-[#1a6b1a]">Foundation → System Diagrams → Feature Blueprints (one click)</p>
+                <button onClick={generateFoundation} disabled={foundationLoading}
+                  className="text-xs text-[#1a6b1a] hover:text-[#22aa00] transition-colors">
+                  or generate foundation only →
+                </button>
+              </div>
             </div>
           )}
         </div>
