@@ -124,6 +124,7 @@ app.use("/api/inspector", require("./inspector"));
 
 // --- Deployer module ---
 app.use("/api/deployer", require("./deployer"));
+app.use("/api/auth/github", require("./github-auth"));
 app.use("/api/admin", require("./admin"));
 app.use("/api/validator", require("./validator"));
 

@@ -301,9 +301,13 @@ router.post("/create-repo", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "project_id and repo_name are required" });
   }
 
-  const githubToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  // Try user's GitHub token first, fall back to service token
+  const { getUserGitHubToken } = require("./github-auth");
+  const userGh = await getUserGitHubToken(req.user.id);
+  const githubToken = userGh?.token || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  const githubUser = userGh?.username || "dante-alpha-assistant";
   if (!githubToken) {
-    return res.status(500).json({ error: "GitHub token not configured" });
+    return res.status(500).json({ error: "GitHub not connected. Connect your GitHub account first." });
   }
 
   try {
@@ -326,7 +330,7 @@ router.post("/create-repo", requireAuth, async (req, res) => {
       }
     }
 
-    const org = "dante-alpha-assistant";
+    const org = githubUser;
 
     // 1. Create repo (user account, not org)
     const createRes = await fetch(`https://api.github.com/user/repos`, {
