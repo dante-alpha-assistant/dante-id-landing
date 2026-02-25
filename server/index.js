@@ -131,6 +131,7 @@ app.use("/api/deployer", require("./deployer"));
 app.use("/api/auth/github", require("./github-auth"));
 app.use("/api/admin", require("./admin"));
 app.use("/api/validator", require("./validator"));
+app.use("/api/iterate", require("./iterate"));
 
 // --- Projects API ---
 app.get("/api/projects", requireAuth, async (req, res) => {

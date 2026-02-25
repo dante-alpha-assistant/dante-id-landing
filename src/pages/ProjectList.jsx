@@ -27,8 +27,8 @@ export default function ProjectList() {
     planning: { step: 3, label: 'Planner ✓', route: id => `/builder/${id}` },
     building: { step: 4, label: 'Builder ✓', route: id => `/inspector/${id}` },
     tested: { step: 5, label: 'Inspector ✓', route: id => `/deployer/${id}` },
-    live: { step: 6, label: 'Live 🚀', route: id => `/dashboard/${id}` },
-    completed: { step: 6, label: 'Live 🚀', route: id => `/dashboard/${id}` },
+    live: { step: 6, label: 'Live 🚀', route: id => `/iterate/${id}` },
+    completed: { step: 6, label: 'Live 🚀', route: id => `/iterate/${id}` },
   }
 
   useEffect(() => {
@@ -156,7 +156,10 @@ export default function ProjectList() {
                         </a>
                       )}
                       <div className="text-[10px] text-[#33ff00]">
-                        [ CONTINUE → {info.step < 6 ? STAGES[Math.min(info.step, 5)].full.toUpperCase() : 'DASHBOARD'} ]
+                        {info.step < 6
+                          ? `[ CONTINUE → ${STAGES[Math.min(info.step, 5)].full.toUpperCase()} ]`
+                          : '[ ITERATE → ]'
+                        }
                       </div>
                     </>
                   )

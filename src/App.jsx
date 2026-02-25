@@ -19,6 +19,7 @@ import Deployer from './pages/Deployer'
 import Pricing from './pages/Pricing'
 import AdminDashboard from './pages/AdminDashboard'
 import Validator from './pages/Validator'
+import Iterate from './pages/Iterate'
 import Docs from './pages/Docs'
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
           <Route path="/inspector/:project_id" element={<ProtectedRoute><Inspector /></ProtectedRoute>} />
           <Route path="/deployer/:project_id" element={<ProtectedRoute><Deployer /></ProtectedRoute>} />
           <Route path="/validator/:project_id" element={<ProtectedRoute><Validator /></ProtectedRoute>} />
+          <Route path="/iterate/:project_id" element={<ProtectedRoute><Iterate /></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/pricing" element={<Pricing />} />

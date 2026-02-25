@@ -326,13 +326,21 @@ export default function Deployer() {
 
           <div className="text-xs text-[#1a6b1a] mt-4">+--------------------------+</div>
 
-          {/* CTA to Validator */}
-          <button
-            onClick={() => navigate(`/validator/${project_id}`)}
-            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
-          >
-            [ CONTINUE → VALIDATOR: Submit Feedback ]
-          </button>
+          {/* CTAs */}
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={() => navigate(`/validator/${project_id}`)}
+              className="flex-1 py-4 border-2 border-[#1f521f] text-[#22aa00] text-sm font-bold hover:border-[#33ff00] transition-colors"
+            >
+              [ VALIDATOR: Submit Feedback ]
+            </button>
+            <button
+              onClick={() => navigate(`/iterate/${project_id}`)}
+              className="flex-1 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+            >
+              [ ITERATE → ]
+            </button>
+          </div>
         </div>
       </div>
     </div>
