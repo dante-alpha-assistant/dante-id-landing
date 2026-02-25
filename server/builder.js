@@ -98,15 +98,19 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate working code scaffolding based on the technical blueprint.
+const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate WORKING, SELF-CONTAINED code based on the technical blueprint.
 
-Rules:
-- Generate key files with real logic for core functionality
-- Include proper imports and file structure
-- Focus on the PRIMARY feature logic — skip boilerplate that frameworks auto-generate
+CRITICAL RULES:
+- Every import MUST resolve to a file you create in this generation. Do NOT import components/modules that don't exist.
+- Every API endpoint referenced in frontend code MUST have a corresponding backend implementation.
+- If a feature requires WebSocket/real-time, implement it with HTTP polling as fallback — NEVER leave it missing.
+- For external integrations (Slack, email, etc.), implement a working mock that returns realistic data — NEVER use console.log stubs.
+- All CRUD operations must be complete: create, read, update, AND delete. No partial implementations.
+- Include proper error handling, loading states, and edge cases.
+- Generate key files with real logic — not scaffolding, not stubs, not TODOs.
 - Keep files concise (under 100 lines each where possible)
 - Include a package.json with dependencies
-- Max 8 files per feature — focus on what matters
+- Max 10 files per feature — focus on completeness over breadth
 
 Return JSON: {
   "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "jsx|ts|py|sql|json|etc"}],
