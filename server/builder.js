@@ -279,7 +279,7 @@ Generate concise, working code for this feature. Focus on core logic, keep files
     if (updateErr) console.error('[Builder] DB update error:', updateErr.message || updateErr);
 
     // Update project status
-    await supabase.from("projects").update({ status: "building" }).eq("id", project_id);
+    await supabase.from("projects").update({ status: "building", stage: "building" }).eq("id", project_id);
 
     return res.json({ build: { ...build, summary: result.summary, setup_instructions: result.setup_instructions } });
   } catch (err) {

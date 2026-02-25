@@ -296,7 +296,7 @@ router.post("/deploy", requireAuth, async (req, res) => {
           .neq("id", deployment.id);
 
         // Update project status
-        await supabase.from("projects").update({ status: "live" }).eq("id", project_id);
+        await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
 
         return res.json({
           deployment_id: deployment.id,

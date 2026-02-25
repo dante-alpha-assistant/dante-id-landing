@@ -217,7 +217,7 @@ Order by priority (critical first). Be specific and actionable.`;
       .order("sort_order");
 
     // Update project status
-    await supabase.from("projects").update({ status: "refining" }).eq("id", project_id);
+    await supabase.from("projects").update({ status: "refining", stage: "building" }).eq("id", project_id);
 
     return res.json({ features: saved || [] });
   } catch (err) {
