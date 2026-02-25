@@ -179,21 +179,20 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
     if (project.status === "pending") body.idea = project.idea;
 
     const token = req.headers.authorization;
-    const moduleRes = await fetch(`http://localhost:3001${step.endpoint}`, {
+
+    // Fire and forget — don't wait for long AI operations
+    fetch(`http://localhost:3001${step.endpoint}`, {
       method: "POST",
       headers: { "Authorization": token, "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    });
-    const result = await moduleRes.text();
-    let parsed;
-    try { parsed = JSON.parse(result); } catch { parsed = { raw: result.slice(0, 500) }; }
+    }).catch(err => console.error(`[Resume] ${step.module} error:`, err.message));
 
-    return res.status(moduleRes.status).json({
+    return res.json({
       resumed: true,
       from_status: project.status,
       next_status: step.next,
       module: step.module,
-      result: parsed,
+      message: `${step.module} started. Poll GET /api/projects to check status.`,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
