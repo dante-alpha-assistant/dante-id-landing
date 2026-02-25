@@ -30,35 +30,38 @@ async function apiRefinery(path) {
 }
 
 const STATUS_CONFIG = {
-  untested: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: '⚪', label: 'Untested' },
-  running: { bg: 'bg-yellow-500/20', text: 'text-yellow-400 animate-pulse', icon: '🔄', label: 'Running' },
-  passed: { bg: 'bg-green-500/20', text: 'text-green-400', icon: '✅', label: 'Passed' },
-  failed: { bg: 'bg-red-500/20', text: 'text-red-400', icon: '❌', label: 'Failed' },
-  partial: { bg: 'bg-orange-500/20', text: 'text-orange-400', icon: '⚠️', label: 'Partial' }
+  untested: { label: '[UNTESTED]', cls: 'text-[#1a6b1a]' },
+  running: { label: '[RUNNING...]', cls: 'text-[#ffb000] terminal-blink' },
+  passed: { label: '[PASS]', cls: 'text-[#33ff00]' },
+  failed: { label: '[FAIL]', cls: 'text-[#ff3333]' },
+  partial: { label: '[WARN]', cls: 'text-[#ffb000]' }
 }
-
-const TEST_STATUS_ICON = { pass: '✅', fail: '❌', warn: '⚠️' }
 
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.untested
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
-      {cfg.icon} {cfg.label}
+    <span className={`text-xs font-bold font-mono ${cfg.cls}`}>
+      {cfg.label}
     </span>
   )
 }
 
-function ScoreBar({ label, value, max = 100 }) {
+function AsciiBar({ label, value, max = 100 }) {
   const pct = Math.min(Math.max(value || 0, 0), max)
-  const color = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+  const totalBlocks = 20
+  const filled = Math.round((pct / max) * totalBlocks)
+  const empty = totalBlocks - filled
+  const bar = '█'.repeat(filled) + '░'.repeat(empty)
+  const color = pct >= 80 ? 'text-[#33ff00]' : pct >= 50 ? 'text-[#ffb000]' : 'text-[#ff3333]'
+
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-sm">
-        <span className="text-gray-400">{label}</span>
-        <span className="text-white font-medium">{pct}%</span>
+        <span className="text-[#22aa00] uppercase">{label}</span>
+        <span className={`font-bold ${color}`}>{pct}%</span>
       </div>
-      <div className="w-full bg-[#222] rounded-full h-2">
-        <div className={`${color} h-2 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+      <div className={`font-mono text-sm ${color}`}>
+        [{bar}]
       </div>
     </div>
   )
@@ -66,23 +69,23 @@ function ScoreBar({ label, value, max = 100 }) {
 
 function TestResultItem({ test }) {
   const [expanded, setExpanded] = useState(false)
-  const statusColor = test.status === 'pass' ? 'text-green-500' : test.status === 'fail' ? 'text-red-500' : 'text-yellow-500'
+  const statusLabel = test.status === 'pass' ? '[PASS]' : test.status === 'fail' ? '[FAIL]' : '[WARN]'
+  const statusColor = test.status === 'pass' ? 'text-[#33ff00]' : test.status === 'fail' ? 'text-[#ff3333]' : 'text-[#ffb000]'
 
   return (
-    <div className="border border-[#333] rounded-lg p-3 hover:border-[#444] transition-colors">
+    <div className="border border-[#1f521f] p-3 hover:border-[#33ff00] transition-colors">
       <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>{TEST_STATUS_ICON[test.status] || '⚪'}</span>
-            <span className="text-sm font-medium text-white">{test.test_name}</span>
+            <span className={`text-xs font-bold font-mono ${statusColor}`}>{statusLabel}</span>
+            <span className="text-sm font-medium text-[#33ff00]">{test.test_name}</span>
           </div>
-          <span className={`text-xs font-medium ${statusColor}`}>{test.status?.toUpperCase()}</span>
         </div>
-        <p className="text-xs text-gray-400 mt-1">{test.description}</p>
+        <p className="text-xs text-[#22aa00] mt-1">{test.description}</p>
       </button>
       {expanded && test.details && (
-        <div className="mt-2 pt-2 border-t border-[#333]">
-          <p className="text-xs text-gray-300 whitespace-pre-wrap">{test.details}</p>
+        <div className="mt-2 pt-2 border-t border-[#1f521f]">
+          <p className="text-xs text-[#22aa00] whitespace-pre-wrap font-mono">{test.details}</p>
         </div>
       )}
     </div>
@@ -110,7 +113,6 @@ export default function Inspector() {
     setFeatures(featRes.features || [])
     setTestResults(testRes.results || [])
 
-    // Fetch builds to know which features have them
     const { data: buildData } = await supabase
       .from('builds')
       .select('id, feature_id')
@@ -124,7 +126,6 @@ export default function Inspector() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Auto-refresh while tests are running
   useEffect(() => {
     const hasRunning = testResults.some(r => r.status === 'running')
     if (!hasRunning && runningTests.size === 0) return
@@ -180,7 +181,6 @@ export default function Inspector() {
     setLoadingFixes(false)
   }
 
-  // Update selected result when testResults change
   useEffect(() => {
     if (selectedFeature) {
       const result = getResultForFeature(selectedFeature.id)
@@ -188,7 +188,6 @@ export default function Inspector() {
     }
   }, [testResults, selectedFeature])
 
-  // Summary stats
   const testedFeatures = testResults.filter(r => r.status !== 'untested')
   const passedCount = testResults.filter(r => r.status === 'passed').length
   const passRate = testedFeatures.length > 0 ? Math.round((passedCount / testedFeatures.length) * 100) : 0
@@ -200,17 +199,14 @@ export default function Inspector() {
     return sum + results.filter(t => t.status === 'fail').length
   }, 0)
 
-  const passRateColor = passRate > 80 ? 'text-green-400' : passRate >= 50 ? 'text-yellow-400' : 'text-red-400'
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-gray-400 animate-pulse">Loading Inspector...</div>
+        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING INSPECTOR...]</div>
       </div>
     )
   }
 
-  // Group test results by category
   const groupedResults = {}
   if (selectedResult?.results) {
     for (const test of selectedResult.results) {
@@ -223,35 +219,35 @@ export default function Inspector() {
   const blockerTests = (selectedResult?.results || []).filter(t => t.status === 'fail')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#222]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="text-gray-400 hover:text-white transition-colors">
-            ← Back
+          <button onClick={() => navigate('/dashboard')} className="text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase text-sm">
+            [ DASHBOARD ]
           </button>
-          <span className="text-xl font-bold tracking-tight">🔍 Inspector</span>
+          <span className="text-xl font-bold tracking-tight uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>INSPECTOR</span>
         </div>
       </div>
 
       {/* Summary Dashboard */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#111] border border-[#222] rounded-xl p-4">
-            <div className="text-sm text-gray-400">Features Tested</div>
-            <div className="text-2xl font-bold mt-1">{testedFeatures.length}</div>
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
+            <div className="text-xs text-[#1a6b1a] uppercase">FEATURES TESTED</div>
+            <div className="text-2xl font-bold mt-1 text-[#33ff00]" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{testedFeatures.length}</div>
           </div>
-          <div className="bg-[#111] border border-[#222] rounded-xl p-4">
-            <div className="text-sm text-gray-400">Pass Rate</div>
-            <div className={`text-2xl font-bold mt-1 ${passRateColor}`}>{passRate}%</div>
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
+            <div className="text-xs text-[#1a6b1a] uppercase">PASS RATE</div>
+            <div className={`text-2xl font-bold mt-1 ${passRate >= 80 ? 'text-[#33ff00]' : passRate >= 50 ? 'text-[#ffb000]' : 'text-[#ff3333]'}`} style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{passRate}%</div>
           </div>
-          <div className="bg-[#111] border border-[#222] rounded-xl p-4">
-            <div className="text-sm text-gray-400">Avg Quality Score</div>
-            <div className="text-2xl font-bold mt-1">{avgQuality}</div>
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
+            <div className="text-xs text-[#1a6b1a] uppercase">AVG QUALITY SCORE</div>
+            <div className="text-2xl font-bold mt-1 text-[#33ff00]" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{avgQuality}</div>
           </div>
-          <div className="bg-[#111] border border-[#222] rounded-xl p-4">
-            <div className="text-sm text-gray-400">Blockers</div>
-            <div className={`text-2xl font-bold mt-1 ${totalBlockers > 0 ? 'text-red-400' : 'text-green-400'}`}>{totalBlockers}</div>
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
+            <div className="text-xs text-[#1a6b1a] uppercase">BLOCKERS</div>
+            <div className={`text-2xl font-bold mt-1 ${totalBlockers > 0 ? 'text-[#ff3333]' : 'text-[#33ff00]'}`} style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{totalBlockers}</div>
           </div>
         </div>
 
@@ -260,17 +256,17 @@ export default function Inspector() {
           {/* Left Panel - Feature List (35%) */}
           <div className="w-[35%] space-y-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">Features</h2>
+              <h2 className="text-lg font-semibold uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>FEATURES</h2>
               <button
                 onClick={runAllTests}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium transition-colors"
+                className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
               >
-                Run All
+                [ RUN ALL ]
               </button>
             </div>
 
             {features.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-[#1a6b1a] py-8">
                 No features found. Add features in the Refinery first.
               </div>
             ) : (
@@ -284,28 +280,30 @@ export default function Inspector() {
                   <button
                     key={feature.id}
                     onClick={() => handleSelectFeature(feature)}
-                    className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                      isSelected ? 'bg-[#1a1a2e] border-indigo-500/50' : 'bg-[#111] border-[#222] hover:border-[#333]'
+                    className={`w-full text-left p-3 border transition-colors ${
+                      isSelected ? 'bg-[#0f0f0f] border-[#33ff00]' : 'bg-[#0f0f0f] border-[#1f521f] hover:border-[#33ff00]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium truncate">{feature.name}</span>
+                      <span className="text-sm font-medium truncate text-[#33ff00]">
+                        {isSelected ? '> ' : '  '}{feature.name}
+                      </span>
                       <StatusBadge status={status} />
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                       {hasBuild && status !== 'running' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); runTests(feature.id) }}
-                          className="px-2 py-1 bg-indigo-600/50 hover:bg-indigo-500 rounded text-xs transition-colors"
+                          className="px-2 py-1 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs transition-colors uppercase"
                         >
-                          Run Tests
+                          [ RUN ]
                         </button>
                       )}
                       {!hasBuild && (
-                        <span className="text-xs text-gray-500">No build available</span>
+                        <span className="text-xs text-[#1a6b1a]">[NO BUILD]</span>
                       )}
                       {result?.quality_score != null && (
-                        <span className="text-xs text-gray-400 ml-auto">Quality: {result.quality_score}%</span>
+                        <span className="text-xs text-[#22aa00] ml-auto">Quality: {result.quality_score}%</span>
                       )}
                     </div>
                   </button>
@@ -317,45 +315,43 @@ export default function Inspector() {
           {/* Right Panel - Test Results (65%) */}
           <div className="w-[65%]">
             {!selectedFeature ? (
-              <div className="bg-[#111] border border-[#222] rounded-xl p-12 text-center">
-                <div className="text-4xl mb-3">🔍</div>
-                <div className="text-gray-400">Select a feature to view test results</div>
+              <div className="bg-[#0f0f0f] border border-[#1f521f] p-12 text-center">
+                <div className="text-[#1a6b1a]">Select a feature to view test results</div>
               </div>
             ) : !selectedResult || selectedResult.status === 'untested' ? (
-              <div className="bg-[#111] border border-[#222] rounded-xl p-12 text-center">
-                <div className="text-4xl mb-3">⚪</div>
-                <div className="text-gray-400">No test results yet for {selectedFeature.name}</div>
+              <div className="bg-[#0f0f0f] border border-[#1f521f] p-12 text-center">
+                <div className="text-[#1a6b1a]">[UNTESTED] No test results yet for {selectedFeature.name}</div>
                 {builds[selectedFeature.id] && (
                   <button
                     onClick={() => runTests(selectedFeature.id)}
-                    className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+                    className="mt-4 px-4 py-2 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
                   >
-                    Run Tests
+                    [ RUN TESTS ]
                   </button>
                 )}
               </div>
             ) : selectedResult.status === 'running' ? (
-              <div className="bg-[#111] border border-[#222] rounded-xl p-12 text-center">
-                <div className="text-4xl mb-3 animate-spin">🔄</div>
-                <div className="text-yellow-400 animate-pulse">Running tests for {selectedFeature.name}...</div>
+              <div className="bg-[#0f0f0f] border border-[#1f521f] p-12 text-center">
+                <div className="text-[#ffb000] terminal-blink text-lg">[RUNNING TESTS...]</div>
+                <div className="text-[#22aa00] mt-2">{selectedFeature.name}</div>
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Score bars */}
-                <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-2">{selectedFeature.name}</h3>
-                  <ScoreBar label="Quality Score" value={selectedResult.quality_score} />
-                  <ScoreBar label="Coverage Estimate" value={selectedResult.coverage_estimate} />
+                <div className="bg-[#0f0f0f] border border-[#1f521f] p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-[#33ff00] mb-2 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.3)' }}>{selectedFeature.name}</h3>
+                  <AsciiBar label="QUALITY SCORE" value={selectedResult.quality_score} />
+                  <AsciiBar label="COVERAGE ESTIMATE" value={selectedResult.coverage_estimate} />
                 </div>
 
                 {/* Blockers */}
                 {blockerTests.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-red-400">🚨 Blockers ({blockerTests.length})</h3>
+                    <h3 className="text-sm font-semibold text-[#ff3333] uppercase">[FAIL] BLOCKERS ({blockerTests.length})</h3>
                     {blockerTests.map((test, i) => (
-                      <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                        <div className="text-sm font-medium text-red-400">{test.test_name}</div>
-                        <p className="text-xs text-red-300/70 mt-1">{test.details || test.description}</p>
+                      <div key={i} className="bg-[#ff3333]/5 border border-[#ff3333]/30 p-3">
+                        <div className="text-sm font-medium text-[#ff3333]">[FAIL] {test.test_name}</div>
+                        <p className="text-xs text-[#ff3333]/70 mt-1 font-mono">{test.details || test.description}</p>
                       </div>
                     ))}
                   </div>
@@ -364,7 +360,7 @@ export default function Inspector() {
                 {/* Test Results grouped by category */}
                 {Object.entries(groupedResults).map(([category, tests]) => (
                   <div key={category}>
-                    <h3 className="text-sm font-semibold text-gray-300 mb-2 capitalize">{category} Tests ({tests.length})</h3>
+                    <h3 className="text-sm font-semibold text-[#22aa00] mb-2 uppercase">{category} TESTS ({tests.length})</h3>
                     <div className="space-y-2">
                       {tests.map((test, i) => (
                         <TestResultItem key={i} test={test} />
@@ -379,9 +375,9 @@ export default function Inspector() {
                     <button
                       onClick={() => getFixSuggestions(selectedFeature.id)}
                       disabled={loadingFixes}
-                      className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                      className="px-4 py-2 border border-[#ffb000] text-[#ffb000] hover:bg-[#ffb000] hover:text-[#0a0a0a] disabled:opacity-50 text-sm font-medium transition-colors uppercase"
                     >
-                      {loadingFixes ? 'Getting fixes...' : '🔧 Get Fix Suggestions'}
+                      {loadingFixes ? '[ GETTING FIXES... ]' : '[ GET FIX SUGGESTIONS ]'}
                     </button>
                   )}
                 </div>
@@ -389,22 +385,22 @@ export default function Inspector() {
                 {/* Fix Suggestions Display */}
                 {fixSuggestions && fixSuggestions.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-orange-400">🔧 Suggested Fixes</h3>
+                    <h3 className="text-sm font-semibold text-[#ffb000] uppercase">[WARN] SUGGESTED FIXES</h3>
                     {fixSuggestions.map((fix, i) => (
-                      <div key={i} className="bg-[#111] border border-orange-500/30 rounded-lg p-4 space-y-2">
+                      <div key={i} className="bg-[#0f0f0f] border border-[#ffb000]/30 p-4 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-white">{fix.test_name}</span>
-                          <span className="text-xs text-gray-400">{fix.file_path}</span>
+                          <span className="text-sm font-medium text-[#33ff00]">{fix.test_name}</span>
+                          <span className="text-xs text-[#1a6b1a] font-mono">{fix.file_path}</span>
                         </div>
-                        <p className="text-xs text-gray-400">{fix.explanation}</p>
+                        <p className="text-xs text-[#22aa00]">{fix.explanation}</p>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <div className="text-xs text-red-400 mb-1">Current</div>
-                            <pre className="text-xs bg-red-500/10 border border-red-500/20 rounded p-2 overflow-x-auto whitespace-pre-wrap text-red-300">{fix.current_code_snippet}</pre>
+                            <div className="text-xs text-[#ff3333] mb-1 font-bold">- CURRENT</div>
+                            <pre className="text-xs bg-[#ff3333]/5 border border-[#ff3333]/20 p-2 overflow-x-auto whitespace-pre-wrap text-[#ff3333] font-mono">{fix.current_code_snippet}</pre>
                           </div>
                           <div>
-                            <div className="text-xs text-green-400 mb-1">Suggested Fix</div>
-                            <pre className="text-xs bg-green-500/10 border border-green-500/20 rounded p-2 overflow-x-auto whitespace-pre-wrap text-green-300">{fix.suggested_fix}</pre>
+                            <div className="text-xs text-[#33ff00] mb-1 font-bold">+ SUGGESTED</div>
+                            <pre className="text-xs bg-[#33ff00]/5 border border-[#33ff00]/20 p-2 overflow-x-auto whitespace-pre-wrap text-[#33ff00] font-mono">{fix.suggested_fix}</pre>
                           </div>
                         </div>
                       </div>
@@ -414,9 +410,9 @@ export default function Inspector() {
 
                 {/* Summary */}
                 {selectedResult.summary && (
-                  <div className="bg-[#111] border border-[#222] rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-300 mb-2">Summary</h3>
-                    <p className="text-sm text-gray-400">{selectedResult.summary}</p>
+                  <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
+                    <h3 className="text-sm font-semibold text-[#22aa00] mb-2 uppercase">SUMMARY</h3>
+                    <p className="text-sm text-[#22aa00]">{selectedResult.summary}</p>
                   </div>
                 )}
               </div>

@@ -77,7 +77,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-gray-400 animate-pulse">Loading...</div>
+        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING...]</div>
       </div>
     )
   }
@@ -87,104 +87,105 @@ export default function Dashboard() {
   const needs = Array.isArray(project.needs) ? project.needs : []
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#222]">
-        <span className="text-xl font-bold tracking-tight">dante.</span>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
+        <span className="text-xl font-bold tracking-tight" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>dante_</span>
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/fleet')}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
           >
-            Fleet
+            [ FLEET ]
           </button>
           <button
             onClick={handleSignOut}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
           >
-            Logout
+            [ LOGOUT ]
           </button>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-4xl mx-auto mt-10 px-4 pb-16">
-        <h1 className="text-2xl font-semibold mb-8">
-          Welcome, {project.full_name || 'there'}
+        <h1 className="text-2xl font-semibold mb-8 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>
+          {'>'} WELCOME, {(project.full_name || 'OPERATOR').toUpperCase()}
         </h1>
 
         {/* Project card */}
-        <div className="bg-[#111] border border-[#222] rounded-xl p-6 space-y-4 mb-10">
+        <div className="bg-[#0f0f0f] border border-[#1f521f] p-6 space-y-4 mb-10">
+          <div className="border-b border-[#1f521f] pb-2 mb-2 text-xs text-[#1a6b1a]">┌── PROJECT_INFO ──┐</div>
           {project.company_name && (
-            <div className="text-lg font-medium">{project.company_name}</div>
+            <div className="text-lg font-medium text-[#33ff00]">{project.company_name}</div>
           )}
           {project.idea && (
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-[#22aa00] text-sm leading-relaxed">
               {project.idea.length > 200 ? project.idea.slice(0, 200) + '…' : project.idea}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
             {project.stage && (
-              <span className="rounded-full px-3 py-1 text-sm bg-white/10 text-gray-300">
-                {project.stage}
+              <span className="px-3 py-1 text-sm bg-[#0a0a0a] text-[#33ff00] border border-[#1f521f]">
+                [{project.stage.toUpperCase()}]
               </span>
             )}
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => navigate(`/refinery/${project.id}`)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
             >
-              🔧 Refinery
+              [ REFINERY ]
             </button>
             <button
               onClick={() => navigate(`/foundry/${project.id}`)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
             >
-              🏗️ Foundry
+              [ FOUNDRY ]
             </button>
             <button
               onClick={() => navigate(`/builder/${project.id}`)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
             >
-              🔨 Builder
+              [ BUILDER ]
             </button>
             <button
               onClick={() => navigate(`/inspector/${project.id}`)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
             >
-              🔍 Inspector
+              [ INSPECTOR ]
             </button>
           </div>
           {needs.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
               {needs.map((need) => (
-                <span key={need} className="rounded-full px-3 py-1 text-xs bg-white/5 text-gray-400 border border-[#333]">
+                <span key={need} className="px-3 py-1 text-xs bg-[#0a0a0a] text-[#1a6b1a] border border-[#1f521f]">
                   {need}
                 </span>
               ))}
             </div>
           )}
+          <div className="text-xs text-[#1a6b1a]">└──────────────────┘</div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-[#222]">
+        <div className="flex gap-2 mb-6 border-b border-[#1f521f]">
           {[
-            { key: 'deliverables', label: 'Deliverables', icon: '📦' },
-            { key: 'analytics', label: 'Analytics', icon: '📊' },
-            { key: 'domains', label: 'Domains', icon: '🌐' },
+            { key: 'deliverables', label: 'DELIVERABLES' },
+            { key: 'analytics', label: 'ANALYTICS' },
+            { key: 'domains', label: 'DOMAINS' },
           ].map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              className={`px-4 py-2 text-sm font-medium transition-colors border border-b-0 ${
                 activeTab === tab.key
-                  ? 'text-white border-blue-500'
-                  : 'text-gray-400 border-transparent hover:text-white'
+                  ? 'bg-[#33ff00] text-[#0a0a0a] border-[#33ff00]'
+                  : 'text-[#22aa00] border-[#1f521f] hover:text-[#33ff00] bg-transparent'
               }`}
             >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.label}
+              [ {tab.label} ]
             </button>
           ))}
         </div>
@@ -192,10 +193,10 @@ export default function Dashboard() {
         {/* Tab Content */}
         {activeTab === 'deliverables' && (
           <>
-            <h2 className="text-lg font-semibold mb-4">Your Deliverables</h2>
+            <h2 className="text-lg font-semibold mb-4 uppercase text-[#33ff00]">YOUR DELIVERABLES</h2>
             {deliverables.length === 0 ? (
-              <p className="text-gray-400 animate-pulse text-center py-8">
-                ✨ Your AI team is being assembled...
+              <p className="text-[#22aa00] text-center py-8 terminal-blink">
+                [ASSEMBLING AI TEAM...]
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -218,13 +219,13 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'analytics' && (
-          <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
             <AnalyticsDashboard projectId={project.id} />
           </div>
         )}
 
         {activeTab === 'domains' && (
-          <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+          <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
             <DomainManager projectId={project.id} />
           </div>
         )}
