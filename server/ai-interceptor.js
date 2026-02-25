@@ -1,6 +1,20 @@
 // Global OpenRouter fetch interceptor for AI usage logging
 // Require this ONCE in server/index.js — it monkey-patches global fetch
 const { createClient } = require("@supabase/supabase-js");
+const { Langfuse } = require("langfuse");
+
+// LangFuse initialization (optional — works without keys, just skips)
+let langfuse = null;
+if (process.env.LANGFUSE_SECRET_KEY && process.env.LANGFUSE_PUBLIC_KEY) {
+  langfuse = new Langfuse({
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    baseUrl: process.env.LANGFUSE_BASE_URL || "https://cloud.langfuse.com",
+  });
+  console.log("[LangFuse] Initialized ✅");
+} else {
+  console.log("[LangFuse] No keys — using local logging only");
+}
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -59,6 +73,7 @@ global.fetch = async function patchedFetch(url, opts) {
       if (inputTokens > 0 || outputTokens > 0) {
         console.log(`[AI$] ${ctx.module || "?"}/${ctx.operation || "?"} | ${model} | ${inputTokens}+${outputTokens}t | $${costUsd.toFixed(4)} | ${latencyMs}ms`);
 
+        // Log to Supabase
         supabase.from("ai_usage_logs").insert({
           project_id: ctx.projectId || null,
           user_id: ctx.userId || null,
@@ -70,6 +85,27 @@ global.fetch = async function patchedFetch(url, opts) {
           cost_usd: costUsd,
           latency_ms: latencyMs,
         }).then(() => {}).catch(err => console.error("[AI$] Log error:", err.message));
+
+        // Log to LangFuse
+        if (langfuse) {
+          try {
+            const trace = langfuse.trace({
+              name: `${ctx.module || "unknown"}/${ctx.operation || "unknown"}`,
+              metadata: { projectId: ctx.projectId, userId: ctx.userId },
+            });
+            trace.generation({
+              name: ctx.operation || "ai_call",
+              model,
+              modelParameters: {},
+              input: `[${ctx.module}] ${ctx.operation}`,
+              output: "response",
+              usage: { promptTokens: inputTokens, completionTokens: outputTokens },
+              metadata: { projectId: ctx.projectId, costUsd },
+            });
+          } catch (lfErr) {
+            console.error("[LangFuse] Error:", lfErr.message);
+          }
+        }
       }
     } catch {}
   }).catch(() => {});
