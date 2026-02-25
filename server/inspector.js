@@ -151,6 +151,53 @@ router.post("/run-tests", aiLimiter, requireAuth, async (req, res) => {
     const testSpecs = blueprint?.content?.tests || {};
     const files = build.files || [];
 
+    // --- Static analysis pass (real validation) ---
+    const staticResults = [];
+    for (const file of files) {
+      const ext = (file.path || "").split(".").pop().toLowerCase();
+      const isJS = ["js", "jsx", "ts", "tsx", "mjs"].includes(ext);
+      const isJSON = ext === "json";
+
+      if (isJS) {
+        try {
+          // Check for syntax errors using Function constructor (doesn't execute)
+          // Strip JSX/TS syntax that Function can't parse — just check basic structure
+          const stripped = (file.content || "")
+            .replace(/import\s+.*?from\s+['"][^'"]+['"]/g, "// import")
+            .replace(/export\s+(default\s+)?/g, "")
+            .replace(/<[^>]+>/g, "'JSX'")
+            .replace(/:\s*\w+(\[\])?\s*(,|\)|\{|;|$)/g, "$2"); // strip TS types
+          new Function(stripped);
+          staticResults.push({ test_name: `Syntax: ${file.path}`, category: "unit", status: "pass", description: "JavaScript syntax valid", details: "Parsed successfully" });
+        } catch (e) {
+          staticResults.push({ test_name: `Syntax: ${file.path}`, category: "unit", status: "warn", description: "Possible syntax issue (may be JSX/TS)", details: e.message });
+        }
+
+        // Check for common issues
+        const content = file.content || "";
+        if (content.includes("console.log") && !file.path.includes("test")) {
+          staticResults.push({ test_name: `Lint: ${file.path}`, category: "unit", status: "warn", description: "Contains console.log statements", details: "Consider removing debug logs in production code" });
+        }
+        if (!content.includes("import") && !content.includes("require") && content.length > 50) {
+          staticResults.push({ test_name: `Imports: ${file.path}`, category: "unit", status: "warn", description: "No imports found", details: "File may be missing dependencies" });
+        }
+      }
+
+      if (isJSON) {
+        try {
+          JSON.parse(file.content || "");
+          staticResults.push({ test_name: `JSON: ${file.path}`, category: "unit", status: "pass", description: "Valid JSON", details: "Parsed successfully" });
+        } catch (e) {
+          staticResults.push({ test_name: `JSON: ${file.path}`, category: "unit", status: "fail", description: "Invalid JSON", details: e.message });
+        }
+      }
+
+      // Check file isn't empty
+      if (!file.content || file.content.trim().length < 10) {
+        staticResults.push({ test_name: `Content: ${file.path}`, category: "unit", status: "fail", description: "File is empty or nearly empty", details: `Only ${(file.content || "").length} characters` });
+      }
+    }
+
     const systemPrompt = `You are a senior QA engineer and code reviewer. Analyze the provided code files against the test specifications from the blueprint.
 For each test case, evaluate whether the code implementation satisfies it.
 Also check for general code quality, security issues, and best practices.
@@ -178,7 +225,8 @@ Analyze each code file against the test specifications. Generate comprehensive t
 
     const aiResult = await callAI(systemPrompt, userPrompt);
 
-    const results = aiResult.results || [];
+    // Merge static analysis + AI results
+    const results = [...staticResults, ...(aiResult.results || [])];
     const qualityScore = aiResult.quality_score || 0;
     const coverageEstimate = aiResult.coverage_estimate || 0;
     const blockers = aiResult.blockers || [];
