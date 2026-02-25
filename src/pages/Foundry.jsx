@@ -94,19 +94,24 @@ export default function Foundry() {
     const missing = features.filter(f => !blueprints[f.id])
     if (missing.length === 0) return
     setAiLoading(true)
-    for (let i = 0; i < missing.length; i++) {
-      const f = missing[i]
-      setBatchProgress({ current: i + 1, total: missing.length, featureName: f.name })
-      try {
-        const res = await apiCall(API_BASE_FOUNDRY, '/generate-blueprint', {
-          method: 'POST',
-          body: JSON.stringify({ feature_id: f.id, project_id })
-        })
-        if (res.blueprint) {
-          setBlueprintsMap(prev => ({ ...prev, [f.id]: res.blueprint }))
+    let completed = 0
+    const CONCURRENCY = 3
+    for (let i = 0; i < missing.length; i += CONCURRENCY) {
+      const batch = missing.slice(i, i + CONCURRENCY)
+      setBatchProgress({ current: completed + 1, total: missing.length, featureName: batch.map(f => f.name).join(', ') })
+      const results = await Promise.allSettled(
+        batch.map(f =>
+          apiCall(API_BASE_FOUNDRY, '/generate-blueprint', {
+            method: 'POST',
+            body: JSON.stringify({ feature_id: f.id, project_id })
+          }).then(res => ({ feature: f, res }))
+        )
+      )
+      for (const r of results) {
+        completed++
+        if (r.status === 'fulfilled' && r.value.res.blueprint) {
+          setBlueprintsMap(prev => ({ ...prev, [r.value.feature.id]: r.value.res.blueprint }))
         }
-      } catch (err) {
-        console.error(`Generate blueprint for ${f.name} failed:`, err)
       }
     }
     setBatchProgress(null)

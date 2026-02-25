@@ -202,23 +202,34 @@ export default function Builder() {
     const eligible = features.filter(f => !buildsMap[f.id])
     if (eligible.length === 0) return
     setAiLoading(true)
-    for (let i = 0; i < eligible.length; i++) {
-      const f = eligible[i]
-      setBatchProgress({ current: i + 1, total: eligible.length, featureName: f.name })
-      try {
-        const res = await apiCall(API_BASE_BUILDER, '/generate-code', {
-          method: 'POST',
-          body: JSON.stringify({ feature_id: f.id, project_id })
-        })
-        if (res.build) {
+    let completed = 0
+    const CONCURRENCY = 3
+
+    // Process in batches of 3
+    for (let i = 0; i < eligible.length; i += CONCURRENCY) {
+      const batch = eligible.slice(i, i + CONCURRENCY)
+      setBatchProgress({ current: completed + 1, total: eligible.length, featureName: batch.map(f => f.name).join(', ') })
+
+      const results = await Promise.allSettled(
+        batch.map(f =>
+          apiCall(API_BASE_BUILDER, '/generate-code', {
+            method: 'POST',
+            body: JSON.stringify({ feature_id: f.id, project_id })
+          }).then(res => ({ feature: f, res }))
+        )
+      )
+
+      for (const r of results) {
+        completed++
+        if (r.status === 'fulfilled' && r.value.res.build) {
+          const { feature, res } = r.value
           setBuildsMap(prev => ({
             ...prev,
-            [f.id]: { build_id: res.build.id, feature_id: f.id, status: res.build.status, file_count: (res.build.files || []).length }
+            [feature.id]: { build_id: res.build.id, feature_id: feature.id, status: res.build.status, file_count: (res.build.files || []).length }
           }))
         }
-      } catch (err) {
-        console.error(`Generate code for ${f.name} failed:`, err)
       }
+      setBatchProgress({ current: completed, total: eligible.length, featureName: 'batch complete' })
     }
     setBatchProgress(null)
     setAiLoading(false)
