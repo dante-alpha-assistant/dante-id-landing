@@ -223,7 +223,7 @@ export default function Inspector() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase text-sm">
+          <button onClick={() => navigate('/dashboard')} className="text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase text-sm">
             [ DASHBOARD ]
           </button>
           <span className="text-xl font-bold tracking-tight uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>INSPECTOR</span>

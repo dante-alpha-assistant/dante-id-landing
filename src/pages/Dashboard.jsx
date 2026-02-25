@@ -239,13 +239,13 @@ export default function Dashboard() {
           </span>
           <button
             onClick={() => navigate('/fleet')}
-            className="text-sm text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
           >
             [ FLEET ]
           </button>
           <button
             onClick={handleSignOut}
-            className="text-sm text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
           >
             [ LOGOUT ]
           </button>

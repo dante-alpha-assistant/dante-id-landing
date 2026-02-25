@@ -266,19 +266,19 @@ export default function Refinery() {
               <div className="flex items-center gap-2 mb-6">
                 <button
                   onClick={() => setShowRefineInput(!showRefineInput)}
-                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
+                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
                 >
                   [ REFINE ]
                 </button>
                 <button
                   onClick={() => refinePrd("Expand all sections with more detail and specificity")}
-                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
+                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
                 >
                   [ EXPAND ]
                 </button>
                 <button
                   onClick={() => refinePrd("Play devil's advocate. Challenge assumptions, identify gaps, ask hard questions, and suggest improvements")}
-                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
+                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
                 >
                   [ CHALLENGE ]
                 </button>
