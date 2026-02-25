@@ -443,4 +443,38 @@ Schema: ${BLUEPRINT_SCHEMA}`;
   }
 });
 
+// --- POST /generate-all-architecture --- One-shot: foundation + diagrams + all feature blueprints
+router.post("/generate-all-architecture", aiLimiter, requireAuth, async (req, res) => {
+  const { project_id } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id required" });
+  const token = req.headers.authorization;
+  const base = "http://localhost:3001/api/foundry";
+  const headers = { Authorization: token, "Content-Type": "application/json" };
+
+  try {
+    // 1. Foundation
+    console.log(`[Foundry All] Generating foundation for ${project_id}`);
+    await fetch(`${base}/generate-foundation`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
+
+    // 2. System Diagrams
+    console.log(`[Foundry All] Generating diagrams for ${project_id}`);
+    await fetch(`${base}/generate-system-diagrams`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
+
+    // 3. Feature blueprints
+    const { data: features } = await supabase.from("features").select("id").eq("project_id", project_id);
+    console.log(`[Foundry All] Generating ${(features || []).length} blueprints for ${project_id}`);
+    for (const f of (features || [])) {
+      await fetch(`${base}/generate-blueprint`, { method: "POST", headers, body: JSON.stringify({ feature_id: f.id }) });
+    }
+
+    // Update project status
+    await supabase.from("projects").update({ status: "designed" }).eq("id", project_id);
+    console.log(`[Foundry All] Complete for ${project_id}`);
+    res.json({ success: true, message: "All architecture generated" });
+  } catch (err) {
+    console.error("[Foundry All] Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

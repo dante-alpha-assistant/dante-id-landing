@@ -233,11 +233,15 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
     const token = req.headers.authorization;
 
     // Fire and forget — don't wait for long AI operations
+    console.log(`[Resume] Starting ${step.module} at ${step.endpoint} for project ${req.params.id}`);
     fetch(`http://localhost:3001${step.endpoint}`, {
       method: "POST",
       headers: { "Authorization": token, "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).catch(err => console.error(`[Resume] ${step.module} error:`, err.message));
+    }).then(async r => {
+      const t = await r.text().catch(() => "");
+      console.log(`[Resume] ${step.module} responded: ${r.status} ${t.slice(0, 300)}`);
+    }).catch(err => console.error(`[Resume] ${step.module} FAILED:`, err.message));
 
     return res.json({
       resumed: true,
