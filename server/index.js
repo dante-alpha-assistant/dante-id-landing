@@ -208,6 +208,15 @@ app.get("/api/projects", requireAuth, async (req, res) => {
   res.json({ projects: data || [] });
 });
 
+// --- GET /api/projects/:id --- single project
+app.get("/api/projects/:id", requireAuth, async (req, res) => {
+  const { data, error } = await supabase.from("projects").select("*").eq("id", req.params.id).eq("user_id", req.user.id).single();
+  if (error || !data) return res.status(404).json({ error: "Project not found" });
+  const { data: dep } = await supabase.from("deployments").select("url, vercel_url").eq("project_id", data.id).eq("status", "live").limit(1).single();
+  data.deploy_url = dep?.vercel_url || dep?.url || null;
+  res.json({ project: data });
+});
+
 // --- POST /api/projects/:id/resume — advance to next pipeline step ---
 app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
   try {
