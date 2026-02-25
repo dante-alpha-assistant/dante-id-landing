@@ -125,6 +125,114 @@ const BLUEPRINT_SCHEMA = `{
   }
 }`;
 
+// --- POST /generate-foundation ---
+router.post("/generate-foundation", aiLimiter, requireAuth, async (req, res) => {
+  const { project_id } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id is required" });
+
+  try {
+    const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
+    const { data: prd } = await supabase.from("prds").select("content").eq("project_id", project_id).single();
+    const { data: features } = await supabase.from("features").select("name, description, priority").eq("project_id", project_id).order("sort_order");
+
+    const systemPrompt = `You are a senior software architect. Generate a Foundation document — project-wide architectural decisions that apply to ALL features. Be concise and specific.
+
+Return JSON:
+{
+  "tech_stack": { "frontend": "string", "backend": "string", "database": "string", "hosting": "string", "auth": "string" },
+  "architecture": { "pattern": "string (e.g. REST API + SPA)", "description": "one paragraph" },
+  "conventions": { "naming": "camelCase/snake_case/etc", "file_structure": "brief description", "api_style": "REST/GraphQL" },
+  "security": ["list of security requirements"],
+  "constraints": ["list of architectural constraints"],
+  "deployment": { "strategy": "string", "ci_cd": "string" }
+}`;
+
+    const userPrompt = `Project: ${project?.company_name || "Unknown"}
+Idea: ${project?.idea || ""}
+PRD: ${JSON.stringify(prd?.content || {}, null, 2)}
+Features: ${(features || []).map(f => `- ${f.name}: ${f.description}`).join("\n")}
+
+Generate the Foundation document for this project.`;
+
+    const result = await callAI(systemPrompt, userPrompt);
+
+    const { data: existing } = await supabase.from("project_documents").select("id").eq("project_id", project_id).eq("doc_type", "foundation").single();
+    let doc;
+    if (existing) {
+      const { data } = await supabase.from("project_documents").update({ content: result, version: existing.version || 1, updated_at: new Date().toISOString() }).eq("id", existing.id).select().single();
+      doc = data;
+    } else {
+      const { data } = await supabase.from("project_documents").insert({ project_id, doc_type: "foundation", content: result }).select().single();
+      doc = data;
+    }
+
+    return res.json({ foundation: doc });
+  } catch (err) {
+    console.error("Generate foundation error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- POST /generate-system-diagrams ---
+router.post("/generate-system-diagrams", aiLimiter, requireAuth, async (req, res) => {
+  const { project_id } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id is required" });
+
+  try {
+    const { data: project } = await supabase.from("projects").select("*").eq("id", project_id).single();
+    const { data: prd } = await supabase.from("prds").select("content").eq("project_id", project_id).single();
+    const { data: features } = await supabase.from("features").select("name, description").eq("project_id", project_id).order("sort_order");
+    const { data: foundation } = await supabase.from("project_documents").select("content").eq("project_id", project_id).eq("doc_type", "foundation").single();
+
+    const systemPrompt = `You are a software architect. Generate system diagrams in Mermaid syntax. Be precise and focused.
+
+Return JSON:
+{
+  "erd": { "title": "Entity Relationship Diagram", "mermaid": "erDiagram\\n  USER ||--o{ PROJECT : owns\\n  ..." },
+  "architecture": { "title": "System Architecture", "mermaid": "graph TD\\n  Client[React SPA] --> API[Express API]\\n  ..." },
+  "data_flow": { "title": "Data Flow", "mermaid": "sequenceDiagram\\n  User->>Frontend: Action\\n  ..." }
+}
+
+Use valid Mermaid syntax. Keep diagrams readable (max 15-20 nodes each).`;
+
+    const userPrompt = `Project: ${project?.company_name || "Unknown"}
+Tech Stack: ${JSON.stringify(foundation?.content?.tech_stack || prd?.content?.tech_stack || {})}
+Features: ${(features || []).map(f => `- ${f.name}: ${f.description}`).join("\n")}
+Foundation: ${JSON.stringify(foundation?.content || {}, null, 2)}
+
+Generate system diagrams for this project.`;
+
+    const result = await callAI(systemPrompt, userPrompt);
+
+    const { data: existing } = await supabase.from("project_documents").select("id, version").eq("project_id", project_id).eq("doc_type", "system_diagram").single();
+    let doc;
+    if (existing) {
+      const { data } = await supabase.from("project_documents").update({ content: result, version: (existing.version || 0) + 1, updated_at: new Date().toISOString() }).eq("id", existing.id).select().single();
+      doc = data;
+    } else {
+      const { data } = await supabase.from("project_documents").insert({ project_id, doc_type: "system_diagram", content: result }).select().single();
+      doc = data;
+    }
+
+    return res.json({ system_diagrams: doc });
+  } catch (err) {
+    console.error("Generate system diagrams error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- GET /:project_id/documents ---
+router.get("/:project_id/documents", requireAuth, async (req, res) => {
+  try {
+    const { data } = await supabase.from("project_documents").select("*").eq("project_id", req.params.project_id);
+    const foundation = (data || []).find(d => d.doc_type === "foundation");
+    const systemDiagrams = (data || []).find(d => d.doc_type === "system_diagram");
+    return res.json({ foundation: foundation || null, system_diagrams: systemDiagrams || null });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // --- POST /generate-blueprint ---
 router.post("/generate-blueprint", requireAuth, async (req, res) => {
   const { feature_id, project_id } = req.body;

@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [pipelineStatus, setPipelineStatus] = useState({
     refinery: { status: 'waiting', text: 'Waiting...' },
     foundry: { status: 'waiting', text: 'Waiting...' },
+    planner: { status: 'waiting', text: 'Waiting...' },
     builder: { status: 'waiting', text: 'Waiting...' },
     inspector: { status: 'waiting', text: 'Waiting...' },
     deployer: { status: 'waiting', text: 'Waiting...' },
@@ -307,7 +308,7 @@ export default function Dashboard() {
           {/* Steps */}
           <div className="space-y-3 mb-8">
             {PIPELINE_STEPS.map((step, idx) => {
-              const st = pipelineStatus[step.key]
+              const st = pipelineStatus[step.key] || { status: 'waiting', text: 'Waiting...' }
               return (
                 <div key={step.key} className="flex items-center gap-3">
                   <span className="text-[#1a6b1a] text-sm w-4">{idx + 1}.</span>
