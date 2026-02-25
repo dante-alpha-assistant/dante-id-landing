@@ -163,6 +163,19 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
 });
 
+// --- Docs (public, no auth) ---
+app.get("/api/docs", (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+  const docsPath = path.join(__dirname, "..", "public", "docs.md");
+  try {
+    const content = fs.readFileSync(docsPath, "utf8");
+    res.type("text/markdown").send(content);
+  } catch (err) {
+    res.status(500).json({ error: "Docs not found" });
+  }
+});
+
 // --- Stale generation recovery on startup ---
 (async () => {
   try {
