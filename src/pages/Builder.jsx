@@ -374,7 +374,7 @@ export default function Builder() {
         <div className="w-[35%] border-r border-[#1f521f] overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>FEATURES</h3>
-            {eligibleCount > 0 && (
+            {eligibleCount > 0 ? (
               <button
                 onClick={generateAll}
                 disabled={aiLoading}
@@ -382,7 +382,14 @@ export default function Builder() {
               >
                 [ BUILD ALL ({eligibleCount}) ]
               </button>
-            )}
+            ) : features.length > 0 && Object.keys(buildsMap).length >= features.length ? (
+              <button
+                onClick={() => navigate(`/inspector/${project_id}`)}
+                className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
+              >
+                [ → RUN TESTS ]
+              </button>
+            ) : null}
           </div>
 
           {features.length === 0 ? (
