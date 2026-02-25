@@ -1718,6 +1718,42 @@ app.post("/api/billing-portal", requireAuth, async (req, res) => {
   }
 });
 
+// --- Deployed app proxy: dante.id/app/{username}/{slug} → Vercel ---
+app.all("/app/:username/:slug*", async (req, res) => {
+  try {
+    const canonicalPath = `/app/${req.params.username}/${req.params.slug}`;
+    // Look up matching deployment - search by canonical_path prefix
+    const { data: deployment } = await supabase
+      .from("deployments")
+      .select("vercel_url")
+      .like("canonical_path", `/${req.params.username}/${req.params.slug}%`)
+      .eq("status", "live")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!deployment?.vercel_url) {
+      return res.status(404).send('<html><body style="background:#0a0a0a;color:#33ff00;font-family:monospace;padding:40px"><h1>404 — App not found</h1><p>No deployment found at this path.</p><a href="/" style="color:#33ff00">← dante.id</a></body></html>');
+    }
+
+    // Proxy to Vercel
+    const subPath = req.params[0] || "";
+    const targetUrl = `${deployment.vercel_url}${subPath}`;
+    const proxyRes = await fetch(targetUrl, {
+      method: req.method,
+      headers: { ...req.headers, host: new URL(deployment.vercel_url).host },
+    });
+    
+    res.status(proxyRes.status);
+    proxyRes.headers.forEach((v, k) => { if (k !== 'transfer-encoding') res.setHeader(k, v); });
+    const body = await proxyRes.arrayBuffer();
+    res.send(Buffer.from(body));
+  } catch (err) {
+    console.error("App proxy error:", err.message);
+    res.status(502).send("Proxy error");
+  }
+});
+
 // --- Error handling ---
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);

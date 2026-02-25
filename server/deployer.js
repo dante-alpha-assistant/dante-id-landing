@@ -173,7 +173,7 @@ router.post("/deploy", requireAuth, async (req, res) => {
       // Get project name
       const { data: project } = await supabase
         .from("projects")
-        .select("name, company_name")
+        .select("name, company_name, user_id")
         .eq("id", project_id)
         .single();
 
@@ -182,6 +182,11 @@ router.post("/deploy", requireAuth, async (req, res) => {
         .replace(/[^a-z0-9-]/g, "-")
         .replace(/-+/g, "-")
         .slice(0, 50);
+
+      // Generate path-based URL: dante.id/{username}/{slug-hash}
+      const shortHash = project_id.slice(0, 4);
+      const username = (req.user.email || "user").split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      const canonicalPath = `/app/${username}/${projectName}-${shortHash}`;
 
       try {
         const vercelRes = await fetch(
@@ -214,16 +219,20 @@ router.post("/deploy", requireAuth, async (req, res) => {
           });
         }
 
-        const deployUrl = `https://${vercelData.url}`;
-        logs.push(logEntry(`Deployment live: ${deployUrl}`));
+        const vercelUrl = `https://${vercelData.url}`;
+        const canonicalUrl = `https://dante.id${canonicalPath}`;
+        logs.push(logEntry(`Vercel URL: ${vercelUrl}`));
+        logs.push(logEntry(`Canonical URL: ${canonicalUrl}`));
         logs.push(logEntry("[DONE]"));
 
         await supabase
           .from("deployments")
           .update({
             status: "live",
-            url: deployUrl,
+            url: canonicalUrl,
             vercel_deployment_id: vercelData.id,
+            vercel_url: vercelUrl,
+            canonical_path: canonicalPath,
             logs,
             updated_at: new Date().toISOString(),
           })
@@ -242,7 +251,8 @@ router.post("/deploy", requireAuth, async (req, res) => {
 
         return res.json({
           deployment_id: deployment.id,
-          url: deployUrl,
+          url: canonicalUrl,
+          vercel_url: vercelUrl,
           status: "live",
         });
       } catch (fetchErr) {
