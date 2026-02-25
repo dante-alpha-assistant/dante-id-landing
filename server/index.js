@@ -125,6 +125,7 @@ app.use("/api/inspector", require("./inspector"));
 // --- Deployer module ---
 app.use("/api/deployer", require("./deployer"));
 app.use("/api/admin", require("./admin"));
+app.use("/api/validator", require("./validator"));
 
 // --- Projects API ---
 app.get("/api/projects", requireAuth, async (req, res) => {
