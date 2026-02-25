@@ -465,7 +465,7 @@ router.post("/generate-all-architecture", aiLimiter, requireAuth, async (req, re
     console.log(`[Foundry All] Generating ${(features || []).length} blueprints for ${project_id}`);
     for (const f of (features || [])) {
       console.log(`[Foundry All] Blueprint for feature ${f.id} (${f.name})`);
-      const bpRes = await fetch(`${base}/generate-blueprint`, { method: "POST", headers, body: JSON.stringify({ feature_id: f.id }) });
+      const bpRes = await fetch(`${base}/generate-blueprint`, { method: "POST", headers, body: JSON.stringify({ feature_id: f.id, project_id }) });
       const bpText = await bpRes.text().catch(() => "");
       console.log(`[Foundry All] Blueprint response: ${bpRes.status} ${bpText.slice(0, 200)}`);
     }
