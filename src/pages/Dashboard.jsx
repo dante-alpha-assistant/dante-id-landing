@@ -7,6 +7,26 @@ import CofounderChat from '../components/CofounderChat'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import DomainManager from '../components/DomainManager'
 
+async function apiCall(base, path) {
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
+  const res = await fetch(`${base}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  })
+  return res.json()
+}
+
+const PIPELINE_STEPS = [
+  { key: 'refinery', label: 'REFINERY', route: (id) => `/refinery/${id}` },
+  { key: 'foundry', label: 'FOUNDRY', route: (id) => `/foundry/${id}` },
+  { key: 'builder', label: 'BUILDER', route: (id) => `/builder/${id}` },
+  { key: 'inspector', label: 'INSPECTOR', route: (id) => `/inspector/${id}` },
+  { key: 'deployer', label: 'DEPLOYER', route: (id) => `/deployer/${id}` },
+]
+
 export default function Dashboard() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
@@ -15,7 +35,14 @@ export default function Dashboard() {
   const [deliverables, setDeliverables] = useState([])
   const [expanded, setExpanded] = useState({})
   const [deliverablesLoaded, setDeliverablesLoaded] = useState(false)
-  const [activeTab, setActiveTab] = useState('deliverables')
+  const [legacyOpen, setLegacyOpen] = useState(false)
+  const [pipelineStatus, setPipelineStatus] = useState({
+    refinery: { status: 'waiting', text: 'Waiting...' },
+    foundry: { status: 'waiting', text: 'Waiting...' },
+    builder: { status: 'waiting', text: 'Waiting...' },
+    inspector: { status: 'waiting', text: 'Waiting...' },
+    deployer: { status: 'waiting', text: 'Waiting...' },
+  })
 
   useEffect(() => {
     if (!user) return
@@ -44,6 +71,93 @@ export default function Dashboard() {
     if (data) setDeliverables(data)
     return data
   }, [project])
+
+  // Fetch pipeline status
+  const fetchPipelineStatus = useCallback(async () => {
+    if (!project) return
+    const id = project.id
+    try {
+      const [prdRes, featuresRes, blueprintsRes, buildsRes, resultsRes, deploymentsRes] = await Promise.allSettled([
+        apiCall('/api/refinery', `/${id}/prd`),
+        apiCall('/api/refinery', `/${id}/features`),
+        apiCall('/api/foundry', `/${id}/blueprints`),
+        apiCall('/api/builder', `/${id}/builds`),
+        apiCall('/api/inspector', `/${id}/results`),
+        apiCall('/api/deployer', `/${id}/deployments`),
+      ])
+
+      const prd = prdRes.status === 'fulfilled' ? prdRes.value : null
+      const features = featuresRes.status === 'fulfilled' ? (featuresRes.value.features || []) : []
+      const blueprints = blueprintsRes.status === 'fulfilled' ? (blueprintsRes.value.blueprints || []) : []
+      const builds = buildsRes.status === 'fulfilled' ? (buildsRes.value.builds || []) : []
+      const results = resultsRes.status === 'fulfilled' ? (resultsRes.value.results || []) : []
+      const deployments = deploymentsRes.status === 'fulfilled' ? (deploymentsRes.value.deployments || []) : []
+
+      const hasPrd = !!(prd?.prd?.id || prd?.id)
+      const featureCount = features.length
+      const blueprintCount = blueprints.length
+      const buildCount = builds.length
+      const resultCount = results.length
+      const liveDeployment = deployments.some(d => d.status === 'live')
+
+      const allBlueprintsReady = featureCount > 0 && blueprintCount >= featureCount
+      const allBuildsReady = featureCount > 0 && buildCount >= featureCount
+      const allResultsReady = featureCount > 0 && resultCount >= featureCount
+
+      const newStatus = {}
+
+      // Refinery
+      if (hasPrd) {
+        newStatus.refinery = { status: 'done', text: `PRD generated, ${featureCount} features` }
+      } else {
+        newStatus.refinery = { status: 'in-progress', text: 'Generate your PRD' }
+      }
+
+      // Foundry
+      if (!hasPrd) {
+        newStatus.foundry = { status: 'waiting', text: 'Waiting...' }
+      } else if (allBlueprintsReady) {
+        newStatus.foundry = { status: 'done', text: `${blueprintCount} blueprints ready` }
+      } else {
+        newStatus.foundry = { status: featureCount > 0 ? 'in-progress' : 'waiting', text: featureCount > 0 ? `${blueprintCount}/${featureCount} blueprints` : 'Waiting...' }
+      }
+
+      // Builder
+      if (!allBlueprintsReady) {
+        newStatus.builder = { status: 'waiting', text: 'Waiting...' }
+      } else if (allBuildsReady) {
+        newStatus.builder = { status: 'done', text: `${buildCount} builds complete` }
+      } else {
+        newStatus.builder = { status: 'in-progress', text: `${buildCount}/${featureCount} built` }
+      }
+
+      // Inspector
+      if (!allBuildsReady) {
+        newStatus.inspector = { status: 'waiting', text: 'Waiting...' }
+      } else if (allResultsReady) {
+        newStatus.inspector = { status: 'done', text: `${resultCount} tests passed` }
+      } else {
+        newStatus.inspector = { status: 'in-progress', text: `${resultCount}/${featureCount} tested` }
+      }
+
+      // Deployer
+      if (!allResultsReady) {
+        newStatus.deployer = { status: 'waiting', text: 'Waiting...' }
+      } else if (liveDeployment) {
+        newStatus.deployer = { status: 'done', text: 'Live ✓' }
+      } else {
+        newStatus.deployer = { status: 'in-progress', text: 'Ready to deploy' }
+      }
+
+      setPipelineStatus(newStatus)
+    } catch {
+      // silently fail
+    }
+  }, [project])
+
+  useEffect(() => {
+    fetchPipelineStatus()
+  }, [fetchPipelineStatus])
 
   // Initial fetch + trigger generation only if truly empty
   useEffect(() => {
@@ -84,14 +198,43 @@ export default function Dashboard() {
 
   if (!project) return null
 
-  const needs = Array.isArray(project.needs) ? project.needs : []
+  // Compute pipeline progress
+  const doneCount = Object.values(pipelineStatus).filter(s => s.status === 'done').length
+  const totalSteps = PIPELINE_STEPS.length
+  const progressPct = Math.round((doneCount / totalSteps) * 100)
+  const filledBars = Math.round((doneCount / totalSteps) * 20)
+  const emptyBars = 20 - filledBars
+  const progressBar = '█'.repeat(filledBars) + '░'.repeat(emptyBars)
+
+  // Find next step
+  const nextStepIdx = PIPELINE_STEPS.findIndex(s => pipelineStatus[s.key]?.status !== 'done')
+  const nextStep = nextStepIdx >= 0 ? PIPELINE_STEPS[nextStepIdx] : null
+
+  const statusIcon = (status) => {
+    if (status === 'done') return <span className="text-[#33ff00]">✓</span>
+    if (status === 'in-progress') return <span className="text-[#ffb000]">→</span>
+    return <span className="text-[#1a6b1a]"> </span>
+  }
+
+  const statusColor = (status) => {
+    if (status === 'done') return 'text-[#33ff00]'
+    if (status === 'in-progress') return 'text-[#ffb000]'
+    return 'text-[#1a6b1a]'
+  }
+
+  const glowStyle = { textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
-        <span className="text-xl font-bold tracking-tight" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>dante_</span>
-        <div className="flex items-center gap-4">
+        <span className="text-xl font-bold tracking-tight" style={glowStyle}>
+          dante<span className="text-[#ffb000]">.id</span>
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-[#22aa00] hidden sm:inline">
+            {project.company_name || project.full_name || 'PROJECT'}
+          </span>
           <button
             onClick={() => navigate('/fleet')}
             className="text-sm text-[#22aa00] hover:text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
@@ -108,139 +251,115 @@ export default function Dashboard() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto mt-10 px-4 pb-16">
-        <h1 className="text-2xl font-semibold mb-8 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>
-          {'>'} WELCOME, {(project.full_name || 'OPERATOR').toUpperCase()}
-        </h1>
+      <div className="max-w-3xl mx-auto mt-10 px-4 pb-16">
 
-        {/* Project card */}
-        <div className="bg-[#0f0f0f] border border-[#1f521f] p-6 space-y-4 mb-10">
-          <div className="border-b border-[#1f521f] pb-2 mb-2 text-xs text-[#1a6b1a]">┌── PROJECT_INFO ──┐</div>
-          {project.company_name && (
-            <div className="text-lg font-medium text-[#33ff00]">{project.company_name}</div>
-          )}
-          {project.idea && (
-            <p className="text-[#22aa00] text-sm leading-relaxed">
-              {project.idea.length > 200 ? project.idea.slice(0, 200) + '…' : project.idea}
-            </p>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            {project.stage && (
-              <span className="px-3 py-1 text-sm bg-[#0a0a0a] text-[#33ff00] border border-[#1f521f]">
-                [{project.stage.toUpperCase()}]
-              </span>
-            )}
+        {/* Pipeline Card */}
+        <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 mb-8">
+          <div className="text-xs text-[#1a6b1a] mb-4">
+            +--- SOFTWARE FACTORY: {(project.company_name || project.full_name || 'PROJECT').toUpperCase()} ---+
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate(`/refinery/${project.id}`)}
-              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
-            >
-              [ REFINERY ]
-            </button>
-            <button
-              onClick={() => navigate(`/foundry/${project.id}`)}
-              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
-            >
-              [ FOUNDRY ]
-            </button>
-            <button
-              onClick={() => navigate(`/builder/${project.id}`)}
-              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
-            >
-              [ BUILDER ]
-            </button>
-            <button
-              onClick={() => navigate(`/inspector/${project.id}`)}
-              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
-            >
-              [ INSPECTOR ]
-            </button>
-            <button
-              onClick={() => navigate(`/deployer/${project.id}`)}
-              className="px-4 py-2 border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
-            >
-              [ DEPLOY ]
-            </button>
+
+          <div className="mb-6">
+            <div className="text-sm text-[#22aa00] mb-1">
+              PIPELINE STATUS: STEP {Math.min(doneCount + 1, totalSteps)} OF {totalSteps}
+            </div>
+            <div className="text-[#33ff00]">
+              [{progressBar}] {progressPct}%
+            </div>
           </div>
-          {needs.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {needs.map((need) => (
-                <span key={need} className="px-3 py-1 text-xs bg-[#0a0a0a] text-[#1a6b1a] border border-[#1f521f]">
-                  {need}
-                </span>
-              ))}
+
+          {/* Steps */}
+          <div className="space-y-3 mb-8">
+            {PIPELINE_STEPS.map((step, idx) => {
+              const st = pipelineStatus[step.key]
+              return (
+                <div key={step.key} className="flex items-center gap-3">
+                  <span className="text-[#1a6b1a] text-sm w-4">{idx + 1}.</span>
+                  <button
+                    onClick={() => navigate(step.route(project.id))}
+                    className="text-sm border border-[#1f521f] px-3 py-1 text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors min-w-[120px] text-left"
+                  >
+                    [ {step.label} ]
+                  </button>
+                  <span className="flex items-center gap-2">
+                    {statusIcon(st.status)}
+                    <span className={`text-sm ${statusColor(st.status)}`}>{st.text}</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Primary CTA */}
+          {nextStep && (
+            <button
+              onClick={() => navigate(nextStep.route(project.id))}
+              className="w-full py-3 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+              style={glowStyle}
+            >
+              [ CONTINUE → {nextStep.label} ]
+            </button>
+          )}
+          {!nextStep && (
+            <div className="text-center py-3 text-[#33ff00] text-lg font-bold" style={glowStyle}>
+              [ALL SYSTEMS OPERATIONAL] ✓
             </div>
           )}
-          <div className="text-xs text-[#1a6b1a]">└──────────────────┘</div>
+
+          <div className="text-xs text-[#1a6b1a] mt-4">+{'─'.repeat(40)}+</div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-[#1f521f]">
-          {[
-            { key: 'deliverables', label: 'DELIVERABLES' },
-            { key: 'analytics', label: 'ANALYTICS' },
-            { key: 'domains', label: 'DOMAINS' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors border border-b-0 ${
-                activeTab === tab.key
-                  ? 'bg-[#33ff00] text-[#0a0a0a] border-[#33ff00]'
-                  : 'text-[#22aa00] border-[#1f521f] hover:text-[#33ff00] bg-transparent'
-              }`}
-            >
-              [ {tab.label} ]
-            </button>
-          ))}
+        {/* Legacy Deliverables — collapsible */}
+        <div className="border border-[#1f521f] bg-[#0f0f0f] mb-8">
+          <button
+            onClick={() => setLegacyOpen(!legacyOpen)}
+            className="w-full px-6 py-3 text-left flex justify-between items-center text-sm text-[#22aa00] hover:text-[#33ff00] transition-colors"
+          >
+            <span>+--- LEGACY DELIVERABLES ---+</span>
+            <span className="text-[#1a6b1a]">{legacyOpen ? '[-]' : '[+]'}</span>
+          </button>
+          {legacyOpen && (
+            <div className="px-6 pb-6">
+              {deliverables.length === 0 ? (
+                <p className="text-[#22aa00] text-center py-8 terminal-blink">
+                  [ASSEMBLING AI TEAM...]
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deliverables.map((d) => (
+                    <DeliverableCard
+                      key={d.id}
+                      deliverable={d}
+                      isExpanded={!!expanded[d.id]}
+                      onToggle={() => toggleCard(d.id)}
+                      onRetry={() => {
+                        import('../lib/api.js').then(({ apiPost }) => {
+                          apiPost('/api/retry-deliverable', { deliverable_id: d.id, project_id: project.id })
+                        })
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'deliverables' && (
-          <>
-            <h2 className="text-lg font-semibold mb-4 uppercase text-[#33ff00]">YOUR DELIVERABLES</h2>
-            {deliverables.length === 0 ? (
-              <p className="text-[#22aa00] text-center py-8 terminal-blink">
-                [ASSEMBLING AI TEAM...]
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {deliverables.map((d) => (
-                  <DeliverableCard
-                    key={d.id}
-                    deliverable={d}
-                    isExpanded={!!expanded[d.id]}
-                    onToggle={() => toggleCard(d.id)}
-                    onRetry={() => {
-                      import('../lib/api.js').then(({ apiPost }) => {
-                        apiPost('/api/retry-deliverable', { deliverable_id: d.id, project_id: project.id })
-                      })
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === 'analytics' && (
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
-            <AnalyticsDashboard projectId={project.id} />
-          </div>
-        )}
-
-        {activeTab === 'domains' && (
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
-            <DomainManager projectId={project.id} />
-          </div>
-        )}
+        {/* Bottom links */}
+        <div className="flex gap-4 text-xs text-[#1a6b1a]">
+          <button onClick={() => navigate(`/analytics/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
+            [ ANALYTICS ]
+          </button>
+          <button onClick={() => navigate(`/domains/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
+            [ DOMAINS ]
+          </button>
+        </div>
       </div>
 
       {/* AI Co-founder Chat */}
       {project && (
-        <CofounderChat 
-          projectId={project.id} 
+        <CofounderChat
+          projectId={project.id}
           context={{
             project: { name: project.company_name, idea: project.idea, stage: project.stage },
             deliverables: deliverables.filter(d => d.status === 'completed').map(d => ({ type: d.type, summary: d.type }))

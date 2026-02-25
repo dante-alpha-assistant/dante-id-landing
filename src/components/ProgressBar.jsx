@@ -1,18 +1,13 @@
 export default function ProgressBar({ currentStep, totalSteps }) {
+  const filled = Math.round(((currentStep + 1) / totalSteps) * 10)
+  const empty = 10 - filled
+  const bar = '█'.repeat(filled) + '░'.repeat(empty)
+
   return (
-    <div className="flex items-center gap-2 mb-8">
-      {Array.from({ length: totalSteps }, (_, i) => (
-        <div key={i} className="flex-1 h-1 rounded-full overflow-hidden bg-[#333]">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              i <= currentStep ? 'bg-violet-500 w-full' : 'w-0'
-            }`}
-          />
-        </div>
-      ))}
-      <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
-        {currentStep + 1}/{totalSteps}
-      </span>
+    <div className="mb-8 font-mono text-sm">
+      <div className="text-[#33ff00]">
+        [{bar}] {currentStep + 1}/{totalSteps}
+      </div>
     </div>
-  );
+  )
 }

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
 const navLinks = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "HOW IT WORKS", href: "#how-it-works" },
+  { label: "FEATURES", href: "#features" },
+  { label: "PRICING", href: "#pricing" },
 ]
 
 const steps = [
@@ -63,30 +63,21 @@ const features = [
 ]
 
 const stats = [
-  {
-    value: "10x",
-    label: "Faster than traditional setup",
-  },
-  {
-    value: "$50K",
-    label: "Average savings vs agencies",
-  },
-  {
-    value: "24/7",
-    label: "Your team never sleeps",
-  },
+  { value: "10x", label: "Faster than traditional setup" },
+  { value: "$50K", label: "Average savings vs agencies" },
+  { value: "24/7", label: "Your team never sleeps" },
 ]
 
 const faqItems = [
   {
-    question: "What is dante.?",
+    question: "What is dante.id?",
     answer:
-      "dante. is an AI-powered startup builder. You describe your idea, and a team of AI agents builds your brand identity, landing page, business plan, and growth strategy — in minutes.",
+      "dante.id is an AI-powered startup builder. You describe your idea, and a team of AI agents builds your brand identity, landing page, business plan, and growth strategy — in minutes.",
   },
   {
     question: "How is this different from ChatGPT?",
     answer:
-      "ChatGPT gives you text. dante. gives you a team that produces real deliverables — actual business plans, actual logos, actual deployed websites. It's the difference between advice and execution.",
+      "ChatGPT gives you text. dante.id gives you a team that produces real deliverables — actual business plans, actual logos, actual deployed websites. It's the difference between advice and execution.",
   },
   {
     question: "How much does it cost?",
@@ -106,7 +97,7 @@ const faqItems = [
   {
     question: "Is this just for tech startups?",
     answer:
-      "No. dante. works for any type of startup — e-commerce, services, SaaS, agencies, local businesses, and more.",
+      "No. dante.id works for any type of startup — e-commerce, services, SaaS, agencies, local businesses, and more.",
   },
 ]
 
@@ -114,6 +105,7 @@ export default function Landing() {
   const [heroEmail, setHeroEmail] = useState("")
   const [ctaEmail, setCtaEmail] = useState("")
   const [openIndex, setOpenIndex] = useState(null)
+  const [mobileNav, setMobileNav] = useState(false)
 
   useEffect(() => {
     const elements = document.querySelectorAll(".reveal")
@@ -128,12 +120,9 @@ export default function Landing() {
       },
       { threshold: 0.1, rootMargin: "0px 0px -20px 0px" }
     )
-
-    // Small delay to ensure layout is ready before observing
     requestAnimationFrame(() => {
       elements.forEach((el) => observer.observe(el))
     })
-
     return () => observer.disconnect()
   }, [])
 
@@ -163,364 +152,338 @@ export default function Landing() {
     setTimeout(() => setWaitlistStatus(null), 4000)
   }
 
+  const glowStyle = { textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }
+
   return (
-    <div>
-      <header className="navbar">
-        <div className="container navbar-inner">
-          <a href="/" className="logo-lockup" aria-label="dante. home">
-            <span className="logo-d">d</span>
-            <span className="logo-text">dante<span className="logo-dot">.</span></span>
+    <div className="bg-[#0a0a0a] text-[#33ff00] font-mono min-h-screen">
+      {/* Navbar */}
+      <header className="border-b border-[#1f521f] bg-[#0a0a0a] sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <a href="/" className="text-2xl font-bold" style={glowStyle}>
+            <span className="text-[#33ff00]">dante</span><span className="text-[#ffb000]">.id</span>
           </a>
-          <nav className="nav-links" aria-label="Primary">
+          <nav className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
-              <a key={link.label} href={link.href}>
-                {link.label}
+              <a key={link.label} href={link.href} className="text-sm text-[#22aa00] hover:text-[#33ff00] transition-colors">
+                [ {link.label} ]
               </a>
             ))}
           </nav>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <button className="hamburger" aria-label="Open navigation">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden text-[#33ff00] border border-[#1f521f] px-2 py-1"
+              onClick={() => setMobileNav(!mobileNav)}
+              aria-label="Toggle navigation"
+            >
+              [≡]
             </button>
-            <Link to="/signup" className="btn btn-ghost">Get Started</Link>
+            <Link to="/signup" className="text-sm border border-[#33ff00] text-[#33ff00] px-4 py-2 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
+              [ GET STARTED ]
+            </Link>
           </div>
         </div>
+        {mobileNav && (
+          <div className="md:hidden border-t border-[#1f521f] px-6 py-4 space-y-3">
+            {navLinks.map((link) => (
+              <a key={link.label} href={link.href} className="block text-sm text-[#22aa00] hover:text-[#33ff00]" onClick={() => setMobileNav(false)}>
+                [ {link.label} ]
+              </a>
+            ))}
+          </div>
+        )}
       </header>
 
       <main>
-        <section className="hero" id="top">
-          <div className="container hero-grid">
+        {/* Hero */}
+        <section className="py-24 px-6" id="top">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <p className="section-label reveal" style={{ "--delay": "0ms" }}>
-                AI STARTUP BUILDER
+              <p className="text-xs text-[#1a6b1a] mb-4 reveal" style={{ "--delay": "0ms" }}>
+                // AI STARTUP BUILDER
               </p>
-              <h1 className="hero-title reveal" style={{ "--delay": "100ms" }}>
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Build your startup in days, not months.
               </h1>
-              <p className="hero-subtitle reveal" style={{ "--delay": "200ms" }}>
-                dante. gives you a full AI team — strategist, designer, developer, lawyer — that builds your business while you focus on your vision.
+              <p className="text-[#22aa00] mt-6 text-lg leading-relaxed reveal" style={{ "--delay": "200ms" }}>
+                dante.id gives you a full AI team — strategist, designer, developer, lawyer — that builds your business while you focus on your vision.
               </p>
               <form
-                className="hero-cta reveal"
+                className="flex gap-3 mt-8 reveal"
                 style={{ "--delay": "300ms" }}
                 onSubmit={(event) => handleSubmit(event, "hero")}
               >
                 <input
-                  className="input"
+                  className="flex-1 px-4 py-3 bg-[#0a0a0a] border border-[#1f521f] text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] font-mono caret-[#33ff00]"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="user@email.com"
                   value={heroEmail}
                   onChange={(event) => setHeroEmail(event.target.value)}
                   required
                 />
-                <button className="btn btn-primary" type="submit">
-                  Join the waitlist
+                <button className="px-6 py-3 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] font-mono transition-colors whitespace-nowrap" type="submit">
+                  [ START BUILDING &gt; ]
                 </button>
               </form>
-              <p className="text-muted reveal" style={{ fontSize: "13px", marginTop: "12px", "--delay": "400ms" }}>
+              {waitlistStatus === "success" && (
+                <p className="text-[#33ff00] text-sm mt-3">[OK] You're on the list.</p>
+              )}
+              {waitlistStatus === "error" && (
+                <p className="text-red-400 text-sm mt-3">[ERROR] Something went wrong. Try again.</p>
+              )}
+              <p className="text-[#1a6b1a] text-xs mt-3 reveal" style={{ "--delay": "400ms" }}>
                 Free to join. No credit card required.
               </p>
             </div>
             <div className="reveal" style={{ "--delay": "200ms" }}>
-              <div className="hero-card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h3 className="heading-md" style={{ margin: 0 }}>
-                    Your AI Team
-                  </h3>
-                  <span className="status-badge">Active</span>
+              <div className="border border-[#1f521f] bg-[#0f0f0f] p-6">
+                <div className="text-xs text-[#1a6b1a] mb-4">┌── AGENT_STATUS ──┐</div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold" style={glowStyle}>YOUR AI TEAM</h3>
+                  <span className="text-xs border border-[#33ff00] px-2 py-0.5 text-[#33ff00]">[ACTIVE]</span>
                 </div>
-                <div className="status-list">
-                  <div className="status-item">
-                    <span>🟣</span>
-                    <span>Strategy complete</span>
-                    <span style={{ marginLeft: "auto", color: "var(--color-success)" }}>✓</span>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#22aa00]">Strategy agent</span>
+                    <span className="text-[#33ff00]">✓ Complete</span>
                   </div>
-                  <div className="status-item">
-                    <span>🟣</span>
-                    <span>Brand kit generated</span>
-                    <span style={{ marginLeft: "auto", color: "var(--color-success)" }}>✓</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#22aa00]">Brand agent</span>
+                    <span className="text-[#33ff00]">✓ Complete</span>
                   </div>
-                  <div className="status-item">
-                    <span>🔵</span>
-                    <span>Website in progress</span>
-                    <span style={{ marginLeft: "auto" }} className="spinner" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#22aa00]">Dev agent</span>
+                    <span className="text-[#ffb000]">→ In Progress</span>
                   </div>
-                  <div className="status-item muted">
-                    <span>○</span>
-                    <span>Legal docs queued</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#1a6b1a]">Legal agent</span>
+                    <span className="text-[#1a6b1a]">Queued...</span>
                   </div>
                 </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "12px",
-                    marginTop: "20px",
-                    fontSize: "12px",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  <div style={{ fontSize: "14px", color: "var(--color-text)" }}>4 agents</div>
-                  <div style={{ fontSize: "14px", color: "var(--color-text)" }}>12 hrs avg</div>
-                  <div style={{ fontSize: "14px", color: "var(--color-text)" }}>24/7</div>
+                <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-[#1f521f] text-center text-sm">
+                  <div><div className="text-[#33ff00]">4</div><div className="text-[#1a6b1a] text-xs">agents</div></div>
+                  <div><div className="text-[#33ff00]">12hrs</div><div className="text-[#1a6b1a] text-xs">avg</div></div>
+                  <div><div className="text-[#33ff00]">24/7</div><div className="text-[#1a6b1a] text-xs">uptime</div></div>
                 </div>
+                <div className="text-xs text-[#1a6b1a] mt-4">└──────────────────┘</div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="social-proof">
-          <div className="container reveal">Trusted by founders building with AI</div>
+        {/* Social proof */}
+        <section className="border-y border-[#1f521f] py-4">
+          <div className="max-w-6xl mx-auto px-6 text-center text-sm text-[#1a6b1a] reveal">
+            // Trusted by founders building with AI
+          </div>
         </section>
 
-        <section className="section" id="how-it-works">
-          <div className="container">
-            <div style={{ textAlign: "center", maxWidth: "700px", margin: "0 auto" }}>
-              <p className="section-label reveal">HOW IT WORKS</p>
-              <h2 className="heading-xl reveal" style={{ marginBottom: "16px", "--delay": "100ms" }}>
+        {/* How it works */}
+        <section className="py-24 px-6" id="how-it-works">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <p className="text-xs text-[#1a6b1a] mb-2 reveal">// HOW IT WORKS</p>
+              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 From idea to launch, end-to-end.
               </h2>
-              <p className="text-secondary reveal" style={{ fontSize: "18px", "--delay": "200ms" }}>
+              <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "200ms" }}>
                 Your AI team works in parallel — strategy, product, and growth — while you stay in control.
               </p>
             </div>
-            <div className="grid-3" style={{ marginTop: "48px" }}>
+            <div className="grid md:grid-cols-3 gap-6">
               {steps.map((step, index) => (
-                <div key={step.title} className="card reveal" style={{ "--delay": `${index * 100}ms` }}>
-                  <div style={{ fontSize: "32px", fontWeight: 700, color: "var(--color-primary)" }}>{step.number}</div>
-                  <h3 className="heading-md" style={{ marginTop: "16px" }}>
-                    {step.title}
-                  </h3>
-                  <p className="text-secondary" style={{ marginTop: "12px" }}>
-                    {step.description}
-                  </p>
+                <div key={step.title} className="border border-[#1f521f] bg-[#0f0f0f] p-6 reveal" style={{ "--delay": `${index * 100}ms` }}>
+                  <div className="text-3xl font-bold text-[#33ff00]" style={glowStyle}>{step.number}</div>
+                  <h3 className="text-lg font-bold mt-4 text-[#33ff00]">{step.title}</h3>
+                  <p className="text-[#22aa00] text-sm mt-3">{step.description}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="section" id="features">
-          <div className="container">
-            <div style={{ textAlign: "center", maxWidth: "700px", margin: "0 auto" }}>
-              <p className="section-label reveal">WHAT YOU GET</p>
-              <h2 className="heading-xl reveal" style={{ marginBottom: "16px", "--delay": "100ms" }}>
+        {/* Features */}
+        <section className="py-24 px-6 border-t border-[#1f521f]" id="features">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <p className="text-xs text-[#1a6b1a] mb-2 reveal">// WHAT YOU GET</p>
+              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Everything you need to launch.
               </h2>
-              <p className="text-secondary reveal" style={{ fontSize: "18px", "--delay": "200ms" }}>
+              <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "200ms" }}>
                 Five AI agents build your startup. One more coming soon.
               </p>
             </div>
-            <div className="grid-2x3" style={{ marginTop: "48px" }}>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map((feature, index) => (
-                <div key={feature.title} className="card card-lift reveal" style={{ "--delay": `${index * 100}ms`, opacity: feature.coming ? 0.5 : 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div className="card-icon">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-                      </svg>
-                    </div>
+                <div
+                  key={feature.title}
+                  className={`border border-[#1f521f] bg-[#0f0f0f] p-6 reveal ${feature.coming ? 'opacity-50' : ''}`}
+                  style={{ "--delay": `${index * 100}ms` }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[#33ff00]">▸</span>
                     {feature.coming && (
-                      <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", color: "var(--color-text-muted)" }}>Coming soon</span>
+                      <span className="text-xs border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a]">[COMING SOON]</span>
                     )}
                   </div>
-                  <h3 className="heading-md" style={{ fontSize: "18px" }}>
-                    {feature.title}
-                  </h3>
-                  <p className="text-secondary" style={{ fontSize: "14px", marginTop: "12px" }}>
-                    {feature.description}
-                  </p>
+                  <h3 className="text-lg font-bold text-[#33ff00]">{feature.title}</h3>
+                  <p className="text-[#22aa00] text-sm mt-3">{feature.description}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="section demo-section">
-          <div className="container" style={{ textAlign: "center" }}>
-            <p className="section-label reveal">SEE IT IN ACTION</p>
-            <h2 className="heading-xl reveal" style={{ marginBottom: "16px", "--delay": "100ms" }}>
+        {/* Demo */}
+        <section className="py-24 px-6 border-t border-[#1f521f]">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-xs text-[#1a6b1a] mb-2 reveal">// SEE IT IN ACTION</p>
+            <h2 className="text-3xl font-bold mb-8 reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
               Watch your team build.
             </h2>
-            <div className="demo-card reveal" style={{ "--delay": "200ms" }}>
-              <div className="chat-row">
-                <div className="chat-bubble agent">
-                  Strategy agent: Market analysis shows strong demand in creator tools. Drafting your business plan now.
-                </div>
-                <div className="chat-bubble agent">
-                  Design agent: Brand kit is ready — logo concepts and primary palette attached.
-                </div>
-                <div className="chat-bubble user">
-                  Founder: Prioritize a clean homepage with onboarding flow.
-                </div>
-                <div className="chat-bubble agent">
-                  Dev agent: Website build in progress. ETA 6 hours for first draft.
-                </div>
+            <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 text-left space-y-4 reveal" style={{ "--delay": "200ms" }}>
+              <div className="text-xs text-[#1a6b1a] mb-2">┌── AGENT_LOG ──┐</div>
+              <div className="text-sm text-[#22aa00]">
+                <span className="text-[#1a6b1a]">[strategy]</span> Market analysis shows strong demand in creator tools. Drafting business plan now.
               </div>
+              <div className="text-sm text-[#22aa00]">
+                <span className="text-[#1a6b1a]">[design]</span> Brand kit ready — logo concepts and primary palette attached.
+              </div>
+              <div className="text-sm text-[#33ff00]">
+                <span className="text-[#ffb000]">[founder]</span> Prioritize a clean homepage with onboarding flow.
+              </div>
+              <div className="text-sm text-[#22aa00]">
+                <span className="text-[#1a6b1a]">[dev]</span> Website build in progress. ETA 6 hours for first draft.
+              </div>
+              <div className="text-xs text-[#1a6b1a] mt-2">└──────────────┘</div>
             </div>
-            <p className="text-muted" style={{ fontSize: "14px", marginTop: "16px" }}>
-              Real output from a dante. agent team.
-            </p>
+            <p className="text-[#1a6b1a] text-xs mt-4">// Real output from a dante.id agent team.</p>
           </div>
         </section>
 
-        <section className="section stats-section" id="pricing">
-          <div className="container">
-            <div className="stats-layout">
-              <div>
-                <p className="section-label reveal">BUILT DIFFERENT</p>
-                <h2 className="heading-lg reveal" style={{ marginBottom: "16px", fontSize: "36px", "--delay": "100ms" }}>
-                  Built by AI agents, for human founders.
-                </h2>
-                <p className="text-secondary reveal" style={{ "--delay": "200ms" }}>
-                  Traditional startup setup costs $10K–$50K and takes months. dante. does it in days for a fraction of the cost.
-                </p>
-              </div>
-              <div className="stats-grid">
-                {stats.map((stat, index) => (
-                  <div key={stat.label} className="reveal" style={{ "--delay": `${index * 100}ms` }}>
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="text-secondary" style={{ fontSize: "14px" }}>
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Stats */}
+        <section className="py-24 px-6 border-t border-[#1f521f]" id="pricing">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <p className="text-xs text-[#1a6b1a] mb-2 reveal">// BUILT DIFFERENT</p>
+              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
+                Built by AI agents, for human founders.
+              </h2>
+              <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "200ms" }}>
+                Traditional startup setup costs $10K–$50K and takes months. dante.id does it in days for a fraction of the cost.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-6">
+              {stats.map((stat, index) => (
+                <div key={stat.label} className="text-center reveal" style={{ "--delay": `${index * 100}ms` }}>
+                  <div className="text-3xl font-bold text-[#33ff00]" style={glowStyle}>{stat.value}</div>
+                  <div className="text-[#22aa00] text-xs mt-2">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="section" id="faq">
-          <div className="container faq">
-            <div style={{ textAlign: "center" }}>
-              <p className="section-label reveal">FAQ</p>
-              <h2 className="heading-xl reveal" style={{ marginBottom: "32px", "--delay": "100ms" }}>
+        {/* FAQ */}
+        <section className="py-24 px-6 border-t border-[#1f521f]" id="faq">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-12">
+              <p className="text-xs text-[#1a6b1a] mb-2 reveal">// FAQ</p>
+              <h2 className="text-3xl font-bold reveal" style={{ ...glowStyle, "--delay": "100ms" }}>
                 Questions?
               </h2>
             </div>
             {faqItems.map((item, index) => {
               const isOpen = openIndex === index
               return (
-                <div key={item.question} className="faq-item reveal" style={{ "--delay": `${index * 100}ms` }}>
+                <div key={item.question} className="border-b border-[#1f521f] reveal" style={{ "--delay": `${index * 50}ms` }}>
                   <button
-                    className="faq-question"
+                    className="w-full flex justify-between items-center py-4 text-left text-[#33ff00] hover:text-[#33ff00] transition-colors"
                     type="button"
                     onClick={() => setOpenIndex(isOpen ? null : index)}
                     aria-expanded={isOpen}
                   >
-                    <span>{item.question}</span>
-                    <span>{isOpen ? "−" : "+"}</span>
+                    <span className="text-sm">{item.question}</span>
+                    <span className="text-[#1a6b1a]">{isOpen ? "[-]" : "[+]"}</span>
                   </button>
-                  {isOpen && <p className="faq-answer">{item.answer}</p>}
+                  {isOpen && <p className="text-[#22aa00] text-sm pb-4">{item.answer}</p>}
                 </div>
               )
             })}
           </div>
         </section>
 
-        <section className="section cta-section" id="waitlist">
-          <div className="container" style={{ textAlign: "center", maxWidth: "720px" }}>
-            <h2 className="heading-xl reveal" style={{ fontSize: "48px" }}>
+        {/* CTA */}
+        <section className="py-24 px-6 border-t border-[#1f521f]" id="waitlist">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-4xl font-bold reveal" style={glowStyle}>
               Ready to build?
             </h2>
-            <p
-              className="text-secondary reveal"
-              style={{ fontSize: "18px", marginTop: "16px", maxWidth: "480px", marginInline: "auto", "--delay": "100ms" }}
-            >
+            <p className="text-[#22aa00] mt-4 reveal" style={{ "--delay": "100ms" }}>
               Join the waitlist and get early access to your AI startup team.
             </p>
             <form
-              className="hero-cta reveal"
-              style={{ justifyContent: "center", marginTop: "32px", "--delay": "200ms" }}
+              className="flex gap-3 mt-8 justify-center reveal"
+              style={{ "--delay": "200ms" }}
               onSubmit={(event) => handleSubmit(event, "cta")}
             >
               <input
-                className="input"
+                className="flex-1 max-w-sm px-4 py-3 bg-[#0a0a0a] border border-[#1f521f] text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] font-mono caret-[#33ff00]"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="user@email.com"
                 value={ctaEmail}
                 onChange={(event) => setCtaEmail(event.target.value)}
                 required
               />
-              <button className="btn btn-primary" type="submit">
-                Join the waitlist
+              <button className="px-6 py-3 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] font-mono transition-colors whitespace-nowrap" type="submit">
+                [ JOIN WAITLIST ]
               </button>
             </form>
-            <p className="text-muted reveal" style={{ fontSize: "13px", marginTop: "12px", "--delay": "300ms" }}>
+            <p className="text-[#1a6b1a] text-xs mt-3 reveal" style={{ "--delay": "300ms" }}>
               Free to join. No credit card required.
             </p>
           </div>
         </section>
       </main>
 
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-grid">
+      {/* Footer */}
+      <footer className="border-t border-[#1f521f] py-12 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <div className="logo-lockup logo-sm">
-                <span className="logo-d">d</span>
-                <span className="logo-text">dante<span className="logo-dot">.</span></span>
-              </div>
-              <p className="text-secondary" style={{ marginTop: "12px", fontSize: "14px" }}>
-                Build with AI.
-              </p>
+              <span className="text-xl font-bold" style={glowStyle}>dante<span className="text-[#ffb000]">.id</span></span>
+              <p className="text-[#1a6b1a] text-sm mt-3">Build with AI.</p>
             </div>
             <div>
-              <h4 className="heading-md" style={{ fontSize: "16px", marginBottom: "12px" }}>
-                Product
-              </h4>
-              <div className="footer-links">
-                <a href="#how-it-works">How It Works</a>
-                <a href="#features">Features</a>
-                <a href="#pricing">Pricing</a>
+              <h4 className="text-sm font-bold text-[#33ff00] mb-3">PRODUCT</h4>
+              <div className="space-y-2">
+                <a href="#how-it-works" className="block text-sm text-[#22aa00] hover:text-[#33ff00]">How It Works</a>
+                <a href="#features" className="block text-sm text-[#22aa00] hover:text-[#33ff00]">Features</a>
+                <a href="#pricing" className="block text-sm text-[#22aa00] hover:text-[#33ff00]">Pricing</a>
               </div>
             </div>
             <div>
-              <h4 className="heading-md" style={{ fontSize: "16px", marginBottom: "12px" }}>
-                Company
-              </h4>
-              <div className="footer-links">
-                <span>About</span>
-                <span>Blog</span>
-                <span>Contact</span>
+              <h4 className="text-sm font-bold text-[#33ff00] mb-3">COMPANY</h4>
+              <div className="space-y-2">
+                <span className="block text-sm text-[#1a6b1a]">About</span>
+                <span className="block text-sm text-[#1a6b1a]">Blog</span>
+                <span className="block text-sm text-[#1a6b1a]">Contact</span>
               </div>
             </div>
             <div>
-              <h4 className="heading-md" style={{ fontSize: "16px", marginBottom: "12px" }}>
-                Legal
-              </h4>
-              <div className="footer-links">
-                <span>Privacy Policy</span>
-                <span>Terms of Service</span>
+              <h4 className="text-sm font-bold text-[#33ff00] mb-3">LEGAL</h4>
+              <div className="space-y-2">
+                <span className="block text-sm text-[#1a6b1a]">Privacy Policy</span>
+                <span className="block text-sm text-[#1a6b1a]">Terms of Service</span>
               </div>
             </div>
           </div>
-          <div className="footer-bottom">
-            <span>© 2026 dante.</span>
-            <div className="footer-socials">
-              <a href="https://x.com" aria-label="Twitter/X">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M4 4l16 16M20 4L4 20" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </a>
-              <a href="https://discord.com" aria-label="Discord">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M7 18c3 2 7 2 10 0" strokeLinecap="round" />
-                  <circle cx="9" cy="12" r="1" />
-                  <circle cx="15" cy="12" r="1" />
-                </svg>
-              </a>
-              <a href="https://github.com" aria-label="GitHub">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path
-                    d="M12 2a10 10 0 00-3 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.2-3.4-1.2-.5-1.1-1.2-1.4-1.2-1.4-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 .1 1.6-.8 1.6-.8.2-.7.6-1.1 1-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 011-2.7 3.6 3.6 0 01.1-2.7s.8-.3 2.8 1a9.7 9.7 0 015.1 0c2-1.3 2.8-1 2.8-1a3.6 3.6 0 01.1 2.7 3.9 3.9 0 011 2.7c0 3.9-2.4 4.7-4.6 5 .6.5 1.1 1.2 1.1 2.5v2.2c0 .3.2.6.7.5A10 10 0 0012 2z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
+          <div className="border-t border-[#1f521f] pt-6 flex justify-between items-center text-xs text-[#1a6b1a]">
+            <span>© 2026 dante.id</span>
+            <div className="flex gap-4">
+              <a href="https://x.com" className="text-[#1a6b1a] hover:text-[#33ff00]" aria-label="Twitter/X">[X]</a>
+              <a href="https://discord.com" className="text-[#1a6b1a] hover:text-[#33ff00]" aria-label="Discord">[DISCORD]</a>
+              <a href="https://github.com" className="text-[#1a6b1a] hover:text-[#33ff00]" aria-label="GitHub">[GITHUB]</a>
             </div>
           </div>
         </div>
