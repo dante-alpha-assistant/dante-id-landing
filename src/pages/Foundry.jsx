@@ -47,11 +47,17 @@ export default function Foundry() {
   const [aiLoading, setAiLoading] = useState(false)
   const [showRefineInput, setShowRefineInput] = useState(false)
   const [refineInput, setRefineInput] = useState('')
+  const [foundation, setFoundation] = useState(null)
+  const [systemDiagrams, setSystemDiagrams] = useState(null)
+  const [foundationLoading, setFoundationLoading] = useState(false)
+  const [diagramsLoading, setDiagramsLoading] = useState(false)
+  const [activeSection, setActiveSection] = useState(null) // foundation | diagrams | features — set after data loads
 
   const fetchData = useCallback(async () => {
-    const [featRes, bpRes] = await Promise.all([
+    const [featRes, bpRes, docsRes] = await Promise.all([
       apiCall(API_BASE_REFINERY, `/${project_id}/features`),
-      apiCall(API_BASE_FOUNDRY, `/${project_id}/blueprints`)
+      apiCall(API_BASE_FOUNDRY, `/${project_id}/blueprints`),
+      apiCall(API_BASE_FOUNDRY, `/${project_id}/documents`)
     ])
     setFeatures(featRes.features || [])
     const bpMap = {}
@@ -59,6 +65,13 @@ export default function Foundry() {
       bpMap[bp.feature_id] = bp
     }
     setBlueprintsMap(bpMap)
+    setFoundation(docsRes.foundation || null)
+    setSystemDiagrams(docsRes.system_diagrams || null)
+    // Smart default: show first incomplete section, or features if all done
+    const hasFdn = !!docsRes.foundation
+    const hasDiag = !!docsRes.system_diagrams
+    const hasBps = (bpRes.blueprints || []).length > 0
+    setActiveSection(!hasFdn ? 'foundation' : !hasDiag ? 'diagrams' : 'features')
     setLoading(false)
   }, [project_id])
 
@@ -70,6 +83,24 @@ export default function Foundry() {
       setBlueprintsMap(prev => ({ ...prev, [featureId]: res.blueprint }))
     }
     return res.blueprint
+  }
+
+  const generateFoundation = async () => {
+    setFoundationLoading(true)
+    try {
+      const res = await apiCall(API_BASE_FOUNDRY, '/generate-foundation', { method: 'POST', body: JSON.stringify({ project_id }) })
+      if (res.foundation) setFoundation(res.foundation)
+    } catch (err) { console.error('Generate foundation failed:', err) }
+    setFoundationLoading(false)
+  }
+
+  const generateDiagrams = async () => {
+    setDiagramsLoading(true)
+    try {
+      const res = await apiCall(API_BASE_FOUNDRY, '/generate-system-diagrams', { method: 'POST', body: JSON.stringify({ project_id }) })
+      if (res.system_diagrams) setSystemDiagrams(res.system_diagrams)
+    } catch (err) { console.error('Generate diagrams failed:', err) }
+    setDiagramsLoading(false)
   }
 
   const generateBlueprint = async (featureId) => {
@@ -188,8 +219,114 @@ export default function Foundry() {
         </div>
       )}
 
-      {/* Main content */}
-      <div className="flex h-[calc(100vh-57px)]">
+      {/* Section tabs */}
+      <div className="flex border-b border-[#1f521f]">
+        {[
+          { key: 'foundation', label: '1. FOUNDATION', done: !!foundation },
+          { key: 'diagrams', label: '2. SYSTEM DIAGRAMS', done: !!systemDiagrams },
+          { key: 'features', label: '3. FEATURE BLUEPRINTS', done: missingCount === 0 && features.length > 0 }
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveSection(tab.key)}
+            className={`px-5 py-3 text-xs font-bold uppercase transition-colors border-b-2 ${
+              activeSection === tab.key
+                ? 'text-[#33ff00] border-[#33ff00] bg-[#33ff00]/5'
+                : 'text-[#1a6b1a] border-transparent hover:text-[#22aa00]'
+            }`}
+          >
+            {tab.label} {tab.done ? '✓' : ''}
+          </button>
+        ))}
+      </div>
+
+      {/* Foundation Section */}
+      {activeSection === 'foundation' && (
+        <div className="p-6 overflow-y-auto" style={{ height: 'calc(100vh - 105px)' }}>
+          {foundation ? (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold uppercase">Foundation Document</h3>
+                <button onClick={generateFoundation} disabled={foundationLoading}
+                  className="px-3 py-1.5 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] disabled:opacity-40 text-xs transition-colors">
+                  [ REGENERATE ]
+                </button>
+              </div>
+              {Object.entries(foundation.content || {}).map(([key, val]) => (
+                <div key={key} className="border border-[#1f521f] p-4">
+                  <h4 className="text-sm font-bold text-[#33ff00] mb-2 uppercase">{key.replace(/_/g, ' ')}</h4>
+                  {typeof val === 'object' && !Array.isArray(val) ? (
+                    <div className="space-y-1">
+                      {Object.entries(val).map(([k, v]) => (
+                        <div key={k} className="flex gap-2 text-xs">
+                          <span className="text-[#1a6b1a] min-w-[100px]">{k}:</span>
+                          <span className="text-[#22aa00]">{typeof v === 'string' ? v : JSON.stringify(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : Array.isArray(val) ? (
+                    <ul className="space-y-1">{val.map((item, i) => <li key={i} className="text-xs text-[#22aa00]">→ {item}</li>)}</ul>
+                  ) : (
+                    <p className="text-xs text-[#22aa00]">{String(val)}</p>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => setActiveSection('diagrams')}
+                className="w-full py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
+                [ CONTINUE → SYSTEM DIAGRAMS ]
+              </button>
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto text-center py-20">
+              <p className="text-[#22aa00] mb-6">No foundation document yet. Generate project-wide architecture decisions.</p>
+              <button onClick={generateFoundation} disabled={foundationLoading}
+                className="px-6 py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 transition-colors">
+                {foundationLoading ? '[ GENERATING... ]' : '[ GENERATE FOUNDATION ]'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* System Diagrams Section */}
+      {activeSection === 'diagrams' && (
+        <div className="p-6 overflow-y-auto" style={{ height: 'calc(100vh - 105px)' }}>
+          {systemDiagrams ? (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold uppercase">System Diagrams</h3>
+                <button onClick={generateDiagrams} disabled={diagramsLoading}
+                  className="px-3 py-1.5 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] disabled:opacity-40 text-xs transition-colors">
+                  [ REGENERATE ]
+                </button>
+              </div>
+              {Object.entries(systemDiagrams.content || {}).map(([key, diagram]) => (
+                <div key={key} className="border border-[#1f521f] p-4">
+                  <h4 className="text-sm font-bold text-[#33ff00] mb-3 uppercase">{diagram?.title || key}</h4>
+                  <pre className="text-xs text-[#22aa00] bg-[#050505] p-4 border border-[#1f521f] overflow-x-auto whitespace-pre-wrap">{diagram?.mermaid || JSON.stringify(diagram, null, 2)}</pre>
+                </div>
+              ))}
+              <button onClick={() => setActiveSection('features')}
+                className="w-full py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
+                [ CONTINUE → FEATURE BLUEPRINTS ]
+              </button>
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto text-center py-20">
+              <p className="text-[#22aa00] mb-2">No system diagrams yet.</p>
+              <p className="text-xs text-[#1a6b1a] mb-6">{foundation ? 'Foundation ready — generate diagrams based on your architecture.' : 'Generate a Foundation document first.'}</p>
+              <button onClick={foundation ? generateDiagrams : generateFoundation} disabled={diagramsLoading || foundationLoading}
+                className="px-6 py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 transition-colors">
+                {!foundation ? '[ GENERATE FOUNDATION FIRST ]' : diagramsLoading ? '[ GENERATING... ]' : '[ GENERATE SYSTEM DIAGRAMS ]'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Feature Blueprints Section (existing) */}
+      {activeSection === 'features' && (
+      <div className="flex h-[calc(100vh-105px)]">
         {/* Left Panel - Features (35%) */}
         <div className="w-[35%] border-r border-[#1f521f] overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
@@ -339,13 +476,13 @@ export default function Foundry() {
         </div>
       </div>
 
-        {/* CTA to next stage */}
-        {missingCount === 0 && features.length > 0 && (
+        {/* CTA to next stage — always visible when blueprints exist */}
+        {Object.keys(blueprints).length > 0 && (
           <button
             onClick={() => navigate(`/planner/${project_id}`)}
-            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+            className="w-full py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
           >
-            [ CONTINUE → PLANNER: Create Work Orders ]
+            [ CONTINUE → PLANNER: Create Work Orders {missingCount > 0 ? `(${missingCount} blueprints remaining)` : ''} ]
           </button>
         )}
     </div>
