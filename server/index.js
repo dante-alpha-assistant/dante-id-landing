@@ -1,6 +1,10 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+
+// Crash protection
+process.on('uncaughtException', (err) => { console.error('[FATAL] Uncaught exception:', err.message, err.stack); });
+process.on('unhandledRejection', (err) => { console.error('[FATAL] Unhandled rejection:', err); });
 const rateLimit = require("express-rate-limit");
 const { createClient } = require("@supabase/supabase-js");
 const { generateDeliverables, retrySingleDeliverable, repairJson } = require("./generate");
