@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import MermaidDiagram from '../components/MermaidDiagram'
 
 const API_BASE_FOUNDRY = '/api/foundry'
 const API_BASE_REFINERY = '/api/refinery'
@@ -390,7 +391,11 @@ export default function Foundry() {
               {Object.entries(systemDiagrams.content || {}).map(([key, diagram]) => (
                 <div key={key} className="border border-[#1f521f] p-4">
                   <h4 className="text-sm font-bold text-[#33ff00] mb-3 uppercase">{diagram?.title || key}</h4>
-                  <pre className="text-xs text-[#22aa00] bg-[#050505] p-4 border border-[#1f521f] overflow-x-auto whitespace-pre-wrap">{diagram?.mermaid || JSON.stringify(diagram, null, 2)}</pre>
+                  {diagram?.mermaid ? (
+                    <MermaidDiagram code={diagram.mermaid} title={diagram?.title || key} />
+                  ) : (
+                    <pre className="text-xs text-[#22aa00] bg-[#050505] p-4 border border-[#1f521f] overflow-x-auto whitespace-pre-wrap">{JSON.stringify(diagram, null, 2)}</pre>
+                  )}
                 </div>
               ))}
               <button onClick={() => setActiveSection('features')}
