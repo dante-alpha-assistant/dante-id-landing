@@ -37,7 +37,7 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => { console.log("[AI] Aborting after 180s"); controller.abort(); }, 180000);
+      const timeout = setTimeout(() => { console.log("[AI] Aborting after 240s"); controller.abort(); }, 240000);
 
       console.log('[AI] Attempt', attempt + 1, 'calling OpenRouter (Planner)...');
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -82,42 +82,31 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const PLANNER_SYSTEM = `You are a senior software architect and project planner. Given a feature blueprint, generate detailed Work Orders — implementation plans that tell a developer exactly what to build.
+const PLANNER_SYSTEM = `You are a software architect. Generate 3-6 concise Work Orders from a feature blueprint.
 
-For each work order, specify:
-- Which files to create (with path, purpose, and key contents)
-- Which existing files to modify (with path and what to change)
-- Dependencies between work orders (what must be built first)
-- Acceptance criteria (how to verify it's done)
-- Estimated complexity (low/medium/high)
+Each work order = one task a developer can complete independently.
 
-Group work orders into phases:
-- Phase 1: Foundation (DB schema, models, types)
-- Phase 2: Core Logic (API routes, business logic)
-- Phase 3: UI (components, pages, styling)
-- Phase 4: Integration (connecting pieces, testing)
+Phases: 1=Foundation, 2=Core Logic, 3=UI, 4=Integration
 
 Return JSON:
 {
   "work_orders": [
     {
-      "title": "string — clear action-oriented title",
-      "description": "string — what this work order accomplishes",
-      "phase": 1-4,
-      "priority": "critical|high|medium|low",
-      "estimated_complexity": "low|medium|high",
-      "files_to_create": [{"path": "src/models/User.ts", "purpose": "User data model", "key_contents": "interface User { id, name, email }"}],
-      "files_to_modify": [{"path": "src/app.ts", "change": "Add user routes import and mount at /api/users"}],
-      "dependencies": ["Work order title that must complete first"],
-      "acceptance_criteria": ["User model validates email format", "API returns 201 on creation"]
+      "title": "short action title",
+      "description": "one sentence",
+      "phase": 1,
+      "priority": "high",
+      "estimated_complexity": "medium",
+      "files_to_create": [{"path": "src/models/User.ts", "purpose": "User model"}],
+      "files_to_modify": [{"path": "src/app.ts", "change": "Mount user routes"}],
+      "dependencies": [],
+      "acceptance_criteria": ["API returns 201"]
     }
   ],
-  "summary": "Overview of the implementation plan",
-  "total_phases": 4,
-  "critical_path": ["Work order titles in dependency order"]
+  "summary": "one sentence overview"
 }
 
-Be specific about file paths and contents. A developer should be able to implement each work order without guessing.`;
+Keep it concise. Max 6 work orders. Short descriptions.`;
 
 // --- POST /generate-work-orders ---
 router.post("/generate-work-orders", aiLimiter, requireAuth, async (req, res) => {
