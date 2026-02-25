@@ -98,6 +98,8 @@ export default function Dashboard() {
       const blueprintCount = blueprints.length
       const buildCount = builds.length
       const resultCount = results.length
+      const passedCount = results.filter(r => r.status === 'passed').length
+      const failedCount = results.filter(r => r.status === 'failed').length
       const liveDeployment = deployments.some(d => d.status === 'live')
 
       const allBlueprintsReady = featureCount > 0 && blueprintCount >= featureCount
@@ -135,7 +137,7 @@ export default function Dashboard() {
       if (!allBuildsReady) {
         newStatus.inspector = { status: 'waiting', text: 'Waiting...' }
       } else if (allResultsReady) {
-        newStatus.inspector = { status: 'done', text: `${resultCount} tests passed` }
+        newStatus.inspector = { status: failedCount > 0 ? 'in-progress' : 'done', text: `${passedCount} passed, ${failedCount} failed` }
       } else {
         newStatus.inspector = { status: 'in-progress', text: `${resultCount}/${featureCount} tested` }
       }
