@@ -98,40 +98,41 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate WORKING, DEPLOYABLE TypeScript code based on the technical blueprint.
+const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate a WORKING, DEPLOYABLE React SPA based on the technical blueprint.
+
+This app will be deployed as a STATIC site on Vercel. There is NO backend server. All data persistence uses localStorage. All API-like operations use helper functions that read/write localStorage.
 
 TECH STACK (MANDATORY):
-- Frontend: React 18 + Vite + TypeScript (.tsx for components, .ts for utils)
-- Styling: Tailwind CSS
-- Backend: Express.js + TypeScript (.ts files)
-- Data: SQLite via better-sqlite3
+- React 18 + Vite + TypeScript (.tsx for components, .ts for utils)
+- Tailwind CSS for styling
+- localStorage for all data persistence (wrap in a src/lib/store.ts helper)
+- React Router for navigation
+- NO Express, NO backend server, NO SQLite, NO native modules
 
-MANDATORY FILES (always include these):
-1. tsconfig.json:
-{"compilerOptions":{"target":"ES2020","module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":false,"skipLibCheck":true,"esModuleInterop":true,"allowSyntheticDefaultImports":true,"forceConsistentCasingInFileNames":true,"resolveJsonModule":true,"isolatedModules":true,"noEmit":true,"outDir":"./dist","baseUrl":".","paths":{"@/*":["./src/*"]}},"include":["src"],"exclude":["node_modules","dist"]}
+USE THESE EXACT VERSIONS in package.json:
+react: "18.2.0", react-dom: "18.2.0", react-router-dom: "6.20.0", @vitejs/plugin-react: "4.2.1", vite: "5.4.0", typescript: "5.3.3", tailwindcss: "3.4.0", postcss: "8.4.32", autoprefixer: "10.4.16"
+@types/react: "18.2.43", @types/react-dom: "18.2.17"
+Put ALL in "dependencies" (NOT devDependencies).
 
-2. vite.config.ts:
-import { defineConfig } from 'vite'; import react from '@vitejs/plugin-react'; export default defineConfig({ plugins: [react()], server: { proxy: { '/api': 'http://localhost:3001' } } });
-
-3. index.html with <div id="root"></div> and <script type="module" src="/src/main.tsx"></script>
-
-4. package.json with scripts: "dev": "vite", "build": "tsc -b && vite build", "start": "tsx server/index.ts"
-   Must include: react, react-dom, @vitejs/plugin-react, vite, typescript, tailwindcss, express, better-sqlite3
-   Put ALL deps in "dependencies" (NOT devDependencies) — Vercel skips devDeps in production builds.
-   Include: @types/react, @types/react-dom, @types/express, @types/better-sqlite3, vite, typescript, @vitejs/plugin-react
+MANDATORY FILES:
+1. tsconfig.json: {"compilerOptions":{"target":"ES2020","module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":false,"skipLibCheck":true,"esModuleInterop":true,"allowSyntheticDefaultImports":true,"resolveJsonModule":true,"isolatedModules":true,"noEmit":true},"include":["src"]}
+2. vite.config.ts: import { defineConfig } from 'vite'; import react from '@vitejs/plugin-react'; export default defineConfig({ plugins: [react()] });
+3. index.html: <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>App</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+4. package.json scripts: "dev": "vite", "build": "vite build", "preview": "vite preview"
+5. src/main.tsx: React entry point rendering App
+6. src/lib/store.ts: localStorage wrapper with typed CRUD helpers
+7. tailwind.config.js + postcss.config.js
 
 CRITICAL RULES:
 - Every import MUST resolve to a file you create. No phantom imports.
-- Every API endpoint in frontend MUST have a backend implementation.
-- Use \`any\` type freely to avoid complex type errors. DO NOT create elaborate type hierarchies.
-- Do NOT use generic type parameters on Express Request/Response — use plain \`req: any, res: any\`.
-- The code MUST pass \`tsc -b && vite build\` without errors.
-- For external integrations, implement working mocks with realistic data.
-- All CRUD: create, read, update, AND delete.
-- Max 10 files per feature.
+- Use \`any\` type freely. No complex type hierarchies.
+- The code MUST pass \`vite build\` without errors.
+- Implement real UI with forms, lists, modals, state management — not placeholders.
+- All CRUD: create, read, update, AND delete via localStorage.
+- Max 12 files per feature.
 
 Return JSON: {
-  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "tsx|ts|json|html|css"}],
+  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "tsx|ts|json|html|css|js"}],
   "summary": "What was generated and key decisions made",
   "setup_instructions": "npm install && npm run dev"
 }`;
