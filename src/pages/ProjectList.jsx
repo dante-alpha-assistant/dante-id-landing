@@ -9,6 +9,7 @@ export default function ProjectList() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [ghStatus, setGhStatus] = useState(null)
+  const [deployUrls, setDeployUrls] = useState({})
 
   const STAGES = [
     { key: 'refinery', label: 'R', full: 'Refinery', route: id => `/refinery/${id}` },
@@ -44,6 +45,16 @@ export default function ProjectList() {
       .then(({ data }) => {
         setProjects(data || [])
         setLoading(false)
+        // Fetch deploy URLs for live projects
+        const liveProjects = (data || []).filter(p => p.status === 'live' || p.status === 'completed')
+        if (liveProjects.length > 0) {
+          supabase.from('deployments').select('project_id, url, vercel_url').in('project_id', liveProjects.map(p => p.id)).eq('status', 'live')
+            .then(({ data: deps }) => {
+              const urls = {}
+              ;(deps || []).forEach(d => { urls[d.project_id] = d.vercel_url || d.url })
+              setDeployUrls(urls)
+            })
+        }
       })
   }, [user])
 
@@ -137,6 +148,13 @@ export default function ProjectList() {
                         ))}
                         <span className="text-[10px] text-[#22aa00] ml-2">{info.step}/6</span>
                       </div>
+                      {deployUrls[p.id] && (
+                        <a href={deployUrls[p.id]} target="_blank" rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="block text-[10px] text-[#33ff00] bg-[#33ff00]/10 border border-[#33ff00]/30 px-2 py-1 mb-1 hover:bg-[#33ff00]/20 truncate">
+                          🔗 {deployUrls[p.id]}
+                        </a>
+                      )}
                       <div className="text-[10px] text-[#33ff00]">
                         [ CONTINUE → {info.step < 6 ? STAGES[Math.min(info.step, 5)].full.toUpperCase() : 'DASHBOARD'} ]
                       </div>
