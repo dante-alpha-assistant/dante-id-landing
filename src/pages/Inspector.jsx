@@ -419,6 +419,16 @@ export default function Inspector() {
             )}
           </div>
         </div>
+
+        {/* CTA to next stage */}
+        {testResults.length > 0 && testResults.length >= features.length && (
+          <button
+            onClick={() => navigate(`/deployer/${project_id}`)}
+            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+          >
+            [ CONTINUE → DEPLOYER: Ship It ]
+          </button>
+        )}
       </div>
     </div>
   )

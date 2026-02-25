@@ -544,6 +544,16 @@ export default function Builder() {
             </>
           )}
         </div>
+
+        {/* CTA to next stage */}
+        {features.length > 0 && features.every(f => buildsMap[f.id] && buildsMap[f.id].status !== "generating") && Object.keys(buildsMap).length >= features.length && (
+          <button
+            onClick={() => navigate(`/inspector/${project_id}`)}
+            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+          >
+            [ CONTINUE → INSPECTOR: Run Tests ]
+          </button>
+        )}
       </div>
     </div>
   )

@@ -409,6 +409,16 @@ export default function Refinery() {
               ))}
             </div>
           )}
+
+          {/* CTA to next stage */}
+          {features.length > 0 && (
+            <button
+              onClick={() => navigate(`/foundry/${project_id}`)}
+              className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+            >
+              [ CONTINUE → FOUNDRY: Generate Blueprints ]
+            </button>
+          )}
         </div>
       </div>
     </div>

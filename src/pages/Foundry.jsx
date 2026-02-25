@@ -338,6 +338,16 @@ export default function Foundry() {
           )}
         </div>
       </div>
+
+        {/* CTA to next stage */}
+        {missingCount === 0 && features.length > 0 && (
+          <button
+            onClick={() => navigate(`/builder/${project_id}`)}
+            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+          >
+            [ CONTINUE → BUILDER: Generate Code ]
+          </button>
+        )}
     </div>
   )
 }
