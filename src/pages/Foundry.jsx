@@ -475,6 +475,7 @@ export default function Foundry() {
           )}
         </div>
       </div>
+      )}
 
         {/* CTA to next stage — always visible when blueprints exist */}
         {Object.keys(blueprints).length > 0 && (
