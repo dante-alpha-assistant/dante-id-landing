@@ -186,6 +186,34 @@ router.post("/deploy", requireAuth, async (req, res) => {
       const username = (req.user.email || "user").split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
       const canonicalPath = `/app/${username}/${projectName}-${shortHash}`;
 
+      // Create per-app schema and run migrations
+      const schemaName = `app_${slug.replace(/-/g, '_')}_${shortHash}`;
+      logs.push(logEntry(`Creating schema: ${schemaName}`));
+      try {
+        // Find migration SQL from build files
+        const migrationFile = Object.keys(fileMap).find(f => f.includes('migration'));
+        const migrationSQL = migrationFile ? fileMap[migrationFile] : '';
+        
+        const schemaSQL = `CREATE SCHEMA IF NOT EXISTS "${schemaName}"; SET search_path TO "${schemaName}"; ${migrationSQL}`;
+        
+        const mgmtRes = await fetch("https://api.supabase.com/v1/projects/lessxkxujvcmublgwdaa/database/query", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + (process.env.SUPABASE_MGMT_TOKEN || "sbp_1bba539cc0f681dba9fd333d4dc1fbdb3b9db972"),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: schemaSQL }),
+        });
+        if (mgmtRes.ok) {
+          logs.push(logEntry("Schema + migrations applied ✅"));
+        } else {
+          const err = await mgmtRes.text();
+          logs.push(logEntry(`Schema warning: ${err.slice(0, 200)}`));
+        }
+      } catch (schemaErr) {
+        logs.push(logEntry(`Schema error (non-fatal): ${schemaErr.message}`));
+      }
+
       try {
         const vercelRes = await fetch(
           "https://api.vercel.com/v13/deployments",
@@ -234,6 +262,7 @@ router.post("/deploy", requireAuth, async (req, res) => {
           const envVars = [
             { key: "VITE_SUPABASE_URL", value: supabaseUrl, target: ["production", "preview", "development"], type: "plain" },
             { key: "VITE_SUPABASE_ANON_KEY", value: supabaseAnon, target: ["production", "preview", "development"], type: "plain" },
+            { key: "VITE_SUPABASE_SCHEMA", value: schemaName, target: ["production", "preview", "development"], type: "plain" },
           ];
           for (const env of envVars) {
             await fetch(`https://api.vercel.com/v10/projects/${vercelData.projectId}/env`, {

@@ -127,9 +127,10 @@ MANDATORY FILES:
 5. src/lib/supabase.ts: Initialize Supabase client using import.meta.env.VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 6. src/main.tsx: React entry point
 7. tailwind.config.js + postcss.config.js
-8. supabase/migration.sql: CREATE TABLE statements + Row Level Security policies + indexes. Use UUID primary keys with gen_random_uuid(). Include RLS: ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY for auth.uid().
-9. .env.example: VITE_SUPABASE_URL=your-project-url, VITE_SUPABASE_ANON_KEY=your-anon-key
+8. supabase/migration.sql: DO NOT include CREATE SCHEMA — the platform handles that. Just CREATE TABLE statements (no schema prefix), Row Level Security policies, and indexes. Use UUID primary keys with gen_random_uuid(). Include RLS: ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY ... USING (auth.uid() = user_id).
+9. .env.example: VITE_SUPABASE_URL=your-project-url, VITE_SUPABASE_ANON_KEY=your-anon-key, VITE_SUPABASE_SCHEMA=app_myproject
 10. vercel.json: {"rewrites":[{"source":"/(.*)", "destination":"/index.html"}]}
+11. src/lib/supabase.ts MUST use: createClient(url, key, { db: { schema: import.meta.env.VITE_SUPABASE_SCHEMA || 'public' } })
 
 DATA OPERATIONS (use Supabase client, NOT fetch):
 - Read: supabase.from('table').select('*').eq('user_id', user.id)
