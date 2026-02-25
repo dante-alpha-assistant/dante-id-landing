@@ -153,6 +153,9 @@ Generate detailed work orders for implementing this feature. Be specific about f
     const result = await callAI(PLANNER_SYSTEM, userPrompt);
     const workOrders = result.work_orders || [];
 
+    // Clear existing work orders for this feature before inserting
+    await supabase.from("work_orders").delete().eq("feature_id", feature_id).eq("project_id", project_id);
+
     // Save work orders to DB
     const saved = [];
     for (const wo of workOrders) {
@@ -201,12 +204,11 @@ router.post("/generate-all-work-orders", aiLimiter, requireAuth, async (req, res
     const { data: blueprints } = await supabase.from("blueprints").select("feature_id").eq("project_id", project_id);
     const bpSet = new Set((blueprints || []).map(b => b.feature_id));
 
-    // Only generate for features that have blueprints but no work orders yet
-    const { data: existingWOs } = await supabase.from("work_orders").select("feature_id").eq("project_id", project_id);
-    const woSet = new Set((existingWOs || []).map(w => w.feature_id));
+    // Clear existing work orders and regenerate all
+    await supabase.from("work_orders").delete().eq("project_id", project_id);
 
-    const eligible = (features || []).filter(f => bpSet.has(f.id) && !woSet.has(f.id));
-    if (eligible.length === 0) return res.json({ message: "All features already have work orders", count: 0 });
+    const eligible = (features || []).filter(f => bpSet.has(f.id));
+    if (eligible.length === 0) return res.json({ message: "No features with blueprints found", count: 0 });
 
     // Generate sequentially (each needs context of previous)
     let totalGenerated = 0;
