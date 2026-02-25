@@ -1,3 +1,5 @@
+const rateLimit = require("express-rate-limit");
+const aiLimiter = rateLimit({ windowMs: 60000, max: 5, message: { error: "Rate limited — try again in a minute" } });
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
@@ -75,7 +77,7 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
 }
 
 // --- POST /run-tests ---
-router.post("/run-tests", requireAuth, async (req, res) => {
+router.post("/run-tests", aiLimiter, requireAuth, async (req, res) => {
   const { feature_id, project_id } = req.body;
   if (!feature_id || !project_id) {
     return res.status(400).json({ error: "feature_id and project_id are required" });
@@ -248,7 +250,7 @@ router.get("/:project_id/results/:feature_id", requireAuth, async (req, res) => 
 });
 
 // --- POST /fix-suggestion ---
-router.post("/fix-suggestion", requireAuth, async (req, res) => {
+router.post("/fix-suggestion", aiLimiter, requireAuth, async (req, res) => {
   const { feature_id } = req.body;
   if (!feature_id) {
     return res.status(400).json({ error: "feature_id is required" });

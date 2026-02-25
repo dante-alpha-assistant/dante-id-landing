@@ -1,3 +1,5 @@
+const rateLimit = require("express-rate-limit");
+const aiLimiter = rateLimit({ windowMs: 60000, max: 5, message: { error: "Rate limited — try again in a minute" } });
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");

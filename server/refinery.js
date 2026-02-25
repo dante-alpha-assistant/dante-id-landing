@@ -1,3 +1,5 @@
+const rateLimit = require("express-rate-limit");
+const aiLimiter = rateLimit({ windowMs: 60000, max: 5, message: { error: "Rate limited — try again in a minute" } });
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
@@ -190,7 +192,7 @@ Order by priority (critical first). Be specific and actionable.`;
 });
 
 // --- POST /refine ---
-router.post("/refine", requireAuth, async (req, res) => {
+router.post("/refine", aiLimiter, requireAuth, async (req, res) => {
   const { project_id, prd_id, instruction } = req.body;
   if (!project_id || !prd_id || !instruction) {
     return res.status(400).json({ error: "project_id, prd_id, and instruction are required" });
