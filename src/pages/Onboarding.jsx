@@ -82,7 +82,7 @@ export default function Onboarding() {
         const { apiPost } = await import('../lib/api.js');
         apiPost('/api/generate', { project_id: insertData[0].id }).catch(() => {});
       }
-      window.location.href = '/dashboard';
+      window.location.href = insertData?.[0]?.id ? `/dashboard/${insertData[0].id}` : '/dashboard';
     } catch (e) {
       setError(e.message || 'Something went wrong');
       setSubmitting(false);

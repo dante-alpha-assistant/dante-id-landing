@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import DeliverableCard from '../components/DeliverableCard'
@@ -30,6 +30,7 @@ const PIPELINE_STEPS = [
 export default function Dashboard() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const { project_id } = useParams()
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [deliverables, setDeliverables] = useState([])
@@ -46,20 +47,32 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return
-    supabase
-      .from('projects')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (!data) {
-          navigate('/onboarding')
-        } else {
-          setProject(data)
-        }
-        setLoading(false)
-      })
-  }, [user, navigate])
+    if (project_id) {
+      supabase
+        .from('projects')
+        .select('*')
+        .eq('id', project_id)
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (!data) navigate('/dashboard')
+          else setProject(data)
+          setLoading(false)
+        })
+    } else {
+      // Legacy: redirect to project list or first project
+      supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (!data || data.length === 0) navigate('/onboarding')
+          else navigate(`/dashboard/${data[0].id}`, { replace: true })
+        })
+    }
+  }, [user, navigate, project_id])
 
   const fetchDeliverables = useCallback(async () => {
     if (!project) return
@@ -237,6 +250,12 @@ export default function Dashboard() {
           <span className="text-sm text-[#22aa00] hidden sm:inline">
             {project.company_name || project.full_name || 'PROJECT'}
           </span>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+          >
+            [ ← PROJECTS ]
+          </button>
           <button
             onClick={() => navigate('/fleet')}
             className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"

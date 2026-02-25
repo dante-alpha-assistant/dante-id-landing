@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
+import ProjectList from './pages/ProjectList'
 import Editor from './pages/Editor'
 import Fleet from './pages/Fleet'
 import AgentProfile from './pages/AgentProfile'
@@ -25,7 +26,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><ProjectList /></ProtectedRoute>} />
+          <Route path="/dashboard/:project_id" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/editor/:project_id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
           <Route path="/refinery/:project_id" element={<ProtectedRoute><Refinery /></ProtectedRoute>} />
           <Route path="/foundry/:project_id" element={<ProtectedRoute><Foundry /></ProtectedRoute>} />
