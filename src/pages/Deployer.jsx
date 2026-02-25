@@ -248,6 +248,23 @@ export default function Deployer() {
           <div className="text-xs text-[#1a6b1a] mt-4">+----------------------+</div>
         </div>
 
+        {/* Live URL Banner */}
+        {deployments.some(d => d.status === 'live') && (() => {
+          const live = deployments.find(d => d.status === 'live')
+          return (
+            <div className="bg-[#33ff00]/5 border-2 border-[#33ff00] p-6 mb-6 text-center">
+              <p className="text-[10px] text-[#22aa00] mb-2">YOUR APP IS LIVE</p>
+              <a href={live.vercel_url || live.url} target="_blank" rel="noopener noreferrer"
+                className="text-xl font-bold text-[#33ff00] hover:underline break-all">
+                {live.vercel_url || live.url}
+              </a>
+              {live.url && live.url !== live.vercel_url && (
+                <p className="text-xs text-[#1a6b1a] mt-2">Canonical: {live.url}</p>
+              )}
+            </div>
+          )
+        })()}
+
         {/* Deployment History */}
         <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
           <div className="text-xs text-[#1a6b1a] mb-4">+--- DEPLOYMENT HISTORY ---+</div>
@@ -281,7 +298,7 @@ export default function Deployer() {
                             rel="noopener noreferrer"
                             className="hover:text-[#33ff00] underline"
                           >
-                            {d.url.length > 35 ? d.url.slice(0, 35) + '..' : d.url}
+                            {d.url}
                           </a>
                         ) : (
                           <span className="text-[#1a6b1a]">—</span>

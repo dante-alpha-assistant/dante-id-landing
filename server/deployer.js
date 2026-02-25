@@ -285,7 +285,7 @@ router.get("/:project_id/deployments", requireAuth, async (req, res) => {
   try {
     const { data: deployments, error } = await supabase
       .from("deployments")
-      .select("id, target, status, url, created_at")
+      .select("id, target, status, url, vercel_url, canonical_path, created_at")
       .eq("project_id", req.params.project_id)
       .order("created_at", { ascending: false });
 
