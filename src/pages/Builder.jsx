@@ -196,11 +196,15 @@ export default function Builder() {
     setAiLoading(false)
   }
 
+  const [batchProgress, setBatchProgress] = useState(null)
+
   const generateAll = async () => {
     const eligible = features.filter(f => !buildsMap[f.id])
     if (eligible.length === 0) return
     setAiLoading(true)
-    for (const f of eligible) {
+    for (let i = 0; i < eligible.length; i++) {
+      const f = eligible[i]
+      setBatchProgress({ current: i + 1, total: eligible.length, featureName: f.name })
       try {
         const res = await apiCall(API_BASE_BUILDER, '/generate-code', {
           method: 'POST',
@@ -216,6 +220,7 @@ export default function Builder() {
         console.error(`Generate code for ${f.name} failed:`, err)
       }
     }
+    setBatchProgress(null)
     setAiLoading(false)
     await fetchData()
   }
@@ -291,7 +296,11 @@ export default function Builder() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
           <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-3">
             <div className="text-[#33ff00] terminal-blink text-lg">[GENERATING...]</div>
-            <p className="text-sm text-[#22aa00]">AI is generating code...</p>
+            {batchProgress ? (
+              <p className="text-sm text-[#22aa00]">Building {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
+            ) : (
+              <p className="text-sm text-[#22aa00]">AI is generating code...</p>
+            )}
           </div>
         </div>
       )}

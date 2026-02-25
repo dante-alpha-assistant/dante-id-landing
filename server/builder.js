@@ -45,7 +45,7 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => { console.log("[AI] Aborting after 120s"); controller.abort(); }, 120000);
+      const timeout = setTimeout(() => { console.log("[AI] Aborting after 180s"); controller.abort(); }, 180000);
       
       console.log('[AI] Attempt', attempt + 1, 'calling OpenRouter...');
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -98,20 +98,20 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate complete, production-ready code files based on the technical blueprint provided.
+const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate working code scaffolding based on the technical blueprint.
 
 Rules:
-- Generate COMPLETE files, not stubs or placeholders
-- Include proper imports, error handling, types where appropriate
-- Follow modern best practices for the specified tech stack
-- Each file must be immediately usable — no TODOs or "implement this"
-- Include package.json if dependencies are needed
-- Generate appropriate directory structure
+- Generate key files with real logic for core functionality
+- Include proper imports and file structure
+- Focus on the PRIMARY feature logic — skip boilerplate that frameworks auto-generate
+- Keep files concise (under 100 lines each where possible)
+- Include a package.json with dependencies
+- Max 8 files per feature — focus on what matters
 
 Return JSON: {
-  "files": [{"path": "relative/path/to/file.ext", "content": "full file content", "language": "jsx|ts|py|sql|json|etc"}],
-  "summary": "What was generated and why",
-  "setup_instructions": "How to run/test this code"
+  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "jsx|ts|py|sql|json|etc"}],
+  "summary": "What was generated and key decisions made",
+  "setup_instructions": "How to run this"
 }`;
 
 // --- POST /generate-code ---
@@ -194,7 +194,7 @@ ${JSON.stringify(blueprint.content, null, 2)}
 Tech Stack Context: ${typeof techStack === 'string' ? techStack : JSON.stringify(techStack)}
 Project: ${project?.company_name || project?.full_name || "Unknown"}
 
-Generate complete, production-ready code files for this feature.`;
+Generate concise, working code for this feature. Focus on core logic, keep files short.`;
 
     const result = await callAI(CODE_GEN_SYSTEM, userPrompt);
 
