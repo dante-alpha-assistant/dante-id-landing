@@ -199,7 +199,16 @@ router.post("/deploy", requireAuth, async (req, res) => {
               name: projectName,
               files,
               target: "production",
-              projectSettings: { framework: null },
+              projectSettings: {
+                framework: "vite",
+                buildCommand: "npm install && npm run build",
+                outputDirectory: "dist",
+                installCommand: "npm install",
+              },
+              env: {
+                VITE_SUPABASE_URL: process.env.SUPABASE_URL || "https://lessxkxujvcmublgwdaa.supabase.co",
+                VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxlc3N4a3h1anZjbXVibGd3ZGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNjE0NjUsImV4cCI6MjA4NjkzNzQ2NX0.HoGHrO4MHc06V1WXYQQTRERHvQaShWOPb3gW4DV7G1A",
+              },
             }),
           }
         );
