@@ -144,6 +144,46 @@ app.use("/api/admin", require("./admin"));
 app.use("/api/validator", require("./validator"));
 app.use("/api/iterate", require("./iterate"));
 
+// --- Per-project AI usage ---
+app.get("/api/projects/:id/usage", requireAuth, async (req, res) => {
+  try {
+    // Verify ownership
+    const { data: project } = await supabase.from("projects").select("id").eq("id", req.params.id).eq("user_id", req.user.id).single();
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const { data: logs } = await supabase.from("ai_usage_logs")
+      .select("module, operation, model, input_tokens, output_tokens, cost_usd, latency_ms, created_at")
+      .eq("project_id", req.params.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    const byModule = {};
+    let totalCost = 0, totalInputTokens = 0, totalOutputTokens = 0, totalCalls = 0;
+
+    (logs || []).forEach(l => {
+      const mod = l.module || "unknown";
+      if (!byModule[mod]) byModule[mod] = { cost: 0, input_tokens: 0, output_tokens: 0, calls: 0 };
+      byModule[mod].cost += Number(l.cost_usd) || 0;
+      byModule[mod].input_tokens += l.input_tokens || 0;
+      byModule[mod].output_tokens += l.output_tokens || 0;
+      byModule[mod].calls += 1;
+      totalCost += Number(l.cost_usd) || 0;
+      totalInputTokens += l.input_tokens || 0;
+      totalOutputTokens += l.output_tokens || 0;
+      totalCalls += 1;
+    });
+
+    res.json({
+      total_cost_usd: Math.round(totalCost * 10000) / 10000,
+      total_input_tokens: totalInputTokens,
+      total_output_tokens: totalOutputTokens,
+      total_calls: totalCalls,
+      by_module: byModule,
+      recent: (logs || []).slice(0, 20),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // --- Projects API ---
 app.get("/api/projects", requireAuth, async (req, res) => {
   const { data, error } = await supabase
