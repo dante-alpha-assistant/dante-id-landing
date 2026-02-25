@@ -17,6 +17,7 @@ import Builder from './pages/Builder'
 import Inspector from './pages/Inspector'
 import Deployer from './pages/Deployer'
 import Pricing from './pages/Pricing'
+import AdminDashboard from './pages/AdminDashboard'
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="/builder/:project_id" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
           <Route path="/inspector/:project_id" element={<ProtectedRoute><Inspector /></ProtectedRoute>} />
           <Route path="/deployer/:project_id" element={<ProtectedRoute><Deployer /></ProtectedRoute>} />
+          <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/fleet/:agentId" element={<AgentProfile />} />
