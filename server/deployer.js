@@ -189,27 +189,37 @@ router.post("/deploy", requireAuth, async (req, res) => {
       // Create per-app schema and run migrations
       const schemaName = `app_${slug.replace(/-/g, '_')}_${shortHash}`;
       logs.push(logEntry(`Creating schema: ${schemaName}`));
+      
+      const mgmtHeaders = {
+        "Authorization": "Bearer " + (process.env.SUPABASE_MGMT_TOKEN || "sbp_1bba539cc0f681dba9fd333d4dc1fbdb3b9db972"),
+        "Content-Type": "application/json",
+      };
+      const mgmtUrl = "https://api.supabase.com/v1/projects/lessxkxujvcmublgwdaa/database/query";
+
       try {
-        // Find migration SQL from build files
-        const migrationFile = Object.keys(fileMap).find(f => f.includes('migration'));
-        const migrationSQL = migrationFile ? fileMap[migrationFile] : '';
-        
-        const schemaSQL = `CREATE SCHEMA IF NOT EXISTS "${schemaName}"; SET search_path TO "${schemaName}"; ${migrationSQL}`;
-        
-        const mgmtRes = await fetch("https://api.supabase.com/v1/projects/lessxkxujvcmublgwdaa/database/query", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + (process.env.SUPABASE_MGMT_TOKEN || "sbp_1bba539cc0f681dba9fd333d4dc1fbdb3b9db972"),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query: schemaSQL }),
+        // Step 1: Create schema
+        await fetch(mgmtUrl, {
+          method: "POST", headers: mgmtHeaders,
+          body: JSON.stringify({ query: `CREATE SCHEMA IF NOT EXISTS "${schemaName}";` }),
         });
-        if (mgmtRes.ok) {
-          logs.push(logEntry("Schema + migrations applied ✅"));
-        } else {
-          const err = await mgmtRes.text();
-          logs.push(logEntry(`Schema warning: ${err.slice(0, 200)}`));
+
+        // Step 2: Find and run migration SQL
+        const migrationFiles = Object.keys(fileMap).filter(f => f.includes('migration') && f.endsWith('.sql'));
+        for (const mf of migrationFiles) {
+          const sql = fileMap[mf];
+          if (!sql || sql.trim().length === 0) continue;
+          // Prefix with search_path so tables go in the app schema
+          const fullSQL = `SET search_path TO "${schemaName}", public;\n${sql}`;
+          const mgmtRes = await fetch(mgmtUrl, {
+            method: "POST", headers: mgmtHeaders,
+            body: JSON.stringify({ query: fullSQL }),
+          });
+          if (!mgmtRes.ok) {
+            const errText = await mgmtRes.text();
+            logs.push(logEntry(`Migration warning (${mf}): ${errText.slice(0, 200)}`));
+          }
         }
+        logs.push(logEntry(`Schema + ${migrationFiles.length} migration(s) applied ✅`));
       } catch (schemaErr) {
         logs.push(logEntry(`Schema error (non-fatal): ${schemaErr.message}`));
       }
