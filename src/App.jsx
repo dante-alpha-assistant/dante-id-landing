@@ -12,6 +12,7 @@ import Fleet from './pages/Fleet'
 import AgentProfile from './pages/AgentProfile'
 import Refinery from './pages/Refinery'
 import Foundry from './pages/Foundry'
+import Planner from './pages/Planner'
 import Builder from './pages/Builder'
 import Inspector from './pages/Inspector'
 import Deployer from './pages/Deployer'
@@ -31,6 +32,7 @@ function App() {
           <Route path="/editor/:project_id" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
           <Route path="/refinery/:project_id" element={<ProtectedRoute><Refinery /></ProtectedRoute>} />
           <Route path="/foundry/:project_id" element={<ProtectedRoute><Foundry /></ProtectedRoute>} />
+          <Route path="/planner/:project_id" element={<ProtectedRoute><Planner /></ProtectedRoute>} />
           <Route path="/builder/:project_id" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
           <Route path="/inspector/:project_id" element={<ProtectedRoute><Inspector /></ProtectedRoute>} />
           <Route path="/deployer/:project_id" element={<ProtectedRoute><Deployer /></ProtectedRoute>} />

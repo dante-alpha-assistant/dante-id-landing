@@ -113,6 +113,9 @@ app.use("/api/refinery", require("./refinery"));
 // --- Foundry module ---
 app.use("/api/foundry", require("./foundry"));
 
+// --- Planner module ---
+app.use("/api/planner", require("./planner"));
+
 // --- Builder module ---
 app.use("/api/builder", require("./builder"));
 

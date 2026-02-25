@@ -22,6 +22,7 @@ async function apiCall(base, path) {
 const PIPELINE_STEPS = [
   { key: 'refinery', label: 'REFINERY', route: (id) => `/refinery/${id}` },
   { key: 'foundry', label: 'FOUNDRY', route: (id) => `/foundry/${id}` },
+  { key: 'planner', label: 'PLANNER', route: (id) => `/planner/${id}` },
   { key: 'builder', label: 'BUILDER', route: (id) => `/builder/${id}` },
   { key: 'inspector', label: 'INSPECTOR', route: (id) => `/inspector/${id}` },
   { key: 'deployer', label: 'DEPLOYER', route: (id) => `/deployer/${id}` },
@@ -90,10 +91,11 @@ export default function Dashboard() {
     if (!project) return
     const id = project.id
     try {
-      const [prdRes, featuresRes, blueprintsRes, buildsRes, resultsRes, deploymentsRes] = await Promise.allSettled([
+      const [prdRes, featuresRes, blueprintsRes, plannerRes, buildsRes, resultsRes, deploymentsRes] = await Promise.allSettled([
         apiCall('/api/refinery', `/${id}/prd`),
         apiCall('/api/refinery', `/${id}/features`),
         apiCall('/api/foundry', `/${id}/blueprints`),
+        apiCall('/api/planner', `/${id}/work-orders`),
         apiCall('/api/builder', `/${id}/builds`),
         apiCall('/api/inspector', `/${id}/results`),
         apiCall('/api/deployer', `/${id}/deployments`),
@@ -102,6 +104,7 @@ export default function Dashboard() {
       const prd = prdRes.status === 'fulfilled' ? prdRes.value : null
       const features = featuresRes.status === 'fulfilled' ? (featuresRes.value.features || []) : []
       const blueprints = blueprintsRes.status === 'fulfilled' ? (blueprintsRes.value.blueprints || []) : []
+      const workOrders = plannerRes.status === 'fulfilled' ? (plannerRes.value.work_orders || []) : []
       const builds = buildsRes.status === 'fulfilled' ? (buildsRes.value.builds || []) : []
       const results = resultsRes.status === 'fulfilled' ? (resultsRes.value.results || []) : []
       const deployments = deploymentsRes.status === 'fulfilled' ? (deploymentsRes.value.deployments || []) : []
@@ -135,6 +138,18 @@ export default function Dashboard() {
         newStatus.foundry = { status: 'done', text: `${blueprintCount} blueprints ready` }
       } else {
         newStatus.foundry = { status: featureCount > 0 ? 'in-progress' : 'waiting', text: featureCount > 0 ? `${blueprintCount}/${featureCount} blueprints` : 'Waiting...' }
+      }
+
+      // Planner
+      const woCount = workOrders.length
+      const allWOsReady = featureCount > 0 && woCount > 0
+      if (!allBlueprintsReady) {
+        newStatus.planner = { status: 'waiting', text: 'Waiting...' }
+      } else if (allWOsReady) {
+        const doneWOs = workOrders.filter(w => w.status === 'done').length
+        newStatus.planner = { status: 'done', text: `${woCount} work orders (${doneWOs} done)` }
+      } else {
+        newStatus.planner = { status: 'in-progress', text: 'Generate work orders' }
       }
 
       // Builder
