@@ -122,6 +122,35 @@ app.use("/api/inspector", require("./inspector"));
 // --- Deployer module ---
 app.use("/api/deployer", require("./deployer"));
 
+// --- Projects API ---
+app.get("/api/projects", requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("user_id", req.user.id)
+    .order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ projects: data || [] });
+});
+
+app.post("/api/projects", requireAuth, async (req, res) => {
+  const { company_name, idea, stage, needs } = req.body;
+  if (!idea) return res.status(400).json({ error: "idea is required" });
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({
+      user_id: req.user.id,
+      company_name: company_name || null,
+      idea: idea.trim().slice(0, 2000),
+      stage: stage || "idea",
+      needs: needs || [],
+    })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ project: data });
+});
+
 // --- Health check ---
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
