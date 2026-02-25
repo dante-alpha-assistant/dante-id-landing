@@ -126,6 +126,12 @@ export default function Dashboard() {
               </span>
             )}
           </div>
+          <button
+            onClick={() => navigate(`/refinery/${project.id}`)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+          >
+            🔧 Refinery
+          </button>
           {needs.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
               {needs.map((need) => (
