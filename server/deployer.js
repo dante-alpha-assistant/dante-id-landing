@@ -169,11 +169,12 @@ router.post("/deploy", requireAuth, async (req, res) => {
         .eq("id", project_id)
         .single();
 
-      const projectName = (project?.name || project?.company_name || "project")
+      const slug = (project?.name || project?.company_name || "project")
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "-")
         .replace(/-+/g, "-")
-        .slice(0, 50);
+        .slice(0, 40);
+      const projectName = `dante-${slug}-${project_id.slice(0, 4)}`;
 
       // Generate path-based URL: dante.id/{username}/{slug-hash}
       const shortHash = project_id.slice(0, 4);
