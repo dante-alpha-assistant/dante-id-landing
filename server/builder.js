@@ -69,7 +69,7 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
       
       // Read body as text with a 120s body timeout
       const bodyPromise = res.text();
-      const bodyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Body read timeout after 120s')), 120000));
+      const bodyTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Body read timeout after 300s')), 300000));
       const bodyText = await Promise.race([bodyPromise, bodyTimeout]);
       clearTimeout(timeout);
       
@@ -100,43 +100,55 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   }
 }
 
-const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate a WORKING, DEPLOYABLE React SPA based on the technical blueprint.
+const CODE_GEN_SYSTEM = `You are a senior full-stack engineer. Generate a WORKING, DEPLOYABLE React + Supabase app based on the technical blueprint.
 
-This app will be deployed as a STATIC site on Vercel. There is NO backend server. All data persistence uses localStorage. All API-like operations use helper functions that read/write localStorage.
+ARCHITECTURE:
+- Frontend: React + Vite + TypeScript → deploys to Vercel as static site
+- Backend: Supabase (database, auth, realtime, storage) → NO Express, NO custom server
+- All data operations use @supabase/supabase-js client
+- Auth via supabase.auth.signUp() / signInWithPassword()
 
 TECH STACK (MANDATORY):
 - React 18 + Vite + TypeScript (.tsx for components, .ts for utils)
+- @supabase/supabase-js for all backend operations
 - Tailwind CSS for styling
-- localStorage for all data persistence (wrap in a src/lib/store.ts helper)
 - React Router for navigation
 - NO Express, NO backend server, NO SQLite, NO native modules
 
 USE THESE EXACT VERSIONS in package.json:
-react: "18.2.0", react-dom: "18.2.0", react-router-dom: "6.20.0", @vitejs/plugin-react: "4.2.1", vite: "5.4.0", typescript: "5.3.3", tailwindcss: "3.4.0", postcss: "8.4.32", autoprefixer: "10.4.16"
-@types/react: "18.2.43", @types/react-dom: "18.2.17"
+react: "18.2.0", react-dom: "18.2.0", react-router-dom: "6.20.0", @supabase/supabase-js: "2.39.0", @vitejs/plugin-react: "4.2.1", vite: "5.4.0", typescript: "5.3.3", tailwindcss: "3.4.0", postcss: "8.4.32", autoprefixer: "10.4.16", @types/react: "18.2.43", @types/react-dom: "18.2.17"
 Put ALL in "dependencies" (NOT devDependencies).
 
 MANDATORY FILES:
 1. tsconfig.json: {"compilerOptions":{"target":"ES2020","module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":false,"skipLibCheck":true,"esModuleInterop":true,"allowSyntheticDefaultImports":true,"resolveJsonModule":true,"isolatedModules":true,"noEmit":true},"include":["src"]}
-2. vite.config.ts: import { defineConfig } from 'vite'; import react from '@vitejs/plugin-react'; export default defineConfig({ plugins: [react()] });
-3. index.html: <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>App</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
-4. package.json scripts: "dev": "vite", "build": "vite build", "preview": "vite preview"
-5. src/main.tsx: React entry point rendering App
-6. src/lib/store.ts: localStorage wrapper with typed CRUD helpers
+2. vite.config.ts: standard Vite + React config
+3. index.html with root div + module script src="/src/main.tsx"
+4. package.json with scripts: "dev": "vite", "build": "vite build", "preview": "vite preview"
+5. src/lib/supabase.ts: Initialize Supabase client using import.meta.env.VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+6. src/main.tsx: React entry point
 7. tailwind.config.js + postcss.config.js
+8. supabase/migration.sql: CREATE TABLE statements + Row Level Security policies + indexes. Use UUID primary keys with gen_random_uuid(). Include RLS: ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY for auth.uid().
+9. .env.example: VITE_SUPABASE_URL=your-project-url, VITE_SUPABASE_ANON_KEY=your-anon-key
+
+DATA OPERATIONS (use Supabase client, NOT fetch):
+- Read: supabase.from('table').select('*').eq('user_id', user.id)
+- Create: supabase.from('table').insert({...}).select().single()
+- Update: supabase.from('table').update({...}).eq('id', id)
+- Delete: supabase.from('table').delete().eq('id', id)
+- Auth: supabase.auth.signUp/signInWithPassword/signOut/getUser
 
 CRITICAL RULES:
 - Every import MUST resolve to a file you create. No phantom imports.
 - Use \`any\` type freely. No complex type hierarchies.
 - The code MUST pass \`vite build\` without errors.
 - Implement real UI with forms, lists, modals, state management — not placeholders.
-- All CRUD: create, read, update, AND delete via localStorage.
+- All CRUD: create, read, update, AND delete via Supabase.
 - Max 12 files per feature.
 
 Return JSON: {
-  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "tsx|ts|json|html|css|js"}],
+  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "tsx|ts|json|html|css|js|sql"}],
   "summary": "What was generated and key decisions made",
-  "setup_instructions": "npm install && npm run dev"
+  "setup_instructions": "npm install && npm run dev (set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env)"
 }`;
 
 // --- POST /generate-code ---
