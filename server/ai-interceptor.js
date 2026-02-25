@@ -84,7 +84,10 @@ global.fetch = async function patchedFetch(url, opts) {
           output_tokens: outputTokens,
           cost_usd: costUsd,
           latency_ms: latencyMs,
-        }).then(() => {}).catch(err => console.error("[AI$] Log error:", err.message));
+        }).then(({ error }) => {
+          if (error) console.error("[AI$] Supabase insert error:", error.message, error.details, error.hint);
+          else console.log("[AI$] Logged to Supabase ✅");
+        }).catch(err => console.error("[AI$] Log error:", err.message));
 
         // Log to LangFuse
         if (langfuse) {
@@ -112,5 +115,11 @@ global.fetch = async function patchedFetch(url, opts) {
 
   return response;
 };
+
+// Self-test on load
+supabase.from("ai_usage_logs").select("id").limit(1).then(({ data, error }) => {
+  if (error) console.error("[AI$] Supabase self-test FAILED:", error.message);
+  else console.log("[AI$] Supabase self-test OK, rows:", data?.length);
+}).catch(err => console.error("[AI$] Supabase self-test error:", err.message));
 
 module.exports = { setAIContext };
