@@ -86,4 +86,49 @@ router.get("/projects", requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- AI Usage Stats ---
+router.get("/usage", requireAdmin, async (req, res) => {
+  try {
+    // Per-project totals
+    const { data: perProject } = await supabase.rpc("exec_sql", { sql: "" }).catch(() => ({ data: null }));
+    
+    // Use direct query instead
+    const { data: logs } = await supabase.from("ai_usage_logs")
+      .select("project_id, module, operation, model, input_tokens, output_tokens, cost_usd, latency_ms, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    // Aggregate per project
+    const byProject = {};
+    const byModule = {};
+    let totalCost = 0, totalTokens = 0;
+
+    (logs || []).forEach(l => {
+      const pid = l.project_id || "unknown";
+      if (!byProject[pid]) byProject[pid] = { cost: 0, tokens: 0, calls: 0 };
+      byProject[pid].cost += Number(l.cost_usd) || 0;
+      byProject[pid].tokens += (l.input_tokens + l.output_tokens) || 0;
+      byProject[pid].calls += 1;
+
+      const mod = l.module || "unknown";
+      if (!byModule[mod]) byModule[mod] = { cost: 0, tokens: 0, calls: 0 };
+      byModule[mod].cost += Number(l.cost_usd) || 0;
+      byModule[mod].tokens += (l.input_tokens + l.output_tokens) || 0;
+      byModule[mod].calls += 1;
+
+      totalCost += Number(l.cost_usd) || 0;
+      totalTokens += (l.input_tokens + l.output_tokens) || 0;
+    });
+
+    res.json({
+      total_cost_usd: Math.round(totalCost * 10000) / 10000,
+      total_tokens: totalTokens,
+      total_calls: (logs || []).length,
+      by_project: byProject,
+      by_module: byModule,
+      recent: (logs || []).slice(0, 20),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;

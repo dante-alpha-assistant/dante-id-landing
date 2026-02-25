@@ -1,4 +1,5 @@
 require("dotenv").config();
+const { setAIContext } = require("./ai-interceptor"); // must be first — patches global fetch
 const express = require("express");
 const cors = require("cors");
 
@@ -39,6 +40,16 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
 });
 
 app.use(express.json({ limit: "100kb" }));
+
+// --- AI context tracking (after body parsing) ---
+app.use((req, res, next) => {
+  const parts = req.path.split("/").filter(Boolean);
+  const module = parts[1] || "unknown";
+  const operation = parts[2] || req.method.toLowerCase();
+  const projectId = req.body?.project_id || req.params?.project_id || req.params?.id || null;
+  setAIContext({ module, operation, projectId, userId: null });
+  next();
+});
 
 // --- Shared Supabase client ---
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
