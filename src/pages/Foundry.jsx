@@ -361,7 +361,7 @@ export default function Foundry() {
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="text-sm font-medium text-[#33ff00] flex-1 truncate">
+                      <h4 className="text-sm font-medium text-[#33ff00] flex-1 break-words">
                         {selectedFeature?.id === f.id ? '> ' : '  '}{f.name}
                       </h4>
                       <span className={`text-[10px] font-bold shrink-0 ${priority.cls}`}>
