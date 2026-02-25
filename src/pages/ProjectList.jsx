@@ -9,7 +9,25 @@ export default function ProjectList() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [progress, setProgress] = useState({}) // { projectId: { step, label } }
+  const STAGES = [
+    { key: 'refinery', label: 'R', full: 'Refinery', route: id => `/refinery/${id}` },
+    { key: 'foundry', label: 'F', full: 'Foundry', route: id => `/foundry/${id}` },
+    { key: 'planner', label: 'P', full: 'Planner', route: id => `/planner/${id}` },
+    { key: 'builder', label: 'B', full: 'Builder', route: id => `/builder/${id}` },
+    { key: 'inspector', label: 'I', full: 'Inspector', route: id => `/inspector/${id}` },
+    { key: 'deployer', label: 'D', full: 'Deployer', route: id => `/deployer/${id}` },
+  ]
+
+  const STATUS_MAP = {
+    pending: { step: 0, label: 'Start', route: id => `/refinery/${id}` },
+    refining: { step: 1, label: 'Refinery ✓', route: id => `/foundry/${id}` },
+    designed: { step: 2, label: 'Foundry ✓', route: id => `/planner/${id}` },
+    planning: { step: 3, label: 'Planner ✓', route: id => `/builder/${id}` },
+    building: { step: 4, label: 'Builder ✓', route: id => `/inspector/${id}` },
+    tested: { step: 5, label: 'Inspector ✓', route: id => `/deployer/${id}` },
+    live: { step: 6, label: 'Live 🚀', route: id => `/dashboard/${id}` },
+    completed: { step: 6, label: 'Live 🚀', route: id => `/dashboard/${id}` },
+  }
 
   useEffect(() => {
     if (!user) return
@@ -18,30 +36,9 @@ export default function ProjectList() {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .then(async ({ data }) => {
+      .then(({ data }) => {
         setProjects(data || [])
         setLoading(false)
-
-        // Fetch pipeline progress for each project
-        const prog = {}
-        for (const p of (data || [])) {
-          const [prd, feat, bp, builds, tests, deploys] = await Promise.all([
-            supabase.from('prds').select('id').eq('project_id', p.id).limit(1),
-            supabase.from('features').select('id').eq('project_id', p.id),
-            supabase.from('blueprints').select('id').eq('project_id', p.id),
-            supabase.from('builds').select('id').eq('project_id', p.id),
-            supabase.from('test_results').select('id').eq('project_id', p.id),
-            supabase.from('deployments').select('id').eq('project_id', p.id).eq('status', 'live'),
-          ])
-          const fc = (feat.data || []).length
-          if ((deploys.data || []).length > 0) prog[p.id] = { step: 5, label: 'DEPLOYED' }
-          else if ((tests.data || []).length >= fc && fc > 0) prog[p.id] = { step: 4, label: 'TESTED' }
-          else if ((builds.data || []).length >= fc && fc > 0) prog[p.id] = { step: 3, label: 'BUILT' }
-          else if ((bp.data || []).length >= fc && fc > 0) prog[p.id] = { step: 2, label: 'BLUEPRINTED' }
-          else if ((prd.data || []).length > 0) prog[p.id] = { step: 1, label: 'PRD DONE' }
-          else prog[p.id] = { step: 0, label: 'NEW' }
-        }
-        setProgress(prog)
       })
   }, [user])
 
@@ -94,7 +91,7 @@ export default function ProjectList() {
             {projects.map(p => (
               <button
                 key={p.id}
-                onClick={() => navigate(`/dashboard/${p.id}`)}
+                onClick={() => navigate((STATUS_MAP[p.status] || STATUS_MAP.pending).route(p.id))}
                 className="border border-[#1f521f] p-5 text-left hover:border-[#33ff00] transition-colors group"
               >
                 <div className="flex items-start justify-between mb-3">
@@ -108,15 +105,27 @@ export default function ProjectList() {
                 <p className="text-xs text-[#22aa00] line-clamp-2 mb-3">
                   {p.idea || p.description || 'No description'}
                 </p>
-                <div className="flex gap-1">
-                  {['R', 'F', 'B', 'I', 'D'].map((label, i) => (
-                    <div key={i} className={`w-6 h-1.5 ${i < (progress[p.id]?.step || 0) ? 'bg-[#33ff00]' : 'bg-[#1f521f]'}`} />
-                  ))}
-                  <span className="text-[10px] text-[#22aa00] ml-2">
-                    {progress[p.id] ? `${progress[p.id].step}/5 ${progress[p.id].label}` : '...'}
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#1a6b1a] mt-2">[ OPEN → ]</p>
+                {(() => {
+                  const info = STATUS_MAP[p.status] || STATUS_MAP.pending
+                  return (
+                    <>
+                      <div className="flex items-center gap-1 mb-2">
+                        {STAGES.map((s, i) => (
+                          <div key={i} className="flex items-center">
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[8px] ${i < info.step ? 'bg-[#33ff00] border-[#33ff00] text-[#0a0a0a] font-bold' : i === info.step ? 'border-[#33ff00] text-[#33ff00]' : 'border-[#1f521f] text-[#1a6b1a]'}`}>
+                              {s.label}
+                            </div>
+                            {i < STAGES.length - 1 && <div className={`w-2 h-px ${i < info.step ? 'bg-[#33ff00]' : 'bg-[#1f521f]'}`} />}
+                          </div>
+                        ))}
+                        <span className="text-[10px] text-[#22aa00] ml-2">{info.step}/6</span>
+                      </div>
+                      <div className="text-[10px] text-[#33ff00]">
+                        [ CONTINUE → {info.step < 6 ? STAGES[Math.min(info.step, 5)].full.toUpperCase() : 'DASHBOARD'} ]
+                      </div>
+                    </>
+                  )
+                })()}
               </button>
             ))}
           </div>
