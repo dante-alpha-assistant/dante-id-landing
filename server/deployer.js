@@ -200,6 +200,7 @@ router.post("/deploy", requireAuth, async (req, res) => {
             body: JSON.stringify({
               name: projectName,
               files,
+              target: "production",
               projectSettings: { framework: null },
             }),
           }
@@ -219,7 +220,10 @@ router.post("/deploy", requireAuth, async (req, res) => {
           });
         }
 
-        const vercelUrl = `https://${vercelData.url}`;
+        // Use production alias (projectname.vercel.app) not preview hash URL
+        const vercelUrl = vercelData.alias?.length > 0 
+          ? `https://${vercelData.alias[0]}` 
+          : `https://${projectName}.vercel.app`;
         const canonicalUrl = `https://dante.id${canonicalPath}`;
         logs.push(logEntry(`Vercel URL: ${vercelUrl}`));
         logs.push(logEntry(`Canonical URL: ${canonicalUrl}`));
