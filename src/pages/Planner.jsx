@@ -3,6 +3,41 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const API_BASE = '/api/planner'
+
+const PLAN_STEPS = [
+  'Analyzing blueprints...',
+  'Identifying implementation phases...',
+  'Creating work order structure...',
+  'Finalizing dependencies...',
+]
+
+function PlannerLoadingOverlay({ batchProgress }) {
+  const [elapsed, setElapsed] = useState(0)
+  const step = Math.floor(elapsed / 15) % PLAN_STEPS.length
+  const pct = Math.min(Math.round((elapsed / 60) * 90), 90)
+  const filled = Math.round(pct / 5)
+
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+      <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-4 min-w-[340px]">
+        <div className="text-[#33ff00] terminal-blink text-lg">[PLANNING...]</div>
+        <p className="text-sm text-[#22aa00]">{batchProgress?.featureName || PLAN_STEPS[step]}</p>
+        <div className="text-xs font-mono text-[#33ff00]">
+          [{'█'.repeat(filled)}{'░'.repeat(20 - filled)}] {pct}%
+        </div>
+        <div className="flex gap-6 text-[10px] text-[#1a6b1a]">
+          <span>Elapsed: {elapsed}s</span>
+          <span>Est: 30-60s</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 const API_BASE_REFINERY = '/api/refinery'
 
 async function apiCall(base, path, opts = {}) {
@@ -108,18 +143,7 @@ export default function Planner() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
       {/* AI Loading overlay */}
-      {aiLoading && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-3">
-            <div className="text-[#33ff00] terminal-blink text-lg">[PLANNING...]</div>
-            {batchProgress ? (
-              <p className="text-sm text-[#22aa00]">{batchProgress.featureName}</p>
-            ) : (
-              <p className="text-sm text-[#22aa00]">AI is generating work orders...</p>
-            )}
-          </div>
-        </div>
-      )}
+      {aiLoading && <PlannerLoadingOverlay batchProgress={batchProgress} />}
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#1f521f]">
