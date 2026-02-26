@@ -5,6 +5,33 @@ const { getUserGitHubToken } = require("./github-auth");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Helper to fetch artifacts for a workflow run
+async function fetchWorkflowArtifacts(owner, repo, runId, token) {
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}/artifacts`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28"
+        }
+      }
+    );
+    
+    if (!res.ok) {
+      console.error(`[Webhook] Failed to fetch artifacts: ${res.status}`);
+      return [];
+    }
+    
+    const data = await res.json();
+    return data.artifacts || [];
+  } catch (err) {
+    console.error("[Webhook] Error fetching artifacts:", err.message);
+    return [];
+  }
+}
+
 const router = express.Router();
 
 // Webhook endpoint - no auth middleware, uses signature verification

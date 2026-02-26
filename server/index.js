@@ -147,6 +147,7 @@ app.use("/api/auth/github", require("./github-auth"));
 app.use("/api/github", require("./github-repos"));
 app.use("/api/admin", require("./admin"));
 app.use("/api/validator", require("./validator"));
+app.use("/api/projects/:id/qa-results", require("./qa-results"));
 app.use("/api/iterate", require("./iterate"));
 
 // --- Per-project AI usage ---
