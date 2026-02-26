@@ -65,19 +65,32 @@ async function collectFiles(projectId) {
     .from("builds")
     .select("*")
     .eq("project_id", projectId)
-    .eq("status", "review");
+    .in("status", ["review", "done"]);
 
   if (error) throw new Error("Failed to fetch builds: " + error.message);
-  if (!builds || builds.length === 0) throw new Error("No builds with status='review' found");
+  if (!builds || builds.length === 0) throw new Error("No builds found");
 
   const fileMap = {}; // path -> code
   for (const build of builds) {
-    const files = build.content?.files;
-    if (!files || typeof files !== "object") continue;
-    for (const [filename, code] of Object.entries(files)) {
-      const mapped = mapFilePath(filename);
-      if (!mapped) continue; // skipped
-      fileMap[mapped] = code;
+    // Handle array format: build.files = [{path, content}]
+    if (Array.isArray(build.files)) {
+      for (const file of build.files) {
+        if (file.path && typeof file.content === "string") {
+          const mapped = mapFilePath(file.path);
+          if (!mapped) continue;
+          fileMap[mapped] = file.content;
+        }
+      }
+    }
+    
+    // Handle object format: build.content.files = {filename: code}
+    const contentFiles = build.content?.files;
+    if (contentFiles && typeof contentFiles === "object" && !Array.isArray(contentFiles)) {
+      for (const [filename, code] of Object.entries(contentFiles)) {
+        const mapped = mapFilePath(filename);
+        if (!mapped) continue;
+        fileMap[mapped] = code;
+      }
     }
   }
 
