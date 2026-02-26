@@ -265,10 +265,45 @@ router.post("/generate-blueprint", requireAuth, async (req, res) => {
 
     const prdContent = feature.prds?.content || {};
 
-    const systemPrompt = `You are a senior software architect. Generate a comprehensive technical blueprint for implementing a feature.
+    // Check if internal project
+    const { data: project } = await supabase.from("projects").select("type, platform_context").eq("id", project_id).single();
+    const isInternal = project?.type === "internal";
+    const platformCtx = project?.platform_context;
+
+    let systemPrompt;
+    if (isInternal && platformCtx) {
+      const existingRoutes = Object.values(platformCtx.api_routes || {}).flat().map(r => `${r.method} ${r.path}`).join("\n");
+      const existingTables = Array.isArray(platformCtx.database_schema?.tables)
+        ? platformCtx.database_schema.tables.join(", ")
+        : Object.keys(platformCtx.database_schema || {}).join(", ");
+
+      systemPrompt = `You are a senior software architect working on dante.id, an AI-native software factory platform.
+You are generating a blueprint for an INTERNAL FEATURE — extending the existing dante.id platform.
+
+CRITICAL: Do NOT create a standalone application. Instead, specify:
+- Which EXISTING files to modify (server/*.js, src/pages/*.jsx, src/components/*.jsx)
+- What NEW files to create within the existing project structure
+- Which EXISTING database tables to extend or reference
+- Which EXISTING API endpoints to modify or extend
+- New endpoints that follow existing patterns (Express router modules)
+- New React components that follow existing patterns (Tailwind, terminal aesthetic)
+
+## EXISTING PLATFORM:
+Tech: Express backend (server/index.js), React 19 frontend (src/App.jsx), Supabase PostgreSQL
+Design: Terminal CLI aesthetic (#0a0a0a black, #33ff00 green, JetBrains Mono, 0px radius)
+Existing API routes:\n${existingRoutes}
+Existing DB tables: ${existingTables}
+Project structure: ${JSON.stringify(platformCtx.project_structure)}
+
+Generate a comprehensive technical blueprint as JSON:
+${BLUEPRINT_SCHEMA}
+Be thorough and specific about WHICH existing files to modify and HOW they integrate with the current codebase.`;
+    } else {
+      systemPrompt = `You are a senior software architect. Generate a comprehensive technical blueprint for implementing a feature.
 The JSON must follow this exact schema:
 ${BLUEPRINT_SCHEMA}
 Be thorough, specific, and actionable. Include realistic endpoints, components, data models, and test cases.`;
+    }
 
     const userPrompt = `Feature: ${feature.name}
 Description: ${feature.description || ""}
@@ -278,7 +313,7 @@ Acceptance Criteria: ${JSON.stringify(feature.acceptance_criteria || [])}
 PRD Context:
 ${JSON.stringify(prdContent, null, 2)}
 
-Generate a complete technical blueprint for implementing this feature.`;
+Generate a complete technical blueprint for implementing this ${isInternal ? "internal platform feature" : "feature"}.`;
 
     const content = await callAI(systemPrompt, userPrompt);
 

@@ -117,7 +117,46 @@ router.post("/generate-prd", requireAuth, async (req, res) => {
   }
 
   try {
-    const systemPrompt = `You are a senior product manager. Generate a comprehensive Product Requirements Document (PRD) as JSON.
+    // Check if this is an internal project (building a feature for dante.id itself)
+    const { data: project } = await supabase.from("projects").select("type, platform_context").eq("id", project_id).single();
+    const isInternal = project?.type === "internal";
+    const platformCtx = project?.platform_context;
+
+    let systemPrompt;
+    if (isInternal && platformCtx) {
+      systemPrompt = `You are a senior product manager at dante.id, an AI-native software factory platform.
+You are generating a PRD for an INTERNAL FEATURE — a new capability being added to the dante.id platform itself, not a standalone app.
+
+CRITICAL: This feature must integrate with the EXISTING platform. Reference existing endpoints, database tables, and frontend routes. Do NOT propose a new standalone application.
+
+## EXISTING PLATFORM CONTEXT:
+- Tech stack: ${JSON.stringify(platformCtx.tech_stack)}
+- Existing API routes: ${JSON.stringify(Object.keys(platformCtx.api_routes || {}).map(cat => ({ category: cat, count: (platformCtx.api_routes[cat] || []).length })))}
+- Database tables: ${Array.isArray(platformCtx.database_schema?.tables) ? platformCtx.database_schema.tables.join(", ") : Object.keys(platformCtx.database_schema || {}).join(", ")}
+- Frontend routes: ${(platformCtx.frontend_routes || []).map(r => r.path).join(", ")}
+- Pipeline: ${(platformCtx.pipeline?.steps || []).map(s => s.name).join(" → ")}
+- Design system: ${JSON.stringify(platformCtx.design_system)}
+
+Generate a PRD as JSON following this exact schema:
+{
+  "title": "string",
+  "overview": "string (2-3 paragraphs — explain how this integrates with existing platform)",
+  "problem": "string (what gap in the current platform this fills)",
+  "solution": "string (how it extends existing modules/endpoints)",
+  "target_users": [{"persona": "string", "needs": ["string"]}],
+  "features": [{"name": "string", "description": "string", "priority": "critical|high|medium|low", "acceptance_criteria": ["string"]}],
+  "tech_stack": {"frontend": "React 19 + Vite + Tailwind (existing)", "backend": "Express (existing)", "database": "Supabase PostgreSQL (existing)", "deployment": "systemd + Vercel (existing)"},
+  "integration_points": [{"existing_module": "string", "how_it_connects": "string"}],
+  "new_endpoints": [{"method": "string", "path": "string", "description": "string"}],
+  "new_tables": [{"name": "string", "columns": ["string"], "purpose": "string"}],
+  "modified_files": [{"path": "string", "change": "string"}],
+  "success_metrics": [{"metric": "string", "target": "string"}],
+  "risks": [{"risk": "string", "mitigation": "string"}],
+  "timeline": "string"
+}
+Be specific about which existing files, endpoints, and tables to modify or extend.`;
+    } else {
+      systemPrompt = `You are a senior product manager. Generate a comprehensive Product Requirements Document (PRD) as JSON.
 The JSON must follow this exact schema:
 {
   "title": "string",
@@ -132,10 +171,11 @@ The JSON must follow this exact schema:
   "timeline": "string"
 }
 Generate a concise but complete PRD. Include 4-6 features with acceptance criteria. Be specific but brief.`;
+    }
 
-    const userPrompt = `Product idea: ${idea_description}${context ? `\n\nAdditional context: ${context}` : ""}
+    const userPrompt = `${isInternal ? "Internal platform feature request" : "Product idea"}: ${idea_description}${context ? `\n\nAdditional context: ${context}` : ""}
 
-Generate a complete PRD for this product.`;
+Generate a complete PRD for this ${isInternal ? "internal platform feature" : "product"}.`;
 
     console.log('[REFINERY] Calling AI for PRD generation...');
     const content = await callAI(systemPrompt, userPrompt);

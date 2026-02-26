@@ -433,17 +433,34 @@ app.post("/api/projects/:id/retry-step", requireAuth, async (req, res) => {
 });
 
 app.post("/api/projects", requireAuth, async (req, res) => {
-  const { company_name, idea, stage, needs } = req.body;
+  const { company_name, idea, stage, needs, type } = req.body;
   if (!idea) return res.status(400).json({ error: "idea is required" });
+
+  const projectType = (type === "internal") ? "internal" : "standard";
+  let platformContext = null;
+
+  // For internal projects, auto-fetch platform context
+  if (projectType === "internal") {
+    try {
+      const ctxRes = await fetch("http://localhost:3001/api/platform/context");
+      platformContext = await ctxRes.json();
+      console.log(`[Projects] Internal project — loaded platform context (${Object.keys(platformContext).length} sections)`);
+    } catch (err) {
+      console.error("[Projects] Failed to fetch platform context:", err.message);
+    }
+  }
+
   const { data, error } = await supabase
     .from("projects")
     .insert({
       user_id: req.user.id,
       full_name: req.body.full_name || "User",
-      company_name: company_name || null,
+      company_name: company_name || (projectType === "internal" ? "dante.id" : null),
       idea: idea.trim().slice(0, 2000),
       stage: stage || "idea",
       needs: needs || [],
+      type: projectType,
+      platform_context: platformContext,
     })
     .select()
     .single();
