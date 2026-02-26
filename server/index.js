@@ -1982,3 +1982,37 @@ const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// --- POST /api/admin/retry-failed — batch retry all stuck projects ---
+app.post("/api/admin/retry-failed", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace("Bearer ", "");
+  if (token !== process.env.SUPABASE_SERVICE_KEY) {
+    return res.status(403).json({ error: "Admin only" });
+  }
+
+  try {
+    const { data: stuck } = await supabase
+      .from("projects")
+      .select("id, name, status")
+      .eq("status", "tested");
+
+    if (!stuck?.length) return res.json({ retried: 0, message: "No stuck projects" });
+
+    const results = [];
+    for (const p of stuck) {
+      console.log(`[Admin] Retrying deploy for ${p.id} (${p.name})`);
+      fetch(`http://localhost:3001/api/deployer/deploy`, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: p.id }),
+      }).then(r => console.log(`[Admin] Deploy retry for ${p.name}: ${r.status}`))
+        .catch(err => console.error(`[Admin] Deploy retry for ${p.name} failed:`, err.message));
+      results.push({ id: p.id, name: p.name, status: "retrying" });
+    }
+
+    res.json({ retried: results.length, projects: results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
