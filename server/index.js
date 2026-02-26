@@ -214,6 +214,10 @@ app.get("/api/projects/:id", requireAuth, async (req, res) => {
   if (error || !data) return res.status(404).json({ error: "Project not found" });
   const { data: dep } = await supabase.from("deployments").select("url, vercel_url").eq("project_id", data.id).eq("status", "live").limit(1).single();
   data.deploy_url = dep?.vercel_url || dep?.url || null;
+  const { data: features } = await supabase.from("features").select("id, name, status, priority, sort_order").eq("project_id", data.id).order("sort_order");
+  data.features = features || [];
+  data.features_count = data.features.length;
+  data.features_built = data.features.filter(f => ['built', 'tested', 'deployed'].includes(f.status)).length;
   res.json({ project: data });
 });
 
