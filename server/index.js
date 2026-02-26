@@ -282,6 +282,22 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
 
     const token = req.headers.authorization;
 
+    // Idempotency guard: check if this step is already running or recently completed
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: existingStep } = await supabase.from("pipeline_steps")
+      .select("id, status, started_at")
+      .eq("project_id", req.params.id)
+      .eq("step", step.module)
+      .in("status", ["running", "completed"])
+      .gte("started_at", tenMinAgo)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (existingStep) {
+      console.log(`[Resume] SKIP: ${step.module} already ${existingStep.status} for ${req.params.id} (started ${existingStep.started_at})`);
+      return res.json({ skipped: true, reason: `${step.module} already ${existingStep.status}`, step_id: existingStep.id });
+    }
+
     // Log pipeline step start
     const { data: stepRow } = await supabase.from("pipeline_steps").insert({
       project_id: req.params.id,
@@ -2194,14 +2210,13 @@ async function builderWatchdog() {
 
     const { data: reviewBuilds } = await supabase.from("builds").select("id").eq("project_id", p.id).eq("status", "review");
     if (reviewBuilds?.length) {
-      console.log(`[Watchdog] Project ${p.id} (${p.name}): stuck at building but ${reviewBuilds.length} builds complete — advancing to inspector`);
+      console.log(`[Watchdog] Project ${p.id} (${p.name}): stuck at building but ${reviewBuilds.length} builds complete — advancing via resume`);
       await supabase.from("projects").update({ status: "building", updated_at: new Date().toISOString() }).eq("id", p.id);
-      fetch(`http://localhost:3001/api/inspector/run-all`, {
+      fetch(`http://localhost:3001/api/projects/${p.id}/resume`, {
         method: "POST",
         headers: { "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: p.id }),
-      }).then(r => console.log(`[Watchdog→Inspector] ${p.id}: ${r.status}`))
-        .catch(err => console.error(`[Watchdog→Inspector] ${p.id} failed:`, err.message));
+      }).then(r => console.log(`[Watchdog→Resume] ${p.id}: ${r.status}`))
+        .catch(err => console.error(`[Watchdog→Resume] ${p.id} failed:`, err.message));
     } else {
       console.log(`[Watchdog] Project ${p.id} (${p.name}): stuck at building with no complete builds — marking failed`);
       await supabase.from("projects").update({ status: "tested", stage: "builder", updated_at: new Date().toISOString() }).eq("id", p.id);
