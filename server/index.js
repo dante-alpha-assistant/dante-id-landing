@@ -250,21 +250,30 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
     }).select().single();
 
     // Fire and forget — don't wait for long AI operations
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
     console.log(`[Resume] Starting ${step.module} at ${step.endpoint} for project ${req.params.id}`);
     fetch(`http://localhost:3001${step.endpoint}`, {
       method: "POST",
-      headers: { "Authorization": token, "Content-Type": "application/json" },
+      headers: { "Authorization": "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(async r => {
       const t = await r.text().catch(() => "");
       console.log(`[Resume] ${step.module} responded: ${r.status} ${t.slice(0, 300)}`);
+      const ok = r.status >= 200 && r.status < 300;
       if (stepRow?.id) {
-        const ok = r.status >= 200 && r.status < 300;
         await supabase.from("pipeline_steps").update({
           status: ok ? "completed" : "failed",
           completed_at: new Date().toISOString(),
           error_message: ok ? null : t.slice(0, 500),
         }).eq("id", stepRow.id);
+      }
+      // On failure, mark project so it's visible in UI
+      if (!ok) {
+        console.error(`[Resume] ${step.module} failed for ${req.params.id}: ${t.slice(0, 300)}`);
+        await supabase.from("projects").update({
+          stage: step.module,
+          updated_at: new Date().toISOString(),
+        }).eq("id", req.params.id);
       }
     }).catch(async err => {
       console.error(`[Resume] ${step.module} FAILED:`, err.message);
