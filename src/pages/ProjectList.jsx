@@ -162,10 +162,17 @@ export default function ProjectList() {
                             : '[ ITERATE → ]'
                           }
                         </span>
-                        <span
-                          onClick={(e) => { e.stopPropagation(); navigate(`/usage/${p.id}`) }}
-                          className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors cursor-pointer"
-                        >[ 💰 ]</span>
+                        <div className="flex gap-1">
+                          <span
+                            onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/${p.id}`) }}
+                            className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors cursor-pointer"
+                            title="Pipeline Timeline"
+                          >[ 📋 ]</span>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); navigate(`/usage/${p.id}`) }}
+                            className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors cursor-pointer"
+                          >[ 💰 ]</span>
+                        </div>
                       </div>
                     </>
                   )
