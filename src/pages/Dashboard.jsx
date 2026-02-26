@@ -402,6 +402,9 @@ export default function Dashboard() {
           <div className="text-xs text-[#1a6b1a] mt-4">+{'─'.repeat(40)}+</div>
         </div>
 
+        {/* GitHub Integration */}
+        <GitHubIntegrationCard projectId={project.id} />
+
         {/* Legacy Deliverables — collapsible */}
         <div className="border border-[#1f521f] bg-[#0f0f0f] mb-8">
           <button

@@ -22,6 +22,7 @@ import Validator from './pages/Validator'
 import Iterate from './pages/Iterate'
 import Usage from './pages/Usage'
 import Docs from './pages/Docs'
+import RepoSelector from './components/RepoSelector'
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
           <Route path="/usage/:project_id" element={<ProtectedRoute><Usage /></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/docs" element={<Docs />} />
+<Route path="/github/repos" element={<ProtectedRoute><RepoSelector /></ProtectedRoute>} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/fleet/:agentId" element={<AgentProfile />} />
