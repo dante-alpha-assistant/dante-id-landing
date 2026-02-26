@@ -40,6 +40,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(null)
+  const [expandedUsage, setExpandedUsage] = useState({})
 
   useEffect(() => {
     apiCall('/projects')
@@ -131,7 +132,16 @@ export default function AdminDashboard() {
               const step = STATUS_STEP[p.status] || 0
               return (
                 <tr key={p.id}
-                  onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                  onClick={() => {
+                    const next = expanded === p.id ? null : p.id
+                    setExpanded(next)
+                    if (next && !expandedUsage[next]) {
+                      supabase.auth.getSession().then(({ data: { session } }) => {
+                        fetch(`/api/projects/${next}/usage`, { headers: { Authorization: `Bearer ${session?.access_token}` } })
+                          .then(r => r.json()).then(d => setExpandedUsage(prev => ({ ...prev, [next]: d }))).catch(() => {})
+                      })
+                    }
+                  }}
                   className="border-b border-[#1f521f]/50 hover:bg-[#33ff00]/5 cursor-pointer transition-colors">
                   <td className="py-2 px-2 font-bold text-[#33ff00]">
                     {p.deploy_url ? (
@@ -170,6 +180,40 @@ export default function AdminDashboard() {
                       <p><span className="text-[#1a6b1a]">Pipeline:</span> <span className="text-[#33ff00]">{p.features}F → {p.blueprints}BP → {p.work_orders}WO → {p.builds}B → {p.tests}T → {p.deployments}D</span></p>
                       {p.deploy_url && (
                         <p><span className="text-[#1a6b1a]">Live URL:</span> <a href={p.deploy_url} target="_blank" rel="noopener noreferrer" className="text-[#33ff00] hover:underline">{p.deploy_url}</a></p>
+                      )}
+                      {/* Cost Breakdown */}
+                      {expandedUsage[p.id] && expandedUsage[p.id].total_calls > 0 && (
+                        <div className="mt-3 border border-[#ffb000]/20 p-3">
+                          <p className="text-[#ffb000] font-bold mb-2">AI COST BREAKDOWN — ${expandedUsage[p.id].total_cost_usd?.toFixed(4)}</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                            <div><span className="text-[#1a6b1a]">Calls:</span> <span className="text-[#ffb000]">{expandedUsage[p.id].total_calls}</span></div>
+                            <div><span className="text-[#1a6b1a]">In:</span> <span className="text-[#ffb000]">{(expandedUsage[p.id].total_input_tokens/1000).toFixed(1)}K</span></div>
+                            <div><span className="text-[#1a6b1a]">Out:</span> <span className="text-[#ffb000]">{(expandedUsage[p.id].total_output_tokens/1000).toFixed(1)}K</span></div>
+                          </div>
+                          {expandedUsage[p.id].by_module && (
+                            <div className="space-y-0.5">
+                              {Object.entries(expandedUsage[p.id].by_module).sort((a,b) => b[1].cost - a[1].cost).map(([mod, d]) => (
+                                <div key={mod} className="flex justify-between">
+                                  <span className="text-[#1a6b1a]">{mod}</span>
+                                  <span className="text-[#ffb000]">${d.cost?.toFixed(4)} · {d.calls} calls · {((d.input_tokens+d.output_tokens)/1000).toFixed(1)}K tok</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {expandedUsage[p.id].recent?.length > 0 && (
+                            <details className="mt-2">
+                              <summary className="text-[#1a6b1a] cursor-pointer hover:text-[#33ff00]">Recent calls ({expandedUsage[p.id].recent.length})</summary>
+                              <div className="mt-1 space-y-0.5 max-h-32 overflow-y-auto">
+                                {expandedUsage[p.id].recent.slice(0, 10).map((r, i) => (
+                                  <div key={i} className="flex justify-between text-[10px]">
+                                    <span className="text-[#1a6b1a]">{r.module}/{r.operation} · {r.model}</span>
+                                    <span className="text-[#ffb000]">${Number(r.cost_usd).toFixed(4)} · {r.latency_ms}ms</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          )}
+                        </div>
                       )}
                       <div className="flex gap-2 mt-2">
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/refinery/${p.id}`) }}
