@@ -22,12 +22,12 @@ async function apiCall(base, path) {
 }
 
 const PIPELINE_STEPS = [
-  { key: 'refinery', label: 'REFINERY', route: (id) => `/refinery/${id}` },
-  { key: 'foundry', label: 'FOUNDRY', route: (id) => `/foundry/${id}` },
-  { key: 'planner', label: 'PLANNER', route: (id) => `/planner/${id}` },
-  { key: 'builder', label: 'BUILDER', route: (id) => `/builder/${id}` },
-  { key: 'inspector', label: 'INSPECTOR', route: (id) => `/inspector/${id}` },
-  { key: 'deployer', label: 'DEPLOYER', route: (id) => `/deployer/${id}` },
+  { key: 'refinery', label: 'Refinery', route: (id) => `/refinery/${id}` },
+  { key: 'foundry', label: 'Foundry', route: (id) => `/foundry/${id}` },
+  { key: 'planner', label: 'Planner', route: (id) => `/planner/${id}` },
+  { key: 'builder', label: 'Builder', route: (id) => `/builder/${id}` },
+  { key: 'inspector', label: 'Inspector', route: (id) => `/inspector/${id}` },
+  { key: 'deployer', label: 'Deployer', route: (id) => `/deployer/${id}` },
 ]
 
 export default function Dashboard() {
@@ -68,7 +68,6 @@ export default function Dashboard() {
           setLoading(false)
         })
     } else {
-      // Legacy: redirect to project list or first project
       supabase
         .from('projects')
         .select('*')
@@ -93,7 +92,6 @@ export default function Dashboard() {
     return data
   }, [project])
 
-  // Fetch pipeline status
   const fetchPipelineStatus = useCallback(async () => {
     if (!project) return
     const id = project.id
@@ -131,14 +129,12 @@ export default function Dashboard() {
 
       const newStatus = {}
 
-      // Refinery
       if (hasPrd) {
         newStatus.refinery = { status: 'done', text: `PRD generated, ${featureCount} features` }
       } else {
         newStatus.refinery = { status: 'in-progress', text: 'Generate your PRD' }
       }
 
-      // Foundry
       if (!hasPrd) {
         newStatus.foundry = { status: 'waiting', text: 'Waiting...' }
       } else if (allBlueprintsReady) {
@@ -147,7 +143,6 @@ export default function Dashboard() {
         newStatus.foundry = { status: featureCount > 0 ? 'in-progress' : 'waiting', text: featureCount > 0 ? `${blueprintCount}/${featureCount} blueprints` : 'Waiting...' }
       }
 
-      // Planner
       const woCount = workOrders.length
       const allWOsReady = featureCount > 0 && woCount > 0
       if (!allBlueprintsReady) {
@@ -159,7 +154,6 @@ export default function Dashboard() {
         newStatus.planner = { status: 'in-progress', text: 'Generate work orders' }
       }
 
-      // Builder
       if (!allBlueprintsReady) {
         newStatus.builder = { status: 'waiting', text: 'Waiting...' }
       } else if (allBuildsReady) {
@@ -168,7 +162,6 @@ export default function Dashboard() {
         newStatus.builder = { status: 'in-progress', text: `${buildCount}/${featureCount} built` }
       }
 
-      // Inspector
       if (!allBuildsReady) {
         newStatus.inspector = { status: 'waiting', text: 'Waiting...' }
       } else if (allResultsReady) {
@@ -177,7 +170,6 @@ export default function Dashboard() {
         newStatus.inspector = { status: 'in-progress', text: `${resultCount}/${featureCount} tested` }
       }
 
-      // Deployer
       if (!allResultsReady) {
         newStatus.deployer = { status: 'waiting', text: 'Waiting...' }
       } else if (liveDeployment) {
@@ -203,13 +195,11 @@ export default function Dashboard() {
   useEffect(() => {
     fetchPipelineStatus()
     fetchPipelineSteps()
-    // Fetch usage data
     if (project?.id) {
       apiCall('', `/api/projects/${project.id}/usage`).then(d => { if (d && !d.error) setUsage(d) }).catch(() => {})
     }
   }, [fetchPipelineStatus, fetchPipelineSteps, project?.id])
 
-  // Auto-refresh pipeline steps every 5s when any step is running
   useEffect(() => {
     const hasRunning = pipelineSteps.some(s => s.status === 'running')
     if (!hasRunning) return
@@ -217,7 +207,6 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [pipelineSteps, fetchPipelineSteps])
 
-  // Initial fetch + trigger generation only if truly empty
   useEffect(() => {
     if (!project || deliverablesLoaded) return
     fetchDeliverables().then((data) => {
@@ -230,7 +219,6 @@ export default function Dashboard() {
     })
   }, [project, deliverablesLoaded, fetchDeliverables])
 
-  // Auto-refresh while pending/generating
   useEffect(() => {
     const hasPending = deliverables?.some(d => ['pending', 'generating'].includes(d.status))
     if (!hasPending && deliverablesLoaded && deliverables.length > 0) return
@@ -248,69 +236,62 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING...]</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary font-sans text-lg animate-pulse">Loading...</div>
       </div>
     )
   }
 
   if (!project) return null
 
-  // Compute pipeline progress
   const isLive = project?.stage === 'launched' || project?.status === 'live'
   const doneCount = isLive ? PIPELINE_STEPS.length : Object.values(pipelineStatus).filter(s => s.status === 'done').length
   const totalSteps = PIPELINE_STEPS.length
   const progressPct = Math.round((doneCount / totalSteps) * 100)
-  const filledBars = Math.round((doneCount / totalSteps) * 20)
-  const emptyBars = 20 - filledBars
-  const progressBar = '█'.repeat(filledBars) + '░'.repeat(emptyBars)
 
-  // Find next step (none if live)
   const nextStepIdx = isLive ? -1 : PIPELINE_STEPS.findIndex(s => pipelineStatus[s.key]?.status !== 'done')
   const nextStep = nextStepIdx >= 0 ? PIPELINE_STEPS[nextStepIdx] : null
 
   const statusIcon = (status) => {
-    if (status === 'done') return <span className="text-[#33ff00]">✓</span>
-    if (status === 'in-progress') return <span className="text-[#ffb000]">→</span>
-    return <span className="text-[#1a6b1a]"> </span>
+    if (status === 'done') return <span className="text-emerald-500">✓</span>
+    if (status === 'in-progress') return <span className="text-amber-500">→</span>
+    return <span className="text-md-on-surface-variant">○</span>
   }
 
   const statusColor = (status) => {
-    if (status === 'done') return 'text-[#33ff00]'
-    if (status === 'in-progress') return 'text-[#ffb000]'
-    return 'text-[#1a6b1a]'
+    if (status === 'done') return 'text-emerald-500'
+    if (status === 'in-progress') return 'text-amber-500'
+    return 'text-md-on-surface-variant'
   }
 
-  const glowStyle = { textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-background font-sans">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
-        <span className="text-xl font-bold tracking-tight" style={glowStyle}>
-          dante<span className="text-[#ffb000]">.id</span>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-border/20 bg-md-surface-container">
+        <span className="text-xl font-bold tracking-tight text-md-on-background">
+          dante<span className="text-md-primary">.id</span>
         </span>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-[#22aa00] hidden sm:inline">
-            {project.name || project.company_name || project.full_name || 'PROJECT'}
+          <span className="text-sm text-md-on-surface-variant hidden sm:inline">
+            {project.name || project.company_name || project.full_name || 'Project'}
           </span>
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+            className="text-sm rounded-full bg-md-surface-variant text-md-on-surface-variant px-4 py-1.5 hover:bg-md-secondary-container transition-colors"
           >
-            [ ← PROJECTS ]
+            ← Projects
           </button>
           <button
             onClick={() => navigate('/fleet')}
-            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+            className="text-sm rounded-full bg-md-surface-variant text-md-on-surface-variant px-4 py-1.5 hover:bg-md-secondary-container transition-colors"
           >
-            [ FLEET ]
+            Fleet
           </button>
           <button
             onClick={handleSignOut}
-            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+            className="text-sm rounded-full bg-md-surface-variant text-md-on-surface-variant px-4 py-1.5 hover:bg-md-secondary-container transition-colors"
           >
-            [ LOGOUT ]
+            Logout
           </button>
         </div>
       </div>
@@ -322,17 +303,24 @@ export default function Dashboard() {
         <PipelineTimeline steps={pipelineSteps} projectId={project.id} onRefresh={fetchPipelineSteps} project={project} />
 
         {/* Pipeline Card */}
-        <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 mb-8">
-          <div className="text-xs text-[#1a6b1a] mb-4">
-            +--- SOFTWARE FACTORY: {(project.name || project.company_name || project.full_name || 'PROJECT').toUpperCase()} ---+
-          </div>
+        <div className="bg-md-surface-container rounded-md-lg p-6 mb-8 shadow-sm">
+          <h2 className="text-lg font-bold text-md-on-background mb-1">
+            Software Factory
+          </h2>
+          <p className="text-sm text-md-on-surface-variant mb-4">
+            {(project.name || project.company_name || project.full_name || 'Project')}
+          </p>
 
           <div className="mb-6">
-            <div className="text-sm text-[#22aa00] mb-1">
-              PIPELINE STATUS: STEP {Math.min(doneCount + 1, totalSteps)} OF {totalSteps}
+            <div className="flex items-center justify-between text-sm text-md-on-surface-variant mb-2">
+              <span>Pipeline Progress</span>
+              <span>Step {Math.min(doneCount + 1, totalSteps)} of {totalSteps} · {progressPct}%</span>
             </div>
-            <div className="text-[#33ff00]">
-              [{progressBar}] {progressPct}%
+            <div className="w-full h-2 bg-md-surface-variant rounded-full overflow-hidden">
+              <div
+                className="h-full bg-md-primary rounded-full transition-all duration-500 ease-md-standard"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
           </div>
 
@@ -342,12 +330,12 @@ export default function Dashboard() {
               const st = isLive ? { status: 'done', text: 'Complete' } : (pipelineStatus[step.key] || { status: 'waiting', text: 'Waiting...' })
               return (
                 <div key={step.key} className="flex items-center gap-3">
-                  <span className="text-[#1a6b1a] text-sm w-4">{idx + 1}.</span>
+                  <span className="text-md-on-surface-variant text-sm w-6 text-right">{idx + 1}.</span>
                   <button
                     onClick={() => navigate(step.route(project.id))}
-                    className="text-sm border border-[#1f521f] px-3 py-1 text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors min-w-[120px] text-left"
+                    className="text-sm rounded-full bg-md-surface-variant text-md-on-surface-variant px-4 py-1.5 hover:bg-md-secondary-container hover:text-md-on-secondary-container transition-all duration-300 ease-md-standard min-w-[120px] text-left"
                   >
-                    [ {step.label} ]
+                    {step.label}
                   </button>
                   <span className="flex items-center gap-2">
                     {statusIcon(st.status)}
@@ -362,19 +350,18 @@ export default function Dashboard() {
           {nextStep && (
             <button
               onClick={() => navigate(nextStep.route(project.id))}
-              className="w-full py-3 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
-              style={glowStyle}
+              className="w-full py-3 rounded-full bg-md-primary text-md-on-primary text-lg font-medium hover:shadow-md active:scale-95 transition-all duration-300 ease-md-standard"
             >
-              [ CONTINUE → {nextStep.label} ]
+              Continue → {nextStep.label}
             </button>
           )}
           {!nextStep && (
-            <div className="text-center py-3 text-[#33ff00] text-lg font-bold" style={glowStyle}>
-              [ALL SYSTEMS OPERATIONAL] ✓
+            <div className="text-center py-3 rounded-full bg-emerald-500/10 text-emerald-600 text-lg font-medium">
+              All Systems Operational ✓
             </div>
           )}
 
-          {/* Resume Pipeline button — unstick projects */}
+          {/* Resume Pipeline button */}
           {project.status && project.status !== 'live' && project.status !== 'completed' && (
             <button
               disabled={resuming}
@@ -386,39 +373,36 @@ export default function Dashboard() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
                   })
-                  // Refresh project data
                   const { data } = await supabase.from('projects').select('*').eq('id', project.id).single()
                   if (data) setProject(data)
                   fetchPipelineSteps()
                 } catch (e) { console.error('Resume failed:', e) }
                 setResuming(false)
               }}
-              className="w-full mt-3 py-2 border border-[#ffb000] text-[#ffb000] text-sm hover:bg-[#ffb000] hover:text-[#0a0a0a] transition-colors disabled:opacity-50"
+              className="w-full mt-3 py-2.5 rounded-full border-2 border-amber-500 text-amber-600 text-sm font-medium hover:bg-amber-500 hover:text-white active:scale-95 transition-all duration-300 ease-md-standard disabled:opacity-50"
             >
-              {resuming ? '[ RESUMING... ]' : '[ ⚡ RESUME PIPELINE → ]'}
+              {resuming ? 'Resuming...' : '⚡ Resume Pipeline'}
             </button>
           )}
-
-          <div className="text-xs text-[#1a6b1a] mt-4">+{'─'.repeat(40)}+</div>
         </div>
 
         {/* GitHub Integration */}
         <GitHubIntegrationCard projectId={project.id} />
 
         {/* Legacy Deliverables — collapsible */}
-        <div className="border border-[#1f521f] bg-[#0f0f0f] mb-8">
+        <div className="bg-md-surface-container rounded-md-lg mb-8 shadow-sm overflow-hidden">
           <button
             onClick={() => setLegacyOpen(!legacyOpen)}
-            className="w-full px-6 py-3 text-left flex justify-between items-center text-sm text-[#22aa00] hover:text-[#33ff00] transition-colors"
+            className="w-full px-6 py-4 text-left flex justify-between items-center text-sm text-md-on-surface-variant hover:bg-md-surface-variant/50 transition-colors"
           >
-            <span>+--- LEGACY DELIVERABLES ---+</span>
-            <span className="text-[#1a6b1a]">{legacyOpen ? '[-]' : '[+]'}</span>
+            <span className="font-medium">Legacy Deliverables</span>
+            <span className="text-md-on-surface-variant">{legacyOpen ? '−' : '+'}</span>
           </button>
           {legacyOpen && (
             <div className="px-6 pb-6">
               {deliverables.length === 0 ? (
-                <p className="text-[#22aa00] text-center py-8 terminal-blink">
-                  [ASSEMBLING AI TEAM...]
+                <p className="text-md-on-surface-variant text-center py-8 animate-pulse">
+                  Assembling AI team...
                 </p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -455,14 +439,13 @@ export default function Dashboard() {
           }
           const deliverableMap = {}
           for (const d of (deliverables || [])) { deliverableMap[d.type] = d }
-          // Show all known deliverable types, driven by deliverables table not needs array
           const ALL_TYPES = Object.keys(NEED_META)
           const incomplete = ALL_TYPES.filter(t => deliverableMap[t]?.status !== 'completed')
           const completed = ALL_TYPES.filter(t => deliverableMap[t]?.status === 'completed')
           return incomplete.length > 0 ? (
-            <div className="border border-[#1f521f] p-5 mt-6">
-              <h3 className="text-[#33ff00] font-bold mb-1 text-sm">[ WHAT'S NEXT ]</h3>
-              <p className="text-[#1a6b1a] text-xs mb-4">Your app is live. Now build your company. ({completed.length}/{ALL_TYPES.length} complete)</p>
+            <div className="bg-md-surface-container rounded-md-lg p-6 mt-6 shadow-sm">
+              <h3 className="text-md-on-background font-bold mb-1 text-base">What's Next</h3>
+              <p className="text-md-on-surface-variant text-sm mb-4">Your app is live. Now build your company. ({completed.length}/{ALL_TYPES.length} complete)</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {incomplete.map(need => {
                   const meta = NEED_META[need]
@@ -487,61 +470,61 @@ export default function Dashboard() {
                           }
                         } catch (e) { console.error('Generate need failed:', e) }
                       }}
-                      className={`border p-3 transition-colors group text-left disabled:opacity-50 ${isFailed ? 'border-red-500/30 hover:border-red-500' : 'border-[#1f521f] hover:border-[#33ff00]'}`}
+                      className={`rounded-md-sm p-4 transition-all duration-300 ease-md-standard group text-left disabled:opacity-50 ${isFailed ? 'bg-red-50 hover:bg-red-100 border border-red-200' : 'bg-md-surface-variant hover:bg-md-secondary-container hover:scale-[1.02]'}`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
                           <span className="text-lg mr-2">{meta.icon}</span>
-                          <span className="text-sm text-[#33ff00] font-bold">{meta.label}</span>
+                          <span className="text-sm text-md-on-background font-medium">{meta.label}</span>
                         </div>
                         {isGenerating ? (
-                          <span className="text-[8px] border border-[#ffb000]/40 text-[#ffb000] px-1.5 py-0.5 animate-pulse">GENERATING...</span>
+                          <span className="rounded-full bg-amber-100 text-amber-700 px-3 py-0.5 text-xs animate-pulse">Generating...</span>
                         ) : isFailed ? (
-                          <span className="text-[8px] border border-red-500/40 text-red-500 px-1.5 py-0.5 group-hover:bg-red-500 group-hover:text-[#0a0a0a] transition-colors">RETRY →</span>
+                          <span className="rounded-full bg-red-100 text-red-600 px-3 py-0.5 text-xs group-hover:bg-red-500 group-hover:text-white transition-colors">Retry →</span>
                         ) : (
-                          <span className="text-[8px] border border-[#33ff00]/40 text-[#33ff00] px-1.5 py-0.5 group-hover:bg-[#33ff00] group-hover:text-[#0a0a0a] transition-colors">START →</span>
+                          <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container px-3 py-0.5 text-xs group-hover:bg-md-primary group-hover:text-md-on-primary transition-colors">Start →</span>
                         )}
                       </div>
-                      <p className="text-[#1a6b1a] text-xs mt-1">{meta.desc}</p>
+                      <p className="text-md-on-surface-variant text-xs mt-1.5">{meta.desc}</p>
                     </button>
                   )
                 })}
               </div>
             </div>
           ) : (
-            <div className="border border-[#1f521f] p-5 mt-6 text-center">
-              <p className="text-[#33ff00] text-sm">All caught up! 🎉</p>
-              <p className="text-[#1a6b1a] text-xs mt-1">Every deliverable has been generated.</p>
+            <div className="bg-md-surface-container rounded-md-lg p-6 mt-6 shadow-sm text-center">
+              <p className="text-md-on-background text-base font-medium">All caught up! 🎉</p>
+              <p className="text-md-on-surface-variant text-sm mt-1">Every deliverable has been generated.</p>
             </div>
           )
         })()}
 
         {/* Cost Summary */}
         {usage && usage.total_calls > 0 && (
-          <div className="border border-[#1f521f] p-5 mt-6">
-            <h3 className="text-[#33ff00] font-bold mb-3 text-sm">[ AI COSTS ]</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
-              <div>
-                <div className="text-[#1a6b1a] text-xs">Total Cost</div>
-                <div className="text-[#33ff00] text-lg font-bold">${usage.total_cost_usd?.toFixed(2)}</div>
+          <div className="bg-md-surface-container rounded-md-lg p-6 mt-6 shadow-sm">
+            <h3 className="text-md-on-background font-bold mb-4 text-base">AI Costs</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+              <div className="bg-md-surface-variant rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant text-xs">Total Cost</div>
+                <div className="text-md-on-background text-xl font-bold">${usage.total_cost_usd?.toFixed(2)}</div>
               </div>
-              <div>
-                <div className="text-[#1a6b1a] text-xs">AI Calls</div>
-                <div className="text-[#33ff00] text-lg font-bold">{usage.total_calls}</div>
+              <div className="bg-md-surface-variant rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant text-xs">AI Calls</div>
+                <div className="text-md-on-background text-xl font-bold">{usage.total_calls}</div>
               </div>
-              <div>
-                <div className="text-[#1a6b1a] text-xs">Input Tokens</div>
-                <div className="text-[#33ff00] text-lg font-bold">{(usage.total_input_tokens / 1000).toFixed(1)}K</div>
+              <div className="bg-md-surface-variant rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant text-xs">Input Tokens</div>
+                <div className="text-md-on-background text-xl font-bold">{(usage.total_input_tokens / 1000).toFixed(1)}K</div>
               </div>
-              <div>
-                <div className="text-[#1a6b1a] text-xs">Output Tokens</div>
-                <div className="text-[#33ff00] text-lg font-bold">{(usage.total_output_tokens / 1000).toFixed(1)}K</div>
+              <div className="bg-md-surface-variant rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant text-xs">Output Tokens</div>
+                <div className="text-md-on-background text-xl font-bold">{(usage.total_output_tokens / 1000).toFixed(1)}K</div>
               </div>
             </div>
             {usage.by_module && Object.keys(usage.by_module).length > 0 && (
-              <div className="text-xs space-y-1">
+              <div className="text-xs space-y-1.5">
                 {Object.entries(usage.by_module).sort((a,b) => b[1].cost - a[1].cost).map(([mod, d]) => (
-                  <div key={mod} className="flex justify-between text-[#1a6b1a]">
+                  <div key={mod} className="flex justify-between text-md-on-surface-variant">
                     <span>{mod}</span>
                     <span>${d.cost?.toFixed(4)} ({d.calls} calls)</span>
                   </div>
@@ -552,15 +535,15 @@ export default function Dashboard() {
         )}
 
         {/* Bottom links */}
-        <div className="flex gap-4 text-xs text-[#1a6b1a] mt-4 flex-wrap">
-          <button onClick={() => navigate(`/analytics/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
-            [ ANALYTICS ]
+        <div className="flex gap-3 text-sm mt-6 flex-wrap">
+          <button onClick={() => navigate(`/analytics/${project.id}`)} className="rounded-full bg-md-secondary-container text-md-on-secondary-container px-4 py-1.5 hover:shadow-md transition-all duration-300 ease-md-standard">
+            Analytics
           </button>
-          <button onClick={() => navigate(`/domains/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
-            [ DOMAINS ]
+          <button onClick={() => navigate(`/domains/${project.id}`)} className="rounded-full bg-md-secondary-container text-md-on-secondary-container px-4 py-1.5 hover:shadow-md transition-all duration-300 ease-md-standard">
+            Domains
           </button>
-          <a href={`/qa/${project.id}`} className="inline-block border border-[#1f521f] px-3 py-1 font-mono text-sm text-green-400 hover:bg-zinc-800 rounded-none transition-colors">
-            [ QA DASHBOARD → ]
+          <a href={`/qa/${project.id}`} className="rounded-full bg-md-secondary-container text-md-on-secondary-container px-4 py-1.5 hover:shadow-md transition-all duration-300 ease-md-standard inline-block">
+            QA Dashboard →
           </a>
         </div>
       </div>
