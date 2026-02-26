@@ -317,6 +317,7 @@ router.post("/build-all", requireAuth, async (req, res) => {
     const { data: features } = await supabase.from("features").select("id, name").eq("project_id", project_id).order("sort_order");
     if (!features?.length) return res.status(400).json({ error: "No features found" });
 
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
     const token = req.headers.authorization;
     const CONCURRENCY = 3;
     const results = [];
@@ -327,7 +328,7 @@ router.post("/build-all", requireAuth, async (req, res) => {
         batch.map(f =>
           fetch("http://localhost:3001/api/builder/generate-code", {
             method: "POST",
-            headers: { Authorization: token, "Content-Type": "application/json" },
+            headers: { Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
             body: JSON.stringify({ project_id, feature_id: f.id }),
           }).then(r => r.json())
         )

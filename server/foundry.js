@@ -458,18 +458,20 @@ Schema: ${BLUEPRINT_SCHEMA}`;
 router.post("/generate-all-architecture", aiLimiter, requireAuth, async (req, res) => {
   const { project_id } = req.body;
   if (!project_id) return res.status(400).json({ error: "project_id required" });
-  const autoToken = process.env.SUPABASE_SERVICE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   const base = "http://localhost:3001/api/foundry";
-  const headers = { Authorization: token, "Content-Type": "application/json" };
+  const headers = { Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" };
 
   try {
     // 1. Foundation
     console.log(`[Foundry All] Generating foundation for ${project_id}`);
-    await fetch(`${base}/generate-foundation`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
+    const foundRes = await fetch(`${base}/generate-foundation`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
+    console.log(`[Foundry All] Foundation response: ${foundRes.status}`);
 
     // 2. System Diagrams
     console.log(`[Foundry All] Generating diagrams for ${project_id}`);
-    await fetch(`${base}/generate-system-diagrams`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
+    const diagRes = await fetch(`${base}/generate-system-diagrams`, { method: "POST", headers, body: JSON.stringify({ project_id }) });
+    console.log(`[Foundry All] Diagrams response: ${diagRes.status}`);
 
     // 3. Feature blueprints
     const { data: features } = await supabase.from("features").select("id, name").eq("project_id", project_id);
@@ -486,7 +488,7 @@ router.post("/generate-all-architecture", aiLimiter, requireAuth, async (req, re
     console.log(`[Foundry All] Complete for ${project_id} — auto-advancing to planner`);
 
     // Auto-advance to planner
-    const autoToken = process.env.SUPABASE_SERVICE_KEY;
+    const autoToken = serviceKey;
     fetch(`http://localhost:3001/api/planner/generate-all-work-orders`, {
       method: "POST",
       headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },

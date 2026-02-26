@@ -408,9 +408,9 @@ router.put("/:project_id/features", requireAuth, async (req, res) => {
 router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
   const { project_id, idea } = req.body;
   if (!project_id) return res.status(400).json({ error: "project_id required" });
-  const autoToken = process.env.SUPABASE_SERVICE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   const base = "http://localhost:3001/api/refinery";
-  const headers = { Authorization: token, "Content-Type": "application/json" };
+  const headers = { Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" };
 
   try {
     // 1. Get project idea
@@ -439,7 +439,7 @@ router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
     console.log(`[Refinery All] Complete for ${project_id} — auto-advancing to foundry`);
 
     // Auto-advance to foundry
-    const autoToken = process.env.SUPABASE_SERVICE_KEY;
+    const autoToken = serviceKey;
     fetch(`http://localhost:3001/api/foundry/generate-all-architecture`, {
       method: "POST",
       headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },
