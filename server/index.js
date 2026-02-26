@@ -2016,3 +2016,53 @@ app.post("/api/admin/retry-failed", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// --- POST /api/admin/rebuild — reset project to re-enter pipeline from Builder ---
+app.post("/api/admin/rebuild", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace("Bearer ", "");
+  if (token !== process.env.SUPABASE_SERVICE_KEY) {
+    return res.status(403).json({ error: "Admin only" });
+  }
+
+  const { project_id, from_stage } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id required" });
+
+  const stageMap = {
+    refinery: "pending",
+    foundry: "refining",
+    planner: "designed",
+    builder: "planning",
+    inspector: "building",
+    deployer: "tested",
+  };
+  const targetStatus = stageMap[from_stage || "builder"] || "planning";
+
+  try {
+    // Reset project status
+    await supabase.from("projects").update({
+      status: targetStatus,
+      updated_at: new Date().toISOString(),
+    }).eq("id", project_id);
+
+    // Clear stale pipeline_steps from this stage onward
+    const stages = Object.keys(stageMap);
+    const fromIdx = stages.indexOf(from_stage || "builder");
+    const stagesToClear = stages.slice(fromIdx);
+    await supabase.from("pipeline_steps").delete()
+      .eq("project_id", project_id)
+      .in("step", stagesToClear);
+
+    // Trigger auto-advance via resume
+    console.log(`[Admin] Rebuilding ${project_id} from ${from_stage || "builder"} (status → ${targetStatus})`);
+    fetch(`http://localhost:3001/api/projects/${project_id}/resume`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Content-Type": "application/json" },
+    }).then(r => r.json()).then(d => console.log(`[Admin] Rebuild resume:`, JSON.stringify(d)))
+      .catch(err => console.error(`[Admin] Rebuild resume failed:`, err.message));
+
+    res.json({ rebuilt: true, project_id, from_stage: from_stage || "builder", new_status: targetStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
