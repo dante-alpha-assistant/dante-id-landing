@@ -327,7 +327,7 @@ router.post("/deploy", requireAuth, async (req, res) => {
           await new Promise(r => setTimeout(r, 5000));
           try {
             const statusRes = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
-              headers: { Authorization: `Bearer ${VERCEL_TOKEN}` },
+              headers: { Authorization: `Bearer ${vercelToken}` },
             });
             const statusData = await statusRes.json();
             buildState = statusData.readyState || statusData.state || "BUILDING";
