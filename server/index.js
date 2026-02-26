@@ -13,6 +13,7 @@ const { generateLandingProject, renderLandingHTML } = require("./generate-landin
 const { deployLandingPage } = require("./deploy");
 const { DomainManager } = require("./domains");
 const { stripe, PLANS, createCheckoutSession, createPortalSession, handleWebhookEvent } = require("./stripe");
+const webhookRouter = require("./webhook");
 const path = require("path");
 const fs = require("fs");
 const { randomUUID } = require("crypto");
@@ -38,6 +39,9 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
     res.status(400).send(`Webhook Error: ${err.message}`);
   }
 });
+
+// GitHub webhook endpoint — also needs raw body
+app.use("/api/webhooks", webhookRouter);
 
 app.use(express.json({ limit: "100kb" }));
 

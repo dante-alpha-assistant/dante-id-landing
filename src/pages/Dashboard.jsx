@@ -7,6 +7,7 @@ import CofounderChat from '../components/CofounderChat'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import DomainManager from '../components/DomainManager'
 import PipelineTimeline from '../components/PipelineTimeline'
+import GitHubIntegrationCard from '../components/GitHubIntegrationCard'
 
 async function apiCall(base, path) {
   const { data: { session } } = await supabase.auth.getSession()
