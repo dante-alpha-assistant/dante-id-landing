@@ -323,6 +323,7 @@ router.post("/deploy", requireAuth, async (req, res) => {
         logs.push(logEntry(`Polling Vercel build status for ${deploymentId}...`));
         let buildState = "BUILDING";
         const pollStart = Date.now();
+        let actualUrl = null;
         while (buildState === "BUILDING" && Date.now() - pollStart < 120000) {
           await new Promise(r => setTimeout(r, 5000));
           try {
@@ -331,13 +332,15 @@ router.post("/deploy", requireAuth, async (req, res) => {
             });
             const statusData = await statusRes.json();
             buildState = statusData.readyState || statusData.state || "BUILDING";
+            if (statusData.url) actualUrl = `https://${statusData.url}`;
             logs.push(logEntry(`Build status: ${buildState}`));
           } catch (e) {
             logs.push(logEntry(`Poll error: ${e.message}`));
           }
         }
 
-        const vercelUrl = `https://${projectName}.vercel.app`;
+        // Use actual URL from Vercel API, fallback to project name pattern
+        const vercelUrl = actualUrl || `https://${projectName}.vercel.app`;
         const canonicalUrl = `https://dante.id${canonicalPath}`;
 
         if (buildState === "READY") {
