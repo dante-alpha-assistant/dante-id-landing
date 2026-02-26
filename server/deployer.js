@@ -391,14 +391,16 @@ router.post("/deploy", requireAuth, async (req, res) => {
           // Revert project to tested so user can retry, but log the failure
           await supabase.from("projects").update({ status: "tested", stage: "deployer" }).eq("id", project_id);
           // Log deploy failure to pipeline_steps
-          await supabase.from("pipeline_steps").insert({
-            project_id,
-            step: "deployer",
-            status: "failed",
-            started_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
-            error_message: errorMsg,
-          }).catch(() => {});
+          try {
+            await supabase.from("pipeline_steps").insert({
+              project_id,
+              step: "deployer",
+              status: "failed",
+              started_at: new Date().toISOString(),
+              completed_at: new Date().toISOString(),
+              error_message: errorMsg,
+            });
+          } catch (_) {}
 
           return res.status(422).json({
             deployment_id: deployment.id,
