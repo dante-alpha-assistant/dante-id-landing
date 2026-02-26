@@ -349,6 +349,9 @@ Generate concise, working code for this feature. Focus on core logic, keep files
       .single();
     if (updateErr) console.error('[Builder] DB update error:', updateErr.message || updateErr);
 
+    // Update feature status to 'built'
+    await supabase.from("features").update({ status: "built" }).eq("id", feature_id);
+
     // Update project status
     await supabase.from("projects").update({ status: "building", stage: "building" }).eq("id", project_id);
 

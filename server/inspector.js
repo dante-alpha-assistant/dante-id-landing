@@ -490,6 +490,7 @@ router.post("/run-all", requireAuth, async (req, res) => {
         });
         const data = await r.json().catch(() => ({}));
         results.push({ feature_id: b.feature_id, status: r.status < 300 ? "tested" : "failed" });
+        if (r.status < 300) await supabase.from("features").update({ status: "tested" }).eq("id", b.feature_id);
       } catch (err) {
         console.error(`[Inspector All] Feature ${b.feature_id} failed:`, err.message);
         results.push({ feature_id: b.feature_id, status: "error", error: err.message });

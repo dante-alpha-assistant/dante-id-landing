@@ -386,6 +386,9 @@ router.post("/deploy", requireAuth, async (req, res) => {
 
           await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
 
+          // Update all features to 'deployed'
+          await supabase.from("features").update({ status: "deployed" }).eq("project_id", project_id);
+
           return res.json({
             deployment_id: deployment.id,
             url: canonicalUrl,
