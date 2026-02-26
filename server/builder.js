@@ -292,9 +292,45 @@ Generate concise, working code for this feature. Focus on core logic, keep files
     const result = await callAI(CODE_GEN_SYSTEM, fullPrompt);
     console.log('[Builder] AI returned, files:', (result.files || []).length, 'keys:', Object.keys(result).join(','));
 
-    const files = result.files || [];
+    let files = result.files || [];
+
+    // Self-validation: resolve broken imports by inlining placeholders
+    const generatedPaths = new Set(files.map(f => f.path || f.filename));
+    // Also include manifest files
+    const allKnownFiles = new Set([...generatedPaths]);
+    // Common utility files that always exist in generated projects
+    ['src/lib/supabase.ts', 'src/lib/supabase.js', 'lib/supabase.ts', 'lib/supabase.js'].forEach(f => allKnownFiles.add(f));
+    if (manifestContext) {
+      const manifestLines = manifestContext.match(/- (.+)/g) || [];
+      manifestLines.forEach(l => allKnownFiles.add(l.replace('- ', '')));
+    }
+
+    let fixedImports = 0;
+    for (const file of files) {
+      if (!file.content) continue;
+      const imports = [...file.content.matchAll(/import\s+(\{[^}]+\}|\w+)\s+from\s+['"]\.\/(.*?)['"]/g)];
+      for (const match of imports) {
+        const importName = match[1].replace(/[{}]/g, '').trim();
+        const importPath = match[2];
+        const exists = [importPath, `${importPath}.jsx`, `${importPath}.tsx`, `${importPath}.js`, `${importPath}.ts`,
+          `src/${importPath}`, `src/${importPath}.jsx`, `src/${importPath}.tsx`]
+          .some(p => allKnownFiles.has(p));
+        if (!exists && !importPath.includes('supabase') && !importPath.includes('lib/')) {
+          // Inline a placeholder component, remove the import
+          const componentName = importName.split(',')[0].trim();
+          const stub = `\nfunction ${componentName}(props) { return <div className="p-2 border border-dashed border-gray-400 rounded text-sm text-gray-500">[${componentName}]</div>; }\n`;
+          file.content = file.content.replace(match[0], `// Placeholder: ${componentName} (auto-inlined)`) + stub;
+          fixedImports++;
+        }
+      }
+    }
+    if (fixedImports > 0) {
+      console.log(`[Builder] Self-validation: inlined ${fixedImports} missing imports as placeholders`);
+    }
+
     const logs = [
       { ts: new Date().toISOString(), msg: `Generated ${files.length} files` },
+      { ts: new Date().toISOString(), msg: fixedImports > 0 ? `Self-validation: ${fixedImports} phantom imports inlined` : 'All imports resolved' },
       { ts: new Date().toISOString(), msg: `Summary: ${result.summary || ""}` }
     ];
 
