@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const statusDot = (online) => (
-  <span className={`inline-block w-2.5 h-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-red-500'}`} />
+  <span className={`inline-block w-2.5 h-2.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-400'}`} />
 )
 
 export default function Fleet() {
@@ -76,12 +76,12 @@ export default function Fleet() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#222]">
-        <span className="text-xl font-bold tracking-tight">dante.</span>
+    <div className="min-h-screen bg-md-background text-md-on-background">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-border/20">
+        <span className="text-xl font-semibold text-md-on-background tracking-tight">dante.</span>
         <button
           onClick={() => navigate('/dashboard')}
-          className="text-sm text-gray-400 hover:text-white transition-colors"
+          className="text-sm text-md-on-surface-variant hover:text-md-primary transition-colors"
         >
           Back to Dashboard
         </button>
@@ -90,19 +90,19 @@ export default function Fleet() {
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-semibold">Agent Fleet</h1>
-            <span className="text-sm text-gray-400">Internal operations view</span>
+            <h1 className="text-2xl font-semibold text-md-on-background">Agent Fleet</h1>
+            <span className="text-sm text-md-on-surface-variant">Internal operations view</span>
           </div>
           <button
             onClick={() => setShowQuickTask(true)}
-            className="text-xs px-4 py-2 rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
+            className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 text-sm font-medium active:scale-95 transition-transform"
           >
             Quick Task
           </button>
         </div>
 
         {loading ? (
-          <div className="text-gray-400 animate-pulse">Loading agents...</div>
+          <div className="text-md-on-surface-variant animate-pulse">Loading agents...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {agents.map((agent) => {
@@ -112,39 +112,39 @@ export default function Fleet() {
                 <button
                   key={agent.id}
                   onClick={() => navigate(`/fleet/${agent.id}`)}
-                  className="text-left bg-white/5 border border-[#333] rounded-2xl p-5 hover:bg-white/10 transition"
+                  className="text-left bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="text-lg font-semibold flex items-center gap-2">
+                      <div className="text-lg font-semibold flex items-center gap-2 text-md-on-background">
                         <span className="text-2xl">{agent.emoji}</span>
                         {agent.name}
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">{agent.role}</p>
+                      <p className="text-sm text-md-on-surface-variant mt-1">{agent.role}</p>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-md-on-surface-variant">
                       {statusDot(online)}
                       {online ? 'Online' : 'Offline'}
                     </div>
                   </div>
 
-                  <div className="mt-4 space-y-1 text-sm text-gray-400">
-                    <div>Model: <span className="text-gray-200">{agent.model}</span></div>
-                    <div>Host: <span className="text-gray-200">{agent.host}</span></div>
+                  <div className="mt-4 space-y-1 text-sm text-md-on-surface-variant">
+                    <div>Model: <span className="text-md-on-background">{agent.model}</span></div>
+                    <div>Host: <span className="text-md-on-background">{agent.host}</span></div>
                   </div>
 
                   <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                    <div className="bg-black/30 border border-[#333] rounded-lg p-2">
-                      <div className="text-gray-400">Backlog</div>
-                      <div className="text-lg font-semibold text-white">{stats.backlog}</div>
+                    <div className="bg-md-background rounded-md-sm p-2">
+                      <div className="text-md-on-surface-variant">Backlog</div>
+                      <div className="text-lg font-semibold text-md-on-background">{stats.backlog}</div>
                     </div>
-                    <div className="bg-black/30 border border-[#333] rounded-lg p-2">
-                      <div className="text-gray-400">In Progress</div>
-                      <div className="text-lg font-semibold text-white">{stats.in_progress}</div>
+                    <div className="bg-md-background rounded-md-sm p-2">
+                      <div className="text-md-on-surface-variant">In Progress</div>
+                      <div className="text-lg font-semibold text-md-on-background">{stats.in_progress}</div>
                     </div>
-                    <div className="bg-black/30 border border-[#333] rounded-lg p-2">
-                      <div className="text-gray-400">Done</div>
-                      <div className="text-lg font-semibold text-white">{stats.done}</div>
+                    <div className="bg-md-background rounded-md-sm p-2">
+                      <div className="text-md-on-surface-variant">Done</div>
+                      <div className="text-lg font-semibold text-md-on-background">{stats.done}</div>
                     </div>
                   </div>
                 </button>
@@ -155,20 +155,20 @@ export default function Fleet() {
       </div>
 
       {showQuickTask && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-[#0d1117] border border-[#333] rounded-2xl p-6 w-full max-w-lg">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-md-surface-container rounded-md-lg p-6 w-full max-w-lg shadow-md">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Quick Task</h2>
+              <h2 className="text-lg font-semibold text-md-on-background">Quick Task</h2>
               <button
                 onClick={() => setShowQuickTask(false)}
-                className="text-sm text-gray-400 hover:text-white"
+                className="text-sm text-md-on-surface-variant hover:text-md-primary transition-colors"
               >
                 Close
               </button>
             </div>
             <form onSubmit={handleQuickTask} className="space-y-3">
               <select
-                className="w-full bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-md-background border border-md-border/30 rounded-md-sm px-3 py-2 text-sm text-md-on-background"
                 value={quickForm.agentId}
                 onChange={(e) => setQuickForm((p) => ({ ...p, agentId: e.target.value }))}
               >
@@ -177,20 +177,20 @@ export default function Fleet() {
                 ))}
               </select>
               <input
-                className="w-full bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-md-background border border-md-border/30 rounded-md-sm px-3 py-2 text-sm text-md-on-background"
                 placeholder="Task title"
                 value={quickForm.title}
                 onChange={(e) => setQuickForm((p) => ({ ...p, title: e.target.value }))}
               />
               <textarea
-                className="w-full bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm min-h-[100px]"
+                className="w-full bg-md-background border border-md-border/30 rounded-md-sm px-3 py-2 text-sm min-h-[100px] text-md-on-background"
                 placeholder="Description"
                 value={quickForm.description}
                 onChange={(e) => setQuickForm((p) => ({ ...p, description: e.target.value }))}
               />
               <div className="flex items-center gap-3">
                 <select
-                  className="flex-1 bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                  className="flex-1 bg-md-background border border-md-border/30 rounded-md-sm px-3 py-2 text-sm text-md-on-background"
                   value={quickForm.priority}
                   onChange={(e) => setQuickForm((p) => ({ ...p, priority: e.target.value }))}
                 >
@@ -201,7 +201,7 @@ export default function Fleet() {
                 </select>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500"
+                  className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 text-sm font-medium active:scale-95 transition-transform"
                 >
                   Send
                 </button>

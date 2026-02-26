@@ -30,38 +30,35 @@ async function apiRefinery(path) {
 }
 
 const STATUS_CONFIG = {
-  untested: { label: '[UNTESTED]', cls: 'text-[#1a6b1a]' },
-  running: { label: '[RUNNING...]', cls: 'text-[#ffb000] terminal-blink' },
-  passed: { label: '[PASS]', cls: 'text-[#33ff00]' },
-  failed: { label: '[FAIL]', cls: 'text-[#ff3333]' },
-  partial: { label: '[WARN]', cls: 'text-[#ffb000]' }
+  untested: { label: 'Untested', cls: 'text-md-outline' },
+  running: { label: 'Running', cls: 'text-amber-500 animate-pulse' },
+  passed: { label: 'Pass', cls: 'text-md-primary' },
+  failed: { label: 'Fail', cls: 'text-red-500' },
+  partial: { label: 'Warning', cls: 'text-amber-500' }
 }
 
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.untested
   return (
-    <span className={`text-xs font-bold font-mono ${cfg.cls}`}>
+    <span className={`text-xs font-bold ${cfg.cls}`}>
       {cfg.label}
     </span>
   )
 }
 
-function AsciiBar({ label, value, max = 100 }) {
+function ProgressBar({ label, value, max = 100 }) {
   const pct = Math.min(Math.max(value || 0, 0), max)
-  const totalBlocks = 20
-  const filled = Math.round((pct / max) * totalBlocks)
-  const empty = totalBlocks - filled
-  const bar = '█'.repeat(filled) + '░'.repeat(empty)
-  const color = pct >= 80 ? 'text-[#33ff00]' : pct >= 50 ? 'text-[#ffb000]' : 'text-[#ff3333]'
+  const barColor = pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'
+  const textColor = pct >= 80 ? 'text-emerald-500' : pct >= 50 ? 'text-amber-500' : 'text-red-500'
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex justify-between text-sm">
-        <span className="text-[#22aa00] uppercase">{label}</span>
-        <span className={`font-bold ${color}`}>{pct}%</span>
+        <span className="text-md-on-surface-variant">{label}</span>
+        <span className={`font-semibold ${textColor}`}>{pct}%</span>
       </div>
-      <div className={`font-mono text-sm ${color}`}>
-        [{bar}]
+      <div className="w-full h-2 bg-md-surface-variant rounded-full overflow-hidden">
+        <div className={`h-full ${barColor} rounded-full transition-all ease-md-standard duration-300`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
@@ -69,23 +66,23 @@ function AsciiBar({ label, value, max = 100 }) {
 
 function TestResultItem({ test }) {
   const [expanded, setExpanded] = useState(false)
-  const statusLabel = test.status === 'pass' ? '[PASS]' : test.status === 'fail' ? '[FAIL]' : '[WARN]'
-  const statusColor = test.status === 'pass' ? 'text-[#33ff00]' : test.status === 'fail' ? 'text-[#ff3333]' : 'text-[#ffb000]'
+  const statusLabel = test.status === 'pass' ? 'Passed' : test.status === 'fail' ? '[FAIL]' : '[WARN]'
+  const statusColor = test.status === 'pass' ? 'text-md-primary' : test.status === 'fail' ? 'text-red-500' : 'text-amber-500'
 
   return (
-    <div className="border border-[#1f521f] p-3 hover:border-[#33ff00] transition-colors">
+    <div className="border border-md-outline-variant rounded-md-lg p-3 hover:border-md-primary transition-all ease-md-standard duration-300">
       <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold font-mono ${statusColor}`}>{statusLabel}</span>
-            <span className="text-sm font-medium text-[#33ff00]">{test.test_name}</span>
+            <span className={`text-xs font-bold ${statusColor}`}>{statusLabel}</span>
+            <span className="text-sm font-medium text-md-primary">{test.test_name}</span>
           </div>
         </div>
-        <p className="text-xs text-[#22aa00] mt-1">{test.description}</p>
+        <p className="text-xs text-md-on-surface-variant mt-1">{test.description}</p>
       </button>
       {expanded && test.details && (
-        <div className="mt-2 pt-2 border-t border-[#1f521f]">
-          <p className="text-xs text-[#22aa00] whitespace-pre-wrap font-mono">{test.details}</p>
+        <div className="mt-2 pt-2 border-t border-md-outline-variant">
+          <p className="text-xs text-md-on-surface-variant whitespace-pre-wrap">{test.details}</p>
         </div>
       )}
     </div>
@@ -201,8 +198,8 @@ export default function Inspector() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING INSPECTOR...]</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary animate-pulse">Loading...</div>
       </div>
     )
   }
@@ -219,35 +216,35 @@ export default function Inspector() {
   const blockerTests = (selectedResult?.results || []).filter(t => t.status === 'fail')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-surface">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-outline-variant">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/dashboard')} className="text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase text-sm">
-            [ DASHBOARD ]
+          <button onClick={() => navigate('/dashboard')} className="text-md-on-surface-variant hover:bg-md-primary hover:text-md-on-primary border border-md-outline-variant px-3 py-1 transition-all ease-md-standard duration-300 uppercase text-sm">
+            Dashboard
           </button>
-          <span className="text-xl font-bold tracking-tight uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>INSPECTOR</span>
+          <span className="text-xl font-bold tracking-tight uppercase">INSPECTOR</span>
         </div>
       </div>
 
       {/* Summary Dashboard */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-            <div className="text-xs text-[#1a6b1a] uppercase">FEATURES TESTED</div>
-            <div className="text-2xl font-bold mt-1 text-[#33ff00]" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{testedFeatures.length}</div>
+          <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+            <div className="text-xs text-md-outline uppercase">FEATURES TESTED</div>
+            <div className="text-2xl font-bold mt-1 text-md-primary">{testedFeatures.length}</div>
           </div>
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-            <div className="text-xs text-[#1a6b1a] uppercase">PASS RATE</div>
-            <div className={`text-2xl font-bold mt-1 ${passRate >= 80 ? 'text-[#33ff00]' : passRate >= 50 ? 'text-[#ffb000]' : 'text-[#ff3333]'}`} style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{passRate}%</div>
+          <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+            <div className="text-xs text-md-outline uppercase">PASS RATE</div>
+            <div className={`text-2xl font-bold mt-1 ${passRate >= 80 ? 'text-md-primary' : passRate >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{passRate}%</div>
           </div>
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-            <div className="text-xs text-[#1a6b1a] uppercase">AVG QUALITY SCORE</div>
-            <div className="text-2xl font-bold mt-1 text-[#33ff00]" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{avgQuality}</div>
+          <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+            <div className="text-xs text-md-outline uppercase">AVG QUALITY SCORE</div>
+            <div className="text-2xl font-bold mt-1 text-md-primary">{avgQuality}</div>
           </div>
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-            <div className="text-xs text-[#1a6b1a] uppercase">BLOCKERS</div>
-            <div className={`text-2xl font-bold mt-1 ${totalBlockers > 0 ? 'text-[#ff3333]' : 'text-[#33ff00]'}`} style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{totalBlockers}</div>
+          <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+            <div className="text-xs text-md-outline uppercase">BLOCKERS</div>
+            <div className={`text-2xl font-bold mt-1 ${totalBlockers > 0 ? 'text-red-500' : 'text-md-primary'}`}>{totalBlockers}</div>
           </div>
         </div>
 
@@ -256,17 +253,17 @@ export default function Inspector() {
           {/* Left Panel - Feature List (35%) */}
           <div className="w-[35%] space-y-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>FEATURES</h2>
+              <h2 className="text-lg font-semibold uppercase">FEATURES</h2>
               <button
                 onClick={runAllTests}
-                className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
+                className="px-3 py-1.5 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary text-xs font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                [ RUN ALL ]
+                Run All
               </button>
             </div>
 
             {features.length === 0 ? (
-              <div className="text-center text-[#1a6b1a] py-8">
+              <div className="text-center text-md-outline py-8">
                 No features found. Add features in the Refinery first.
               </div>
             ) : (
@@ -280,13 +277,13 @@ export default function Inspector() {
                   <button
                     key={feature.id}
                     onClick={() => handleSelectFeature(feature)}
-                    className={`w-full text-left p-3 border transition-colors ${
-                      isSelected ? 'bg-[#0f0f0f] border-[#33ff00]' : 'bg-[#0f0f0f] border-[#1f521f] hover:border-[#33ff00]'
+                    className={`w-full text-left p-3 border transition-all ease-md-standard duration-300 ${
+                      isSelected ? 'bg-md-surface-container border-md-primary' : 'bg-md-surface-container border-md-outline-variant hover:border-md-primary'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium truncate text-[#33ff00]">
-                        {isSelected ? '> ' : '  '}{feature.name}
+                      <span className="text-sm font-medium truncate text-md-primary">
+                        {feature.name}
                       </span>
                       <StatusBadge status={status} />
                     </div>
@@ -294,16 +291,16 @@ export default function Inspector() {
                       {hasBuild && status !== 'running' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); runTests(feature.id) }}
-                          className="px-2 py-1 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs transition-colors uppercase"
+                          className="px-2 py-1 border border-md-outline-variant text-md-on-surface-variant hover:border-md-primary hover:bg-md-primary hover:text-md-on-primary text-xs transition-all ease-md-standard duration-300 uppercase"
                         >
-                          [ RUN ]
+                          Run
                         </button>
                       )}
                       {!hasBuild && (
-                        <span className="text-xs text-[#1a6b1a]">[NO BUILD]</span>
+                        <span className="text-xs text-md-outline">No build</span>
                       )}
                       {result?.quality_score != null && (
-                        <span className="text-xs text-[#22aa00] ml-auto">Quality: {result.quality_score}%</span>
+                        <span className="text-xs text-md-on-surface-variant ml-auto">Quality: {result.quality_score}%</span>
                       )}
                     </div>
                   </button>
@@ -315,43 +312,43 @@ export default function Inspector() {
           {/* Right Panel - Test Results (65%) */}
           <div className="w-[65%]">
             {!selectedFeature ? (
-              <div className="bg-[#0f0f0f] border border-[#1f521f] p-12 text-center">
-                <div className="text-[#1a6b1a]">Select a feature to view test results</div>
+              <div className="bg-md-surface-container rounded-md-lg p-12 shadow-sm text-center">
+                <div className="text-md-outline">Select a feature to view test results</div>
               </div>
             ) : !selectedResult || selectedResult.status === 'untested' ? (
-              <div className="bg-[#0f0f0f] border border-[#1f521f] p-12 text-center">
-                <div className="text-[#1a6b1a]">[UNTESTED] No test results yet for {selectedFeature.name}</div>
+              <div className="bg-md-surface-container rounded-md-lg p-12 shadow-sm text-center">
+                <div className="text-md-outline">No test results yet for {selectedFeature.name}</div>
                 {builds[selectedFeature.id] && (
                   <button
                     onClick={() => runTests(selectedFeature.id)}
-                    className="mt-4 px-4 py-2 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm font-medium transition-colors uppercase"
+                    className="mt-4 px-4 py-2 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary text-sm font-medium transition-all ease-md-standard duration-300 uppercase"
                   >
-                    [ RUN TESTS ]
+                    Run Tests
                   </button>
                 )}
               </div>
             ) : selectedResult.status === 'running' ? (
-              <div className="bg-[#0f0f0f] border border-[#1f521f] p-12 text-center">
-                <div className="text-[#ffb000] terminal-blink text-lg">[RUNNING TESTS...]</div>
-                <div className="text-[#22aa00] mt-2">{selectedFeature.name}</div>
+              <div className="bg-md-surface-container rounded-md-lg p-12 shadow-sm text-center">
+                <div className="text-amber-500 animate-pulse text-lg">Running tests...</div>
+                <div className="text-md-on-surface-variant mt-2">{selectedFeature.name}</div>
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Score bars */}
-                <div className="bg-[#0f0f0f] border border-[#1f521f] p-4 space-y-3">
-                  <h3 className="text-sm font-semibold text-[#33ff00] mb-2 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.3)' }}>{selectedFeature.name}</h3>
-                  <AsciiBar label="QUALITY SCORE" value={selectedResult.quality_score} />
-                  <AsciiBar label="COVERAGE ESTIMATE" value={selectedResult.coverage_estimate} />
+                <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm space-y-3">
+                  <h3 className="text-sm font-semibold text-md-primary mb-2 uppercase">{selectedFeature.name}</h3>
+                  <ProgressBar label="QUALITY SCORE" value={selectedResult.quality_score} />
+                  <ProgressBar label="COVERAGE ESTIMATE" value={selectedResult.coverage_estimate} />
                 </div>
 
                 {/* Blockers */}
                 {blockerTests.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-[#ff3333] uppercase">[FAIL] BLOCKERS ({blockerTests.length})</h3>
+                    <h3 className="text-sm font-semibold text-red-500 uppercase">[FAIL] BLOCKERS ({blockerTests.length})</h3>
                     {blockerTests.map((test, i) => (
-                      <div key={i} className="bg-[#ff3333]/5 border border-[#ff3333]/30 p-3">
-                        <div className="text-sm font-medium text-[#ff3333]">[FAIL] {test.test_name}</div>
-                        <p className="text-xs text-[#ff3333]/70 mt-1 font-mono">{test.details || test.description}</p>
+                      <div key={i} className="bg-red-500/5 border border-red-500/30 p-3">
+                        <div className="text-sm font-medium text-red-500">[FAIL] {test.test_name}</div>
+                        <p className="text-xs text-red-500/70 mt-1">{test.details || test.description}</p>
                       </div>
                     ))}
                   </div>
@@ -360,7 +357,7 @@ export default function Inspector() {
                 {/* Test Results grouped by category */}
                 {Object.entries(groupedResults).map(([category, tests]) => (
                   <div key={category}>
-                    <h3 className="text-sm font-semibold text-[#22aa00] mb-2 uppercase">{category} TESTS ({tests.length})</h3>
+                    <h3 className="text-sm font-semibold text-md-on-surface-variant mb-2 uppercase">{category} TESTS ({tests.length})</h3>
                     <div className="space-y-2">
                       {tests.map((test, i) => (
                         <TestResultItem key={i} test={test} />
@@ -375,9 +372,9 @@ export default function Inspector() {
                     <button
                       onClick={() => getFixSuggestions(selectedFeature.id)}
                       disabled={loadingFixes}
-                      className="px-4 py-2 border border-[#ffb000] text-[#ffb000] hover:bg-[#ffb000] hover:text-[#0a0a0a] disabled:opacity-50 text-sm font-medium transition-colors uppercase"
+                      className="px-4 py-2 border border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-md-on-primary disabled:opacity-50 text-sm font-medium transition-all ease-md-standard duration-300 uppercase"
                     >
-                      {loadingFixes ? '[ GETTING FIXES... ]' : '[ GET FIX SUGGESTIONS ]'}
+                      {loadingFixes ? 'Getting Fixes...' : 'Get Fix Suggestions'}
                     </button>
                   )}
                 </div>
@@ -385,22 +382,22 @@ export default function Inspector() {
                 {/* Fix Suggestions Display */}
                 {fixSuggestions && fixSuggestions.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-[#ffb000] uppercase">[WARN] SUGGESTED FIXES</h3>
+                    <h3 className="text-sm font-semibold text-amber-500 uppercase">⚠ SUGGESTED FIXES</h3>
                     {fixSuggestions.map((fix, i) => (
-                      <div key={i} className="bg-[#0f0f0f] border border-[#ffb000]/30 p-4 space-y-2">
+                      <div key={i} className="bg-md-surface-container border border-amber-500/30 p-4 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-[#33ff00]">{fix.test_name}</span>
-                          <span className="text-xs text-[#1a6b1a] font-mono">{fix.file_path}</span>
+                          <span className="text-sm font-medium text-md-primary">{fix.test_name}</span>
+                          <span className="text-xs text-md-outline">{fix.file_path}</span>
                         </div>
-                        <p className="text-xs text-[#22aa00]">{fix.explanation}</p>
+                        <p className="text-xs text-md-on-surface-variant">{fix.explanation}</p>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <div className="text-xs text-[#ff3333] mb-1 font-bold">- CURRENT</div>
-                            <pre className="text-xs bg-[#ff3333]/5 border border-[#ff3333]/20 p-2 overflow-x-auto whitespace-pre-wrap text-[#ff3333] font-mono">{fix.current_code_snippet}</pre>
+                            <div className="text-xs text-red-500 mb-1 font-bold">- CURRENT</div>
+                            <pre className="text-xs bg-red-500/5 border border-red-500/20 p-2 overflow-x-auto whitespace-pre-wrap text-red-500">{fix.current_code_snippet}</pre>
                           </div>
                           <div>
-                            <div className="text-xs text-[#33ff00] mb-1 font-bold">+ SUGGESTED</div>
-                            <pre className="text-xs bg-[#33ff00]/5 border border-[#33ff00]/20 p-2 overflow-x-auto whitespace-pre-wrap text-[#33ff00] font-mono">{fix.suggested_fix}</pre>
+                            <div className="text-xs text-md-primary mb-1 font-bold">+ SUGGESTED</div>
+                            <pre className="text-xs bg-md-primary/5 border border-md-primary/20 p-2 overflow-x-auto whitespace-pre-wrap text-md-primary">{fix.suggested_fix}</pre>
                           </div>
                         </div>
                       </div>
@@ -410,9 +407,9 @@ export default function Inspector() {
 
                 {/* Summary */}
                 {selectedResult.summary && (
-                  <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-                    <h3 className="text-sm font-semibold text-[#22aa00] mb-2 uppercase">SUMMARY</h3>
-                    <p className="text-sm text-[#22aa00]">{selectedResult.summary}</p>
+                  <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+                    <h3 className="text-sm font-semibold text-md-on-surface-variant mb-2 uppercase">SUMMARY</h3>
+                    <p className="text-sm text-md-on-surface-variant">{selectedResult.summary}</p>
                   </div>
                 )}
               </div>
@@ -424,9 +421,9 @@ export default function Inspector() {
         {testResults.length > 0 && testResults.length >= features.length && (
           <button
             onClick={() => navigate(`/deployer/${project_id}`)}
-            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+            className="w-full mt-6 py-4 border-2 border-md-primary text-md-primary text-lg font-bold hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300"
           >
-            [ CONTINUE → DEPLOYER: Ship It ]
+            Continue to Deployer →
           </button>
         )}
       </div>

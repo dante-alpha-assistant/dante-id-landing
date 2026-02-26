@@ -3,7 +3,6 @@ import CopyButton from './CopyButton'
 export default function BrandIdentityView({ content }) {
   if (!content) return null
 
-  // Support both v1 (flat) and v2 (Beta) schemas
   const namesList = Array.isArray(content.name_suggestions)
     ? content.name_suggestions.map(n => typeof n === 'string' ? n : n.name || JSON.stringify(n))
     : []
@@ -47,10 +46,10 @@ export default function BrandIdentityView({ content }) {
       <div className="flex justify-end"><CopyButton text={allText} label="Copy All" /></div>
       {namesList.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Name Suggestions</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Name Suggestions</h4>
           <div className="flex flex-wrap gap-2">
             {namesList.map((n, i) => (
-              <span key={i} className="bg-white/5 border border-[#333] rounded-lg px-3 py-1.5 text-sm">{n}</span>
+              <span key={i} className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs px-3 py-1.5">{n}</span>
             ))}
           </div>
         </div>
@@ -58,13 +57,13 @@ export default function BrandIdentityView({ content }) {
 
       {colors.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Color Palette</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Color Palette</h4>
           <div className="flex flex-wrap gap-3">
             {colors.map((c, i) => (
               <div key={i} className="flex flex-col items-center gap-1.5">
-                <div className="w-12 h-12 rounded-lg border border-[#333]" style={{ backgroundColor: c.hex }} />
-                <span className="text-xs text-gray-400">{c.name}</span>
-                <span className="text-xs text-gray-500 font-mono">{c.hex}</span>
+                <div className="w-12 h-12 rounded-md-lg border border-md-outline-variant shadow-sm" style={{ backgroundColor: c.hex }} />
+                <span className="text-xs text-md-on-surface-variant">{c.name}</span>
+                <span className="text-xs text-md-on-surface-variant">{c.hex}</span>
               </div>
             ))}
           </div>
@@ -73,20 +72,20 @@ export default function BrandIdentityView({ content }) {
 
       {(headingFont || bodyFont) && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Typography</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Typography</h4>
           <div className="flex gap-4">
-            {headingFont && <span className="bg-white/5 border border-[#333] rounded-lg px-3 py-1.5 text-sm">Heading: {headingFont}</span>}
-            {bodyFont && <span className="bg-white/5 border border-[#333] rounded-lg px-3 py-1.5 text-sm">Body: {bodyFont}</span>}
+            {headingFont && <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs px-3 py-1.5">Heading: {headingFont}</span>}
+            {bodyFont && <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs px-3 py-1.5">Body: {bodyFont}</span>}
           </div>
         </div>
       )}
 
       {taglines.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Tagline Options</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Tagline Options</h4>
           <ul className="space-y-1">
             {taglines.map((t, i) => (
-              <li key={i} className="text-sm text-gray-300 italic">"{t}"</li>
+              <li key={i} className="text-sm text-md-on-surface italic">"{t}"</li>
             ))}
           </ul>
         </div>
@@ -94,8 +93,8 @@ export default function BrandIdentityView({ content }) {
 
       {brandVoice && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Brand Voice</h4>
-          <p className="text-sm text-gray-300 leading-relaxed">{brandVoice}</p>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Brand Voice</h4>
+          <p className="text-sm text-md-on-surface leading-relaxed">{brandVoice}</p>
         </div>
       )}
     </div>

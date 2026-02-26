@@ -3,7 +3,6 @@ import CopyButton from './CopyButton'
 export default function GrowthStrategyView({ content }) {
   if (!content) return null
 
-  // Support v1 (flat) and v2 (Beta) schemas
   const channels = Array.isArray(content.channels)
     ? content.channels.map(c => ({ name: c.name || c.channel || '', desc: c.description || c.why_it_fits || '' }))
     : Array.isArray(content.channel_strategy)
@@ -39,12 +38,12 @@ export default function GrowthStrategyView({ content }) {
       <div className="flex justify-end"><CopyButton text={JSON.stringify(content, null, 2)} label="Copy All" /></div>
       {channels.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Growth Channels</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Growth Channels</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {channels.map((c, i) => (
-              <div key={i} className="bg-white/5 border border-[#333] rounded-lg p-3">
-                <div className="text-sm font-medium text-white">{c.name}</div>
-                <div className="text-xs text-gray-400 mt-1">{c.desc}</div>
+              <div key={i} className="bg-md-surface-container rounded-md-lg p-3 shadow-sm">
+                <div className="text-sm font-medium text-md-on-surface">{c.name}</div>
+                <div className="text-xs text-md-on-surface-variant mt-1">{c.desc}</div>
               </div>
             ))}
           </div>
@@ -53,10 +52,10 @@ export default function GrowthStrategyView({ content }) {
 
       {first90.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">First 90 Days</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">First 90 Days</h4>
           <ol className="list-decimal list-inside space-y-1">
             {first90.map((item, i) => (
-              <li key={i} className="text-sm text-gray-300">{typeof item === 'string' ? item : item?.focus || JSON.stringify(item)}</li>
+              <li key={i} className="text-sm text-md-on-surface">{typeof item === 'string' ? item : item?.focus || JSON.stringify(item)}</li>
             ))}
           </ol>
         </div>
@@ -64,11 +63,11 @@ export default function GrowthStrategyView({ content }) {
 
       {quickWins.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Quick Wins</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Quick Wins</h4>
           <div className="space-y-1">
             {quickWins.map((w, i) => (
-              <div key={i} className="text-sm text-gray-300">
-                ⚡ {typeof w === 'string' ? w : w.action || ''} {w.time ? <span className="text-xs text-gray-500">({w.time})</span> : null}
+              <div key={i} className="text-sm text-md-on-surface">
+                ⚡ {typeof w === 'string' ? w : w.action || ''} {w.time ? <span className="text-xs text-md-on-surface-variant">({w.time})</span> : null}
               </div>
             ))}
           </div>
@@ -77,10 +76,10 @@ export default function GrowthStrategyView({ content }) {
 
       {metrics.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Key Metrics</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Key Metrics</h4>
           <div className="flex flex-wrap gap-2">
             {metrics.map((m, i) => (
-              <span key={i} className="bg-white/5 border border-[#333] rounded-lg px-3 py-1.5 text-sm text-gray-300">
+              <span key={i} className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs px-3 py-1.5">
                 {typeof m === 'string' ? m : m?.metric || ''}
               </span>
             ))}
@@ -90,20 +89,20 @@ export default function GrowthStrategyView({ content }) {
 
       {budget.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Budget Allocation</h4>
+          <h4 className="text-sm font-medium text-md-on-surface-variant mb-2">Budget Allocation</h4>
           <div className="space-y-2">
             {budget.map((b, i) => (
               <div key={i}>
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <div className="flex justify-between text-xs text-md-on-surface-variant mb-1">
                   <span>{b.category}</span>
                   {b.percentage != null && <span>{b.percentage}%</span>}
                 </div>
                 {b.percentage != null && (
-                  <div className="w-full bg-white/5 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${b.percentage}%` }} />
+                  <div className="h-2 rounded-full bg-md-surface-variant">
+                    <div className="h-2 rounded-full bg-md-primary transition-all" style={{ width: `${b.percentage}%` }} />
                   </div>
                 )}
-                {b.outcome && <p className="text-xs text-gray-500 mt-1">{b.outcome}</p>}
+                {b.outcome && <p className="text-xs text-md-on-surface-variant mt-1">{b.outcome}</p>}
               </div>
             ))}
           </div>

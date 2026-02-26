@@ -19,19 +19,19 @@ async function apiCall(base, path, options = {}) {
 }
 
 const PRIORITY_LABELS = {
-  critical: { text: '[CRITICAL]', cls: 'text-[#ff3333]' },
-  high: { text: '[HIGH]', cls: 'text-[#ffb000]' },
-  medium: { text: '[MEDIUM]', cls: 'text-[#33ff00]' },
-  low: { text: '[LOW]', cls: 'text-[#22aa00]' },
-  'nice-to-have': { text: '[NICE]', cls: 'text-[#1a6b1a]' }
+  critical: { text: 'Critical', cls: 'text-red-500' },
+  high: { text: 'High', cls: 'text-amber-500' },
+  medium: { text: 'Medium', cls: 'text-md-primary' },
+  low: { text: 'Low', cls: 'text-md-on-surface-variant' },
+  'nice-to-have': { text: 'Nice', cls: 'text-md-outline' }
 }
 
 const STATUS_LABELS = {
-  pending: { text: '[PENDING]', cls: 'text-[#1a6b1a]' },
-  generating: { text: '[GENERATING...]', cls: 'text-[#ffb000] terminal-blink' },
-  review: { text: '[REVIEW]', cls: 'text-[#33ff00]' },
-  done: { text: '[DONE]', cls: 'text-[#33ff00]' },
-  failed: { text: '[FAILED]', cls: 'text-[#ff3333]' }
+  pending: { text: 'Pending', cls: 'text-md-outline' },
+  generating: { text: 'Generating...', cls: 'text-amber-500 animate-pulse' },
+  review: { text: 'Review', cls: 'text-md-primary' },
+  done: { text: 'Done', cls: 'text-md-primary' },
+  failed: { text: 'Failed', cls: 'text-red-500' }
 }
 
 // Simple syntax highlight
@@ -83,7 +83,7 @@ function FileTreeNode({ node, depth = 0, selectedFile, onSelect, isLast = false 
         return (
           <div key={folder.name}>
             <div
-              className="flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-[#0f0f0f] text-xs text-[#22aa00] font-mono"
+              className="flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-md-surface-container text-xs text-md-on-surface-variant"
               style={{ paddingLeft: `${indent}px` }}
               onClick={() => setOpen(prev => {
                 const next = { ...prev }
@@ -91,7 +91,7 @@ function FileTreeNode({ node, depth = 0, selectedFile, onSelect, isLast = false 
                 return next
               })}
             >
-              <span className="text-[#1a6b1a]">{isLastFolder ? '└──' : '├──'}</span>
+              <span className="text-md-outline">{isLastFolder ? '└──' : '├──'}</span>
               <span>{folder.name}/</span>
             </div>
             {open && <FileTreeNode node={folder} depth={depth + 1} selectedFile={selectedFile} onSelect={onSelect} />}
@@ -101,13 +101,13 @@ function FileTreeNode({ node, depth = 0, selectedFile, onSelect, isLast = false 
       {files.map((file, fi) => (
         <div
           key={file.path}
-          className={`flex items-center gap-1 px-2 py-1 cursor-pointer text-xs truncate font-mono ${
-            selectedFile?.path === file.path ? 'bg-[#33ff00]/10 text-[#33ff00]' : 'text-[#22aa00] hover:bg-[#0f0f0f]'
+          className={`flex items-center gap-1 px-2 py-1 cursor-pointer text-xs truncate ${
+            selectedFile?.path === file.path ? 'bg-md-primary/10 text-md-primary' : 'text-md-on-surface-variant hover:bg-md-surface-container'
           }`}
           style={{ paddingLeft: `${indent}px` }}
           onClick={() => onSelect(file)}
         >
-          <span className="text-[#1a6b1a]">{fi === files.length - 1 ? '└──' : '├──'}</span>
+          <span className="text-md-outline">{fi === files.length - 1 ? '└──' : '├──'}</span>
           <span className="truncate">{file.filename}</span>
         </div>
       ))}
@@ -304,61 +304,61 @@ export default function Builder() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING...]</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary animate-pulse">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-surface">
       <style>{`
-        .code-keyword { color: #33ff00; font-weight: bold; }
-        .code-string { color: #ffb000; }
-        .code-comment { color: #1a6b1a; font-style: italic; }
+        .code-keyword { color: var(--md-primary, #6750A4); font-weight: bold; }
+        .code-string { color: var(--md-tertiary, #7D5260); }
+        .code-comment { color: var(--md-outline, #79747E); font-style: italic; }
       `}</style>
 
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-outline-variant">
         <div className="flex items-center gap-4">
-          <span className="text-xl font-bold tracking-tight" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>dante_</span>
-          <span className="text-[#1a6b1a]">/</span>
-          <span className="text-sm text-[#22aa00] uppercase">Builder</span>
+          <span className="text-xl font-bold tracking-tight">dante_</span>
+          <span className="text-md-outline">/</span>
+          <span className="text-sm text-md-on-surface-variant uppercase">Builder</span>
         </div>
         <div className="flex items-center gap-3">
           {hasBuilds && (ghStatus?.connected ? (
             <button
               onClick={() => setShowRepoModal(true)}
-              className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
+              className="px-3 py-1.5 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary text-xs font-medium transition-all ease-md-standard duration-300 uppercase"
             >
-              [ PUSH TO GITHUB → {ghStatus.github_username} ]
+              Push to GitHub · {ghStatus.github_username}
             </button>
           ) : (
             <button
               onClick={connectGitHub}
-              className="px-3 py-1.5 border border-[#ffb000] text-[#ffb000] hover:bg-[#ffb000] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
+              className="px-3 py-1.5 border border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-md-on-primary text-xs font-medium transition-all ease-md-standard duration-300 uppercase"
             >
-              [ 🔗 CONNECT GITHUB ]
+              Connect GitHub
             </button>
           ))}
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+            className="text-sm text-md-on-surface-variant hover:bg-md-primary hover:text-md-on-primary border border-md-outline-variant px-3 py-1 transition-all ease-md-standard duration-300 uppercase"
           >
-            [ DASHBOARD ]
+            Dashboard
           </button>
         </div>
       </div>
 
       {/* AI Loading overlay */}
       {aiLoading && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-3">
-            <div className="text-[#33ff00] terminal-blink text-lg">[GENERATING...]</div>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-md-surface-container rounded-md-lg p-8 shadow-sm flex flex-col items-center gap-3">
+            <div className="text-md-primary animate-pulse text-lg">Generating...</div>
             {batchProgress ? (
-              <p className="text-sm text-[#22aa00]">Building {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
+              <p className="text-sm text-md-on-surface-variant">Building {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
             ) : (
-              <p className="text-sm text-[#22aa00]">AI is generating code...</p>
+              <p className="text-sm text-md-on-surface-variant">AI is generating code...</p>
             )}
           </div>
         </div>
@@ -366,13 +366,13 @@ export default function Builder() {
 
       {/* Repo modal */}
       {showRepoModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-6 w-[400px]">
-            <h3 className="text-lg font-semibold mb-2 uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>CREATE GITHUB REPOSITORY</h3>
-            {ghStatus?.github_username && <p className="text-xs text-[#22aa00] mb-4">Pushing to <span className="text-[#33ff00] font-bold">github.com/{ghStatus.github_username}</span></p>}
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md w-[400px]">
+            <h3 className="text-lg font-semibold mb-2 uppercase">CREATE GITHUB REPOSITORY</h3>
+            {ghStatus?.github_username && <p className="text-xs text-md-on-surface-variant mb-4">Pushing to <span className="text-md-primary font-bold">github.com/{ghStatus.github_username}</span></p>}
             <input
-              className="w-full bg-[#0d0d0d] border border-[#1f521f] px-3 py-2 text-sm text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] mb-4 font-mono"
-              style={{ caretColor: '#33ff00' }}
+              className="w-full bg-md-surface-variant border border-md-outline-variant px-3 py-2 text-sm text-md-primary placeholder-md-outline focus:outline-none focus:border-md-primary mb-4"
+              
               placeholder="Repository name (e.g. my-app)"
               value={repoName}
               onChange={(e) => setRepoName(e.target.value)}
@@ -382,16 +382,16 @@ export default function Builder() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowRepoModal(false)}
-                className="px-4 py-2 text-sm text-[#22aa00] hover:text-[#33ff00] border border-[#1f521f] transition-colors uppercase"
+                className="px-4 py-2 text-sm text-md-on-surface-variant hover:text-md-primary border border-md-outline-variant transition-all ease-md-standard duration-300 uppercase"
               >
-                [ CANCEL ]
+                Cancel
               </button>
               <button
                 onClick={createRepo}
                 disabled={repoLoading || !repoName.trim()}
-                className="px-4 py-2 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 text-sm font-medium transition-colors uppercase"
+                className="px-4 py-2 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 text-sm font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                {repoLoading ? '[ CREATING... ]' : '[ CREATE ]'}
+                {repoLoading ? 'Creating...' : 'Create'}
               </button>
             </div>
           </div>
@@ -401,29 +401,29 @@ export default function Builder() {
       {/* Main content */}
       <div className="flex h-[calc(100vh-57px)]">
         {/* Left Panel - Features (35%) */}
-        <div className="w-[35%] border-r border-[#1f521f] overflow-y-auto p-6">
+        <div className="w-[35%] border-r border-md-outline-variant overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>FEATURES</h3>
+            <h3 className="text-lg font-semibold uppercase">FEATURES</h3>
             {eligibleCount > 0 ? (
               <button
                 onClick={generateAll}
                 disabled={aiLoading}
-                className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 text-xs font-medium transition-colors uppercase"
+                className="px-3 py-1.5 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 text-xs font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                [ BUILD ALL ({eligibleCount}) ]
+                Build All ({eligibleCount})
               </button>
             ) : features.length > 0 && Object.keys(buildsMap).length >= features.length ? (
               <button
                 onClick={() => navigate(`/inspector/${project_id}`)}
-                className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-xs font-medium transition-colors uppercase"
+                className="px-3 py-1.5 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary text-xs font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                [ → RUN TESTS ]
+                → Run Tests
               </button>
             ) : null}
           </div>
 
           {features.length === 0 ? (
-            <p className="text-sm text-[#1a6b1a] text-center mt-8">
+            <p className="text-sm text-md-outline text-center mt-8">
               No features found. Go to Refinery first.
             </p>
           ) : (
@@ -436,15 +436,15 @@ export default function Builder() {
                   <div
                     key={f.id}
                     onClick={() => selectFeature(f)}
-                    className={`p-3 cursor-pointer border transition-colors ${
+                    className={`p-3 cursor-pointer border transition-all ease-md-standard duration-300 ${
                       selectedFeature?.id === f.id
-                        ? 'bg-[#0f0f0f] border-[#33ff00]'
-                        : 'bg-[#0f0f0f] border-[#1f521f] hover:border-[#33ff00]'
+                        ? 'bg-md-surface-container border-md-primary'
+                        : 'bg-md-surface-container border-md-outline-variant hover:border-md-primary'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="text-sm font-medium text-[#33ff00] flex-1 truncate">
-                        {selectedFeature?.id === f.id ? '> ' : '  '}{f.name}
+                      <h4 className="text-sm font-medium text-md-primary flex-1 truncate">
+                        {f.name}
                       </h4>
                       <span className={`text-[10px] font-bold shrink-0 ${priority.cls}`}>
                         {priority.text}
@@ -456,8 +456,8 @@ export default function Builder() {
                           {status.text} {build.file_count > 0 ? `(${build.file_count} files)` : ''}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-[#1a6b1a] font-bold">
-                          [NO BUILD]
+                        <span className="text-[10px] text-md-outline font-bold">
+                          No build
                         </span>
                       )}
                     </div>
@@ -465,9 +465,9 @@ export default function Builder() {
                       <button
                         onClick={(e) => { e.stopPropagation(); generateCode(f.id) }}
                         disabled={aiLoading}
-                        className="mt-2 px-3 py-1 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 text-[10px] font-medium transition-colors uppercase"
+                        className="mt-2 px-3 py-1 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 text-[10px] font-medium transition-all ease-md-standard duration-300 uppercase"
                       >
-                        [ BUILD ]
+                        Build
                       </button>
                     )}
                   </div>
@@ -481,34 +481,34 @@ export default function Builder() {
         <div className="w-[65%] overflow-hidden flex flex-col">
           {!selectedFeature ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-[#1a6b1a] text-sm">Select a feature to view its build</p>
+              <p className="text-md-outline text-sm">Select a feature to view its build</p>
             </div>
           ) : !currentBuild ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
-              <p className="text-[#22aa00] text-sm">No build for &quot;{selectedFeature.name}&quot;</p>
-              <p className="text-[#1a6b1a] text-xs">Make sure a blueprint exists in Foundry first.</p>
+              <p className="text-md-on-surface-variant text-sm">No build for &quot;{selectedFeature.name}&quot;</p>
+              <p className="text-md-outline text-xs">Make sure a blueprint exists in Foundry first.</p>
               <button
                 onClick={() => generateCode(selectedFeature.id)}
                 disabled={aiLoading}
-                className="px-6 py-3 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 text-sm font-medium transition-colors uppercase"
+                className="px-6 py-3 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 text-sm font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                [ GENERATE CODE ]
+                Generate Code
               </button>
             </div>
           ) : (
             <>
               {/* Status banner */}
-              <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 border-b border-[#1f521f] ${
-                currentBuild.status === 'generating' ? 'bg-[#ffb000]/10 text-[#ffb000]' :
-                currentBuild.status === 'review' ? 'bg-[#33ff00]/10 text-[#33ff00]' :
-                currentBuild.status === 'done' ? 'bg-[#33ff00]/10 text-[#33ff00]' :
-                currentBuild.status === 'failed' ? 'bg-[#ff3333]/10 text-[#ff3333]' :
-                'bg-[#1a6b1a]/10 text-[#1a6b1a]'
+              <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 border-b border-md-outline-variant ${
+                currentBuild.status === 'generating' ? 'bg-amber-500/10 text-amber-500' :
+                currentBuild.status === 'review' ? 'bg-md-primary/10 text-md-primary' :
+                currentBuild.status === 'done' ? 'bg-md-primary/10 text-md-primary' :
+                currentBuild.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                'bg-md-outline/10 text-md-outline'
               }`}>
-                {currentBuild.status === 'generating' && <span className="terminal-blink">●</span>}
+                {currentBuild.status === 'generating' && <span className="animate-pulse">●</span>}
                 STATUS: [{currentBuild.status.toUpperCase()}]
                 {currentBuild.github_url && (
-                  <a href={currentBuild.github_url} target="_blank" rel="noopener noreferrer" className="ml-auto text-[#33ff00] hover:underline">
+                  <a href={currentBuild.github_url} target="_blank" rel="noopener noreferrer" className="ml-auto text-md-primary hover:underline">
                     View on GitHub →
                   </a>
                 )}
@@ -517,7 +517,7 @@ export default function Builder() {
               {/* File tree + code viewer */}
               <div className="flex flex-1 overflow-hidden">
                 {/* File tree sidebar */}
-                <div className="w-[200px] border-r border-[#1f521f] overflow-y-auto py-2 shrink-0 bg-[#0a0a0a]">
+                <div className="w-[200px] border-r border-md-outline-variant overflow-y-auto py-2 shrink-0 bg-md-background">
                   {fileTree && <FileTreeNode node={fileTree} selectedFile={selectedFile} onSelect={setSelectedFile} />}
                 </div>
 
@@ -526,19 +526,19 @@ export default function Builder() {
                   {selectedFile ? (
                     <div>
                       {/* File header */}
-                      <div className="flex items-center gap-2 px-4 py-2 border-b border-[#1f521f] bg-[#0a0a0a]">
-                        <span className="text-xs text-[#33ff00] font-mono">{selectedFile.path}</span>
-                        <span className="text-[10px] px-2 py-0.5 text-[#22aa00] bg-[#33ff00]/10 border border-[#1f521f]">
+                      <div className="flex items-center gap-2 px-4 py-2 border-b border-md-outline-variant bg-md-background">
+                        <span className="text-xs text-md-primary">{selectedFile.path}</span>
+                        <span className="text-[10px] px-2 py-0.5 text-md-on-surface-variant bg-md-primary/10 border border-md-outline-variant">
                           {selectedFile.language || selectedFile.path.split('.').pop()}
                         </span>
                       </div>
 
                       {/* Code */}
-                      <div className="bg-[#0d0d0d] overflow-x-auto">
-                        <pre className="p-4 text-xs leading-5 font-mono">
+                      <div className="bg-md-surface-variant overflow-x-auto">
+                        <pre className="p-4 text-xs leading-5">
                           {(selectedFile.content || '').split('\n').map((line, i) => (
                             <div key={i} className="flex">
-                              <span className="text-[#1a6b1a] select-none w-10 text-right pr-4 shrink-0">{i + 1}</span>
+                              <span className="text-md-outline select-none w-10 text-right pr-4 shrink-0">{i + 1}</span>
                               <span dangerouslySetInnerHTML={{ __html: highlightCode(line, selectedFile.language) }} />
                             </div>
                           ))}
@@ -547,27 +547,27 @@ export default function Builder() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32">
-                      <p className="text-[#1a6b1a] text-xs">Select a file to view</p>
+                      <p className="text-md-outline text-xs">Select a file to view</p>
                     </div>
                   )}
 
                   {/* Build Log */}
                   {currentBuild.logs && currentBuild.logs.length > 0 && (
-                    <div className="border-t border-[#1f521f] p-4 space-y-3">
+                    <div className="border-t border-md-outline-variant p-4 space-y-3">
                       <div>
-                        <h4 className="text-xs text-[#1a6b1a] uppercase mb-1">BUILD LOG</h4>
+                        <h4 className="text-xs text-md-outline uppercase mb-1">BUILD LOG</h4>
                         <button
                           onClick={() => setShowLogs(!showLogs)}
-                          className="text-[10px] text-[#33ff00] hover:underline uppercase"
+                          className="text-[10px] text-md-primary hover:underline uppercase"
                         >
                           [{showLogs ? 'HIDE' : 'SHOW'} LOGS ({currentBuild.logs.length})]
                         </button>
                         {showLogs && (
-                          <div className="mt-2 space-y-1 bg-[#0d0d0d] border border-[#1f521f] p-3">
+                          <div className="mt-2 space-y-1 bg-md-surface-variant border border-md-outline-variant rounded-md-lg p-3">
                             {currentBuild.logs.map((log, i) => (
-                              <div key={i} className="text-xs text-[#22aa00] font-mono">
-                                <span className="text-[#1a6b1a]">$</span>{' '}
-                                <span className="text-[#1a6b1a]">{new Date(log.ts).toLocaleTimeString()}</span>{' '}
+                              <div key={i} className="text-xs text-md-on-surface-variant">
+                                <span className="text-md-outline">$</span>{' '}
+                                <span className="text-md-outline">{new Date(log.ts).toLocaleTimeString()}</span>{' '}
                                 {log.msg}
                               </div>
                             ))}
@@ -586,9 +586,9 @@ export default function Builder() {
         {features.length > 0 && features.every(f => buildsMap[f.id] && buildsMap[f.id].status !== "generating") && Object.keys(buildsMap).length >= features.length && (
           <button
             onClick={() => navigate(`/inspector/${project_id}`)}
-            className="w-full mt-6 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+            className="w-full mt-6 py-4 border-2 border-md-primary text-md-primary text-lg font-bold hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300"
           >
-            [ CONTINUE → INSPECTOR: Run Tests ]
+            Continue to Inspector →
           </button>
         )}
       </div>

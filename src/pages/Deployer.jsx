@@ -89,19 +89,19 @@ export default function Deployer() {
 
       if (res.error) {
         setError(res.error)
-        setLogs(prev => [...prev, { timestamp: new Date().toTimeString().split(' ')[0], message: `[ERROR] ${res.error}` }])
+        setLogs(prev => [...prev, { timestamp: new Date().toTimeString().split(' ')[0], message: `Error: ${res.error}` }])
       } else {
         setLogs(prev => [
           ...prev,
           { timestamp: new Date().toTimeString().split(' ')[0], message: `$ Deployment complete` },
           { timestamp: new Date().toTimeString().split(' ')[0], message: `$ Live at: ${res.url}` },
-          { timestamp: new Date().toTimeString().split(' ')[0], message: '[DONE]' },
+          { timestamp: new Date().toTimeString().split(' ')[0], message: '✓ Done' },
         ])
         await fetchDeployments()
       }
     } catch (err) {
       setError(err.message)
-      setLogs(prev => [...prev, { timestamp: new Date().toTimeString().split(' ')[0], message: `[FATAL] ${err.message}` }])
+      setLogs(prev => [...prev, { timestamp: new Date().toTimeString().split(' ')[0], message: `Fatal: ${err.message}` }])
     }
     setDeploying(false)
   }
@@ -120,81 +120,81 @@ export default function Deployer() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING...]</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary animate-pulse">Loading...</div>
       </div>
     )
   }
 
   const statusColor = (status) => {
     switch (status) {
-      case 'live': return 'text-[#33ff00]'
-      case 'deploying': return 'text-[#ffb000] terminal-blink'
-      case 'failed': return 'text-[#ff3333]'
-      case 'rolled_back': return 'text-[#888]'
-      default: return 'text-[#22aa00]'
+      case 'live': return 'text-md-primary'
+      case 'deploying': return 'text-amber-500 animate-pulse'
+      case 'failed': return 'text-red-500'
+      case 'rolled_back': return 'text-md-outline'
+      default: return 'text-md-on-surface-variant'
     }
   }
 
   const statusLabel = (status) => {
     switch (status) {
-      case 'live': return '[LIVE]'
-      case 'deploying': return '[DEPLOYING...]'
-      case 'failed': return '[FAILED]'
-      case 'rolled_back': return '[ROLLED_BACK]'
-      case 'pending': return '[PENDING]'
-      case 'done': return '[OLD]'
-      default: return `[${(status || 'UNKNOWN').toUpperCase()}]`
+      case 'live': return 'Live'
+      case 'deploying': return 'Deploying'
+      case 'failed': return 'Failed'
+      case 'rolled_back': return 'Rolled Back'
+      case 'pending': return 'Pending'
+      case 'done': return 'Previous'
+      default: return status?.toUpperCase() || 'Unknown'
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-surface">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-outline-variant">
         <div className="flex items-center gap-4">
-          <span className="text-xl font-bold tracking-tight" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>dante_</span>
-          <span className="text-[#1a6b1a]">/</span>
-          <span className="text-sm text-[#22aa00] uppercase">Deployer</span>
+          <span className="text-xl font-bold tracking-tight">dante_</span>
+          <span className="text-md-outline">/</span>
+          <span className="text-sm text-md-on-surface-variant uppercase">Deployer</span>
         </div>
         <button
           onClick={() => navigate('/dashboard')}
-          className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+          className="text-sm text-md-on-surface-variant hover:bg-md-primary hover:text-md-on-primary border border-md-outline-variant px-3 py-1 transition-all ease-md-standard duration-300 uppercase"
         >
-          [ DASHBOARD ]
+          Dashboard
         </button>
       </div>
 
       <div className="max-w-4xl mx-auto mt-8 px-4 pb-16 space-y-8">
         {/* Project Status */}
-        <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
-          <div className="text-xs text-[#1a6b1a] mb-4">+--- PROJECT STATUS ---+</div>
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md">
+          <div className="text-xs text-md-outline mb-4">Project Status</div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-[#22aa00]">  Features:</span>
-              <span className="text-[#33ff00]">{stats.features}</span>
+              <span className="text-md-on-surface-variant">  Features:</span>
+              <span className="text-md-primary">{stats.features}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#22aa00]">  Builds:</span>
-              <span className="text-[#33ff00]">{stats.builds}/{stats.totalBuilds} {stats.builds >= stats.totalBuilds && stats.totalBuilds > 0 ? '[OK]' : '[PARTIAL]'}</span>
+              <span className="text-md-on-surface-variant">  Builds:</span>
+              <span className="text-md-primary">{stats.builds}/{stats.totalBuilds} {stats.builds >= stats.totalBuilds && stats.totalBuilds > 0 ? '✓' : 'Partial'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#22aa00]">  Tests:</span>
-              <span className="text-[#33ff00]">{stats.testsPassed}/{stats.testsTotal} passed</span>
+              <span className="text-md-on-surface-variant">  Tests:</span>
+              <span className="text-md-primary">{stats.testsPassed}/{stats.testsTotal} passed</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#22aa00]">  Quality Gate:</span>
-              <span className={stats.qualityGate ? 'text-[#33ff00]' : 'text-[#ff3333]'}>
-                {stats.qualityGate ? '[PASS]' : '[BLOCK]'}
+              <span className="text-md-on-surface-variant">  Quality Gate:</span>
+              <span className={stats.qualityGate ? 'text-md-primary' : 'text-red-500'}>
+                {stats.qualityGate ? 'Passed' : 'Blocked'}
               </span>
             </div>
           </div>
-          <div className="text-xs text-[#1a6b1a] mt-4">+----------------------+</div>
+          <div className="text-xs text-md-outline mt-4"></div>
         </div>
 
         {/* Deploy Console */}
-        <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
-          <div className="text-xs text-[#1a6b1a] mb-4">+--- DEPLOY CONSOLE ---+</div>
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md">
+          <div className="text-xs text-md-outline mb-4">Deploy Console</div>
 
           {/* Target selector */}
           <div className="flex gap-2 mb-6">
@@ -202,13 +202,13 @@ export default function Deployer() {
               <button
                 key={t.key}
                 onClick={() => setTarget(t.key)}
-                className={`px-4 py-2 text-sm border transition-colors ${
+                className={`px-4 py-2 text-sm border transition-all ease-md-standard duration-300 ${
                   target === t.key
-                    ? 'bg-[#33ff00] text-[#0a0a0a] border-[#33ff00]'
-                    : 'text-[#22aa00] border-[#1f521f] hover:border-[#33ff00]'
+                    ? 'bg-md-primary text-md-on-primary border-md-primary'
+                    : 'text-md-on-surface-variant border-md-outline-variant hover:border-md-primary'
                 }`}
               >
-                [ {t.label} ]
+                {t.label}
               </button>
             ))}
           </div>
@@ -217,65 +217,65 @@ export default function Deployer() {
           <button
             onClick={handleDeploy}
             disabled={deploying || !stats.qualityGate}
-            className={`w-full py-4 text-lg border transition-colors mb-6 ${
+            className={`w-full py-4 text-lg border transition-all ease-md-standard duration-300 mb-6 ${
               !stats.qualityGate
-                ? 'border-[#333] text-[#555] cursor-not-allowed'
+                ? 'border-md-outline-variant text-md-outline cursor-not-allowed'
                 : deploying
-                  ? 'border-[#ffb000] text-[#ffb000] terminal-blink cursor-wait'
-                  : 'border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a]'
+                  ? 'border-amber-500 text-amber-500 animate-pulse cursor-wait'
+                  : 'border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary'
             }`}
           >
-            {deploying ? '[ DEPLOYING... ]' : !stats.qualityGate ? '[ DEPLOY BLOCKED ]' : '[ DEPLOY > ]'}
+            {deploying ? 'Deploying...' : !stats.qualityGate ? 'Deploy Blocked' : 'Deploy'}
           </button>
 
           {error && (
-            <div className="mb-4 p-3 border border-[#ff3333] text-[#ff3333] text-sm">
-              [ERROR] {error}
+            <div className="mb-4 p-3 border border-red-500 text-red-500 text-sm">
+              Error: {error}
             </div>
           )}
 
           {/* Log output */}
           {logs.length > 0 && (
-            <div className="bg-[#0a0a0a] border border-[#1f521f] p-4 max-h-64 overflow-y-auto">
+            <div className="bg-md-background border border-md-outline-variant rounded-md-lg p-4 max-h-64 overflow-y-auto">
               {logs.map((log, i) => (
-                <div key={i} className={`text-xs ${log.message.includes('[ERROR]') || log.message.includes('[FATAL]') ? 'text-[#ff3333]' : log.message.includes('[DONE]') ? 'text-[#33ff00] font-bold' : 'text-[#22aa00]'}`}>
-                  <span className="text-[#1a6b1a]">[{log.timestamp}]</span> {log.message.startsWith('$') || log.message.startsWith('[') ? log.message : `$ ${log.message}`}
+                <div key={i} className={`text-xs ${log.message.includes('[ERROR]') || log.message.includes('[FATAL]') ? 'text-red-500' : log.message.includes('✓ Done') ? 'text-md-primary font-bold' : 'text-md-on-surface-variant'}`}>
+                  <span className="text-md-outline">[{log.timestamp}]</span> {log.message.startsWith('$') || log.message.startsWith('[') ? log.message : `$ ${log.message}`}
                 </div>
               ))}
             </div>
           )}
 
-          <div className="text-xs text-[#1a6b1a] mt-4">+----------------------+</div>
+          <div className="text-xs text-md-outline mt-4"></div>
         </div>
 
         {/* Live URL Banner */}
         {deployments.some(d => d.status === 'live') && (() => {
           const live = deployments.find(d => d.status === 'live')
           return (
-            <div className="bg-[#33ff00]/5 border-2 border-[#33ff00] p-6 mb-6 text-center">
-              <p className="text-[10px] text-[#22aa00] mb-2">YOUR APP IS LIVE</p>
+            <div className="bg-md-primary/5 border-2 border-md-primary p-6 mb-6 text-center">
+              <p className="text-[10px] text-md-on-surface-variant mb-2">YOUR APP IS LIVE</p>
               <a href={live.vercel_url || live.url} target="_blank" rel="noopener noreferrer"
-                className="text-xl font-bold text-[#33ff00] hover:underline break-all">
+                className="text-xl font-bold text-md-primary hover:underline break-all">
                 {live.vercel_url || live.url}
               </a>
               {live.url && live.url !== live.vercel_url && (
-                <p className="text-xs text-[#1a6b1a] mt-2">Canonical: {live.url}</p>
+                <p className="text-xs text-md-outline mt-2">Canonical: {live.url}</p>
               )}
             </div>
           )
         })()}
 
         {/* Deployment History */}
-        <div className="bg-[#0f0f0f] border border-[#1f521f] p-6">
-          <div className="text-xs text-[#1a6b1a] mb-4">+--- DEPLOYMENT HISTORY ---+</div>
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md">
+          <div className="text-xs text-md-outline mb-4">Deployment History</div>
 
           {deployments.length === 0 ? (
-            <p className="text-[#1a6b1a] text-sm text-center py-4">No deployments yet</p>
+            <p className="text-md-outline text-sm text-center py-4">No deployments yet</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-[#1a6b1a] border-b border-[#1f521f]">
+                  <tr className="text-md-outline border-b border-md-outline-variant">
                     <th className="text-left py-2 pr-4">#</th>
                     <th className="text-left py-2 pr-4">STATUS</th>
                     <th className="text-left py-2 pr-4">URL</th>
@@ -285,35 +285,35 @@ export default function Deployer() {
                 </thead>
                 <tbody>
                   {deployments.map((d, i) => (
-                    <tr key={d.id} className="border-b border-[#0a0a0a]">
-                      <td className="py-2 pr-4 text-[#33ff00]">{i + 1}</td>
+                    <tr key={d.id} className="border-b border-md-outline-variant">
+                      <td className="py-2 pr-4 text-md-primary">{i + 1}</td>
                       <td className={`py-2 pr-4 font-bold ${statusColor(d.status)}`}>
                         {statusLabel(d.status)}
                       </td>
-                      <td className="py-2 pr-4 text-[#22aa00]">
+                      <td className="py-2 pr-4 text-md-on-surface-variant">
                         {d.url ? (
                           <a
                             href={d.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-[#33ff00] underline"
+                            className="hover:text-md-primary underline"
                           >
                             {d.url}
                           </a>
                         ) : (
-                          <span className="text-[#1a6b1a]">—</span>
+                          <span className="text-md-outline">—</span>
                         )}
                       </td>
-                      <td className="py-2 pr-4 text-[#1a6b1a]">
+                      <td className="py-2 pr-4 text-md-outline">
                         {d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}
                       </td>
                       <td className="py-2">
                         {d.status === 'live' && (
                           <button
                             onClick={() => handleRollback(d.id)}
-                            className="px-2 py-1 border border-[#ff3333] text-[#ff3333] hover:bg-[#ff3333] hover:text-[#0a0a0a] transition-colors text-[10px]"
+                            className="px-2 py-1 border border-red-500 text-red-500 hover:bg-red-500 hover:text-md-on-primary transition-all ease-md-standard duration-300 text-[10px]"
                           >
-                            [ ROLLBACK ]
+                            Rollback
                           </button>
                         )}
                       </td>
@@ -324,21 +324,21 @@ export default function Deployer() {
             </div>
           )}
 
-          <div className="text-xs text-[#1a6b1a] mt-4">+--------------------------+</div>
+          <div className="text-xs text-md-outline mt-4"></div>
 
           {/* CTAs */}
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => navigate(`/validator/${project_id}`)}
-              className="flex-1 py-4 border-2 border-[#1f521f] text-[#22aa00] text-sm font-bold hover:border-[#33ff00] transition-colors"
+              className="flex-1 py-4 border-2 border-md-outline-variant text-md-on-surface-variant text-sm font-bold hover:border-md-primary transition-all ease-md-standard duration-300"
             >
-              [ VALIDATOR: Submit Feedback ]
+              Validator: Submit Feedback
             </button>
             <button
               onClick={() => navigate(`/iterate/${project_id}`)}
-              className="flex-1 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+              className="flex-1 py-4 border-2 border-md-primary text-md-primary text-lg font-bold hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300"
             >
-              [ ITERATE → ]
+              Iterate →
             </button>
           </div>
         </div>

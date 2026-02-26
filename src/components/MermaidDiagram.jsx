@@ -9,15 +9,15 @@ function loadMermaid() {
     s.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js'
     s.onload = () => {
       window.mermaid.initialize({
-        startOnLoad: false, theme: 'dark',
+        startOnLoad: false, theme: 'neutral',
         themeVariables: {
-          darkMode: true, background: '#0a0a0a', primaryColor: '#1f521f',
-          primaryTextColor: '#33ff00', primaryBorderColor: '#33ff00', lineColor: '#22aa00',
-          secondaryColor: '#0f0f0f', tertiaryColor: '#050505',
-          fontFamily: 'JetBrains Mono, monospace', fontSize: '12px',
-          nodeBorder: '#33ff00', mainBkg: '#0f0f0f', clusterBkg: '#0a0a0a',
-          clusterBorder: '#1f521f', titleColor: '#33ff00', edgeLabelBackground: '#0a0a0a',
-          nodeTextColor: '#33ff00',
+          darkMode: false, background: '#fffbfe', primaryColor: '#e8def8',
+          primaryTextColor: '#1d1b20', primaryBorderColor: '#cac4d0', lineColor: '#79747e',
+          secondaryColor: '#f3edf7', tertiaryColor: '#ece6f0',
+          fontFamily: 'system-ui, sans-serif', fontSize: '13px',
+          nodeBorder: '#cac4d0', mainBkg: '#f3edf7', clusterBkg: '#fffbfe',
+          clusterBorder: '#cac4d0', titleColor: '#1d1b20', edgeLabelBackground: '#fffbfe',
+          nodeTextColor: '#1d1b20',
         },
       })
       resolve(window.mermaid)
@@ -59,25 +59,25 @@ export default function MermaidDiagram({ code, title }) {
 
   if (error) return (
     <div>
-      <div className="text-[10px] text-red-400 mb-2">Render error: {error}</div>
-      <pre className="text-xs text-[#22aa00] bg-[#050505] p-4 border border-[#1f521f] overflow-x-auto whitespace-pre-wrap">{code}</pre>
+      <div className="text-[10px] text-md-error mb-2">Render error: {error}</div>
+      <pre className="text-xs text-md-on-surface-variant bg-md-surface-variant p-4 rounded-md-lg overflow-x-auto whitespace-pre-wrap">{code}</pre>
     </div>
   )
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <button onClick={() => setScale(s => Math.min(4, s * 1.2))} className="text-[10px] border border-[#1f521f] px-2 py-0.5 text-[#22aa00] hover:border-[#33ff00]">[ + ]</button>
-        <button onClick={() => setScale(s => Math.max(0.25, s * 0.8))} className="text-[10px] border border-[#1f521f] px-2 py-0.5 text-[#22aa00] hover:border-[#33ff00]">[ - ]</button>
-        <button onClick={() => { setScale(1); setPan({ x: 0, y: 0 }) }} className="text-[10px] border border-[#1f521f] px-2 py-0.5 text-[#22aa00] hover:border-[#33ff00]">[ RESET ]</button>
-        <span className="text-[10px] text-[#1a6b1a] ml-2">{Math.round(scale * 100)}%</span>
+        <button onClick={() => setScale(s => Math.min(4, s * 1.2))} className="text-xs rounded-full bg-md-secondary-container text-md-on-secondary-container px-3 py-1 hover:shadow-sm transition-all">+</button>
+        <button onClick={() => setScale(s => Math.max(0.25, s * 0.8))} className="text-xs rounded-full bg-md-secondary-container text-md-on-secondary-container px-3 py-1 hover:shadow-sm transition-all">−</button>
+        <button onClick={() => { setScale(1); setPan({ x: 0, y: 0 }) }} className="text-xs rounded-full bg-md-secondary-container text-md-on-secondary-container px-3 py-1 hover:shadow-sm transition-all">Reset</button>
+        <span className="text-xs text-md-on-surface-variant ml-2">{Math.round(scale * 100)}%</span>
         <div className="flex-1" />
-        <button onClick={() => setShowCode(!showCode)} className="text-[10px] border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00]">
-          {showCode ? '[ HIDE CODE ]' : '[ VIEW CODE ]'}
+        <button onClick={() => setShowCode(!showCode)} className="text-xs rounded-full bg-md-secondary-container text-md-on-secondary-container px-3 py-1 hover:shadow-sm transition-all">
+          {showCode ? 'Hide Code' : 'View Code'}
         </button>
       </div>
       <div
-        className="border border-[#1f521f] bg-[#050505] overflow-hidden cursor-grab active:cursor-grabbing"
+        className="border border-md-outline-variant bg-md-surface rounded-md-lg overflow-hidden cursor-grab active:cursor-grabbing"
         style={{ height: '400px', position: 'relative' }}
         onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
       >
@@ -86,7 +86,7 @@ export default function MermaidDiagram({ code, title }) {
           dangerouslySetInnerHTML={{ __html: svg }}
         />
       </div>
-      {showCode && <pre className="text-xs text-[#22aa00] bg-[#050505] p-4 border border-[#1f521f] overflow-x-auto whitespace-pre-wrap mt-2">{code}</pre>}
+      {showCode && <pre className="text-xs text-md-on-surface-variant bg-md-surface-variant p-4 rounded-md-lg overflow-x-auto whitespace-pre-wrap mt-2">{code}</pre>}
     </div>
   )
 }
