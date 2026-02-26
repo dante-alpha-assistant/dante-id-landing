@@ -150,6 +150,7 @@ app.use("/api/platform/context", require("./platform-context"));
 app.use("/api/validator", require("./validator"));
 app.use("/api/projects/:id/qa-results", require("./qa-results"));
 app.use("/api/iterate", require("./iterate"));
+app.use("/api/qa", require("./qa-dashboard"));
 
 // --- Per-project AI usage ---
 app.get("/api/projects/:id/usage", requireAuth, async (req, res) => {
