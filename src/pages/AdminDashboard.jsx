@@ -13,7 +13,14 @@ const STATUS_COLORS = {
   completed: 'text-[#33ff00]',
 }
 
-const PIPELINE = ['R', 'F', 'P', 'B', 'I', 'D']
+const PIPELINE = [
+  { letter: 'R', label: 'Refinery' },
+  { letter: 'F', label: 'Foundry' },
+  { letter: 'P', label: 'Planner' },
+  { letter: 'B', label: 'Builder' },
+  { letter: 'I', label: 'Inspector' },
+  { letter: 'D', label: 'Deployer' },
+]
 const STATUS_STEP = { pending: 0, refining: 1, designed: 2, planning: 3, building: 4, tested: 5, live: 6, completed: 6 }
 
 async function apiCall(path) {
@@ -127,8 +134,8 @@ export default function AdminDashboard() {
                   <td className="py-2 px-2 text-[#22aa00] text-xs">{p.user_email}</td>
                   <td className="py-2 px-2">
                     <div className="flex gap-0.5">
-                      {PIPELINE.map((l, i) => (
-                        <div key={i} className={`w-3 h-3 flex items-center justify-center text-[7px] border ${i < step ? 'bg-[#33ff00] border-[#33ff00] text-[#0a0a0a] font-bold' : i === step ? 'border-[#33ff00] text-[#33ff00]' : 'border-[#1f521f] text-[#1a6b1a]'}`}>{l}</div>
+                      {PIPELINE.map((s, i) => (
+                        <div key={i} title={s.label} className={`w-3 h-3 flex items-center justify-center text-[7px] border ${i < step ? 'bg-[#33ff00] border-[#33ff00] text-[#0a0a0a] font-bold' : i === step ? 'border-[#33ff00] text-[#33ff00]' : 'border-[#1f521f] text-[#1a6b1a]'}`}>{s.letter}</div>
                       ))}
                     </div>
                   </td>
