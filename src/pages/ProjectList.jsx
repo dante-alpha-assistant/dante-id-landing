@@ -48,7 +48,6 @@ export default function ProjectList() {
       .then(({ data }) => {
         setProjects(data || [])
         setLoading(false)
-        // Fetch QA summaries for all projects
         ;(data || []).forEach(p => {
           supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session) return
@@ -60,7 +59,6 @@ export default function ProjectList() {
               .catch(() => {})
           })
         })
-        // Fetch deploy URLs for live projects
         const liveProjects = (data || []).filter(p => p.status === 'live' || p.status === 'completed')
         if (liveProjects.length > 0) {
           supabase.from('deployments').select('project_id, url, vercel_url').in('project_id', liveProjects.map(p => p.id)).eq('status', 'live')
@@ -75,34 +73,34 @@ export default function ProjectList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#33ff00] terminal-blink font-mono">[ LOADING... ]</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary font-sans text-lg animate-pulse">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-background font-sans">
       {/* Header */}
-      <header className="border-b border-[#1f521f] px-4 sm:px-6 py-4">
+      <header className="border-b border-md-border/20 bg-md-surface-container px-4 sm:px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-bold">dante.id <span className="text-[#22aa00] text-sm font-normal">// projects</span></h1>
-          <div className="flex items-center gap-4">
+          <h1 className="text-lg font-bold text-md-on-background">dante<span className="text-md-primary">.id</span> <span className="text-md-on-surface-variant text-sm font-normal">/ projects</span></h1>
+          <div className="flex items-center gap-3">
             {ghStatus?.connected ? (
-              <span className="text-[10px] text-[#22aa00] border border-[#1f521f] px-2 py-1">✓ {ghStatus.github_username}</span>
+              <span className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs">✓ {ghStatus.github_username}</span>
             ) : ghStatus !== null ? (
               <button onClick={async () => {
                 const { data: { session } } = await supabase.auth.getSession()
                 const res = await fetch('/api/auth/github/connect', { headers: { Authorization: `Bearer ${session.access_token}` } })
                 const data = await res.json()
                 if (data.url) window.location.href = data.url
-              }} className="text-[10px] text-[#ffb000] border border-[#ffb000] px-2 py-1 hover:bg-[#ffb000] hover:text-[#0a0a0a] transition-colors">
-                [ 🔗 CONNECT GITHUB ]
+              }} className="rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs hover:bg-amber-200 transition-colors">
+                🔗 Connect GitHub
               </button>
             ) : null}
-            <span className="text-xs text-[#1a6b1a]">{user?.email}</span>
-            <button onClick={signOut} className="text-xs text-[#22aa00] hover:text-[#33ff00] border border-[#1f521f] px-2 py-1 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
-              [ LOGOUT ]
+            <span className="text-xs text-md-on-surface-variant">{user?.email}</span>
+            <button onClick={signOut} className="rounded-full bg-md-surface-variant text-md-on-surface-variant px-4 py-1.5 text-sm hover:bg-md-secondary-container transition-colors">
+              Logout
             </button>
           </div>
         </div>
@@ -110,23 +108,23 @@ export default function ProjectList() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-bold">YOUR PROJECTS</h2>
+          <h2 className="text-2xl font-bold text-md-on-background">Your Projects</h2>
           <button
             onClick={() => navigate('/onboarding')}
-            className="px-4 py-2 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors text-sm"
+            className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 text-sm font-medium hover:shadow-md active:scale-95 transition-all duration-300 ease-md-standard"
           >
-            [ + NEW PROJECT ]
+            + New Project
           </button>
         </div>
 
         {projects.length === 0 ? (
-          <div className="border border-[#1f521f] p-12 text-center">
-            <p className="text-[#22aa00] mb-4">No projects yet.</p>
+          <div className="bg-md-surface-container rounded-md-lg p-12 text-center shadow-sm">
+            <p className="text-md-on-surface-variant mb-4 text-lg">No projects yet.</p>
             <button
               onClick={() => navigate('/onboarding')}
-              className="px-6 py-3 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+              className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 font-medium hover:shadow-md active:scale-95 transition-all duration-300 ease-md-standard"
             >
-              [ START YOUR FIRST PROJECT ]
+              Start Your First Project
             </button>
           </div>
         ) : (
@@ -135,74 +133,72 @@ export default function ProjectList() {
               <button
                 key={p.id}
                 onClick={() => navigate((STATUS_MAP[p.status] || STATUS_MAP.pending).route(p.id))}
-                className="border border-[#1f521f] p-5 text-left hover:border-[#33ff00] transition-colors group"
+                className="bg-md-surface-container rounded-md-lg p-6 text-left shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 ease-md-standard group"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-bold text-[#33ff00] group-hover:text-[#33ff00] truncate pr-2">
+                  <h3 className="font-bold text-md-on-background truncate pr-2">
                     {p.name || p.company_name || (p.idea && p.idea.slice(0, 40)) || 'Untitled Project'}
                   </h3>
-                  <span className="text-[10px] text-[#1a6b1a] whitespace-nowrap">
+                  <span className="text-xs text-md-on-surface-variant whitespace-nowrap">
                     {new Date(p.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="font-mono text-xs px-2 py-0.5 border border-[#1f521f] rounded-none">
-                    {qaSummaries[p.id] ? (
-                      qaSummaries[p.id].issues === 0 || qaSummaries[p.id].passing
-                        ? <span className="text-green-400">✓ Passing</span>
-                        : <span className="text-red-400">✗ {qaSummaries[p.id].issues || 0} issues</span>
-                    ) : (
-                      <span className="text-[#1a6b1a]">⚪ No QA</span>
-                    )}
-                  </span>
+                  {qaSummaries[p.id] ? (
+                    qaSummaries[p.id].issues === 0 || qaSummaries[p.id].passing
+                      ? <span className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-0.5 text-xs">✓ Passing</span>
+                      : <span className="rounded-full bg-red-100 text-red-600 px-3 py-0.5 text-xs">✗ {qaSummaries[p.id].issues || 0} issues</span>
+                  ) : (
+                    <span className="rounded-full bg-md-surface-variant text-md-on-surface-variant px-3 py-0.5 text-xs">No QA</span>
+                  )}
                 </div>
-                <p className="text-xs text-[#22aa00] line-clamp-2 mb-3">
+                <p className="text-sm text-md-on-surface-variant line-clamp-2 mb-3">
                   {p.idea || p.description || 'No description'}
                 </p>
                 {(() => {
                   const info = STATUS_MAP[p.status] || STATUS_MAP.pending
                   return (
                     <>
-                      <div className="flex items-center gap-1 mb-2">
+                      <div className="flex items-center gap-1 mb-3">
                         {STAGES.map((s, i) => (
                           <div key={i} className="flex items-center">
-                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[8px] ${i < info.step ? 'bg-[#33ff00] border-[#33ff00] text-[#0a0a0a] font-bold' : i === info.step ? 'border-[#33ff00] text-[#33ff00]' : 'border-[#1f521f] text-[#1a6b1a]'}`}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium ${i < info.step ? 'bg-md-primary text-md-on-primary' : i === info.step ? 'border-2 border-md-primary text-md-primary' : 'bg-md-surface-variant text-md-on-surface-variant'}`}>
                               {s.label}
                             </div>
-                            {i < STAGES.length - 1 && <div className={`w-2 h-px ${i < info.step ? 'bg-[#33ff00]' : 'bg-[#1f521f]'}`} />}
+                            {i < STAGES.length - 1 && <div className={`w-2 h-0.5 ${i < info.step ? 'bg-md-primary' : 'bg-md-surface-variant'}`} />}
                           </div>
                         ))}
-                        <span className="text-[10px] text-[#22aa00] ml-2">{info.step}/6</span>
+                        <span className="text-xs text-md-on-surface-variant ml-2">{info.step}/6</span>
                       </div>
                       {deployUrls[p.id] && (
                         <a href={deployUrls[p.id]} target="_blank" rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          className="block text-[10px] text-[#33ff00] bg-[#33ff00]/10 border border-[#33ff00]/30 px-2 py-1 mb-1 hover:bg-[#33ff00]/20 truncate">
+                          className="block text-xs text-md-primary bg-md-secondary-container rounded-full px-3 py-1 mb-2 hover:bg-md-primary hover:text-md-on-primary truncate transition-colors">
                           🔗 {deployUrls[p.id]}
                         </a>
                       )}
-                      <div className="flex gap-2 items-center justify-between text-[10px]">
-                        <span className="text-[#33ff00]">
+                      <div className="flex gap-2 items-center justify-between text-xs">
+                        <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container px-3 py-1 font-medium">
                           {info.step < 6
-                            ? `[ CONTINUE → ${STAGES[Math.min(info.step, 5)].full.toUpperCase()} ]`
-                            : '[ ITERATE → ]'
+                            ? `Continue → ${STAGES[Math.min(info.step, 5)].full}`
+                            : 'Iterate →'
                           }
                         </span>
                         <div className="flex gap-1">
                           <span
                             onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/${p.id}`) }}
-                            className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors cursor-pointer"
+                            className="w-8 h-8 rounded-full bg-md-surface-variant flex items-center justify-center hover:bg-md-secondary-container transition-colors cursor-pointer"
                             title="Pipeline Timeline"
-                          >[ 📋 ]</span>
+                          >📋</span>
                           <span
                             onClick={(e) => { e.stopPropagation(); navigate(`/usage/${p.id}`) }}
-                            className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors cursor-pointer"
-                          >[ 💰 ]</span>
+                            className="w-8 h-8 rounded-full bg-md-surface-variant flex items-center justify-center hover:bg-md-secondary-container transition-colors cursor-pointer"
+                          >💰</span>
                           <span
                             onClick={(e) => { e.stopPropagation(); setDeleteConfirm(p) }}
-                            className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
+                            className="w-8 h-8 rounded-full bg-md-surface-variant flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors cursor-pointer"
                             title="Delete Project"
-                          >[ 🗑 ]</span>
+                          >🗑</span>
                         </div>
                       </div>
                     </>
@@ -216,19 +212,19 @@ export default function ProjectList() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteConfirm(null)}>
-          <div className="border border-red-500/50 bg-[#0a0a0a] p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-red-500 font-bold mb-3">[ DELETE PROJECT ]</h3>
-            <p className="text-[#22aa00] text-sm mb-1">
-              Delete <span className="text-[#33ff00] font-bold">{deleteConfirm.name || deleteConfirm.company_name || (deleteConfirm.idea && deleteConfirm.idea.slice(0, 40)) || 'Untitled'}</span>?
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteConfirm(null)}>
+          <div className="bg-md-background rounded-md-lg p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-red-600 font-bold text-lg mb-3">Delete Project</h3>
+            <p className="text-md-on-background text-sm mb-1">
+              Delete <span className="font-bold">{deleteConfirm.name || deleteConfirm.company_name || (deleteConfirm.idea && deleteConfirm.idea.slice(0, 40)) || 'Untitled'}</span>?
             </p>
-            <p className="text-[#1a6b1a] text-xs mb-6">This will permanently remove the project, all features, builds, and deployments. This cannot be undone.</p>
+            <p className="text-md-on-surface-variant text-sm mb-6">This will permanently remove the project, all features, builds, and deployments. This cannot be undone.</p>
             <div className="flex gap-3 justify-end">
               <button
                 disabled={deleting}
                 onClick={() => setDeleteConfirm(null)}
-                className="text-sm border border-[#1f521f] text-[#22aa00] px-4 py-2 hover:border-[#33ff00] transition-colors"
-              >[ CANCEL ]</button>
+                className="rounded-full bg-md-surface-variant text-md-on-surface-variant px-5 py-2.5 text-sm hover:bg-md-secondary-container transition-colors"
+              >Cancel</button>
               <button
                 disabled={deleting}
                 onClick={async () => {
@@ -247,8 +243,8 @@ export default function ProjectList() {
                     setDeleting(false)
                   }
                 }}
-                className="text-sm border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-[#0a0a0a] transition-colors"
-              >{deleting ? '[ DELETING... ]' : '[ DELETE ]'}</button>
+                className="rounded-full bg-red-500 text-white px-5 py-2.5 text-sm font-medium hover:bg-red-600 active:scale-95 transition-all duration-300"
+              >{deleting ? 'Deleting...' : 'Delete'}</button>
             </div>
           </div>
         </div>

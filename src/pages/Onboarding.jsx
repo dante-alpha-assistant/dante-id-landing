@@ -13,9 +13,9 @@ const NEEDS_OPTIONS = [
 ];
 
 const STAGES = [
-  { value: 'idea', label: 'IDEA', desc: 'Just an idea in my head' },
-  { value: 'building', label: 'BUILDING', desc: 'Actively developing' },
-  { value: 'launched', label: 'LAUNCHED', desc: 'Already live' },
+  { value: 'idea', label: 'Idea', desc: 'Just an idea in my head' },
+  { value: 'building', label: 'Building', desc: 'Actively developing' },
+  { value: 'launched', label: 'Launched', desc: 'Already live' },
 ];
 
 export default function Onboarding() {
@@ -32,7 +32,6 @@ export default function Onboarding() {
     needs: [],
   });
 
-  // Returning users: skip Step 0 (profile), pre-fill from existing project
   useEffect(() => {
     if (!user) return;
     supabase
@@ -44,7 +43,7 @@ export default function Onboarding() {
         if (data && data.length > 0) {
           setIsReturning(true);
           setForm(f => ({ ...f, fullName: data[0].full_name || '', companyName: data[0].company_name || '' }));
-          setStep(1); // Skip to idea
+          setStep(1);
         }
       });
   }, [user]);
@@ -108,29 +107,30 @@ export default function Onboarding() {
   };
 
   const inputClass =
-    'w-full bg-[#0a0a0a] border border-[#1f521f] px-4 py-3 text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] transition font-mono caret-[#33ff00]';
+    'w-full rounded-t-lg rounded-b-none border-b-2 border-md-border bg-md-surface-variant h-14 px-4 text-md-on-background placeholder-md-on-surface-variant/50 focus:outline-none focus:border-md-primary transition-colors font-sans';
 
-  const stepLabels = ['USER_INFO', 'PROJECT_IDEA', 'PROJECT_STAGE', 'REQUIREMENTS'];
+  const stepLabels = ['Your Info', 'Your Idea', 'Your Stage', 'Requirements'];
   const displayStep = isReturning ? step : step + 1;
   const displayTotal = isReturning ? 3 : 4;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 font-mono">
-      <div className="w-full max-w-lg border border-[#1f521f] p-8 bg-[#0f0f0f]">
-        <div className="text-xs text-[#1a6b1a] mb-2">┌── STEP {displayStep}/{displayTotal}: {stepLabels[step]} ──┐</div>
+    <div className="min-h-screen bg-md-background flex items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-lg bg-md-surface-container rounded-md-lg p-8 shadow-sm">
+        <div className="text-sm text-md-on-surface-variant mb-1">Step {displayStep} of {displayTotal}</div>
+        <h2 className="text-xl font-bold text-md-on-background mb-4">{stepLabels[step]}</h2>
         <ProgressBar currentStep={isReturning ? step - 1 : step} totalSteps={displayTotal} />
 
         {step === 0 && (
-          <OnboardingStep title="Your Info" subtitle="Initialize operator profile">
+          <OnboardingStep title="Your Info" subtitle="Let's get to know you">
             <input
               className={inputClass}
-              placeholder="full_name *"
+              placeholder="Full name *"
               value={form.fullName}
               onChange={(e) => update('fullName', e.target.value)}
             />
             <input
               className={inputClass}
-              placeholder="company_name (optional)"
+              placeholder="Company name (optional)"
               value={form.companyName}
               onChange={(e) => update('companyName', e.target.value)}
             />
@@ -141,13 +141,13 @@ export default function Onboarding() {
           <OnboardingStep title="Your Idea" subtitle="Describe what you're building">
             <div className="relative">
               <textarea
-                className={`${inputClass} h-36 resize-none`}
-                placeholder="describe_idea *"
+                className={`${inputClass} h-36 resize-none rounded-b-none pt-4`}
+                placeholder="Describe your idea *"
                 maxLength={500}
                 value={form.idea}
                 onChange={(e) => update('idea', e.target.value)}
               />
-              <span className="absolute bottom-3 right-3 text-xs text-[#1a6b1a]">
+              <span className="absolute bottom-3 right-3 text-xs text-md-on-surface-variant">
                 {form.idea.length}/500
               </span>
             </div>
@@ -155,14 +155,14 @@ export default function Onboarding() {
         )}
 
         {step === 2 && (
-          <OnboardingStep title="Your Stage" subtitle="Select current project status">
+          <OnboardingStep title="Your Stage" subtitle="Where are you in the journey?">
             {STAGES.map((s) => (
               <label
                 key={s.value}
-                className={`flex items-center gap-3 p-4 border cursor-pointer transition font-mono ${
+                className={`flex items-center gap-3 p-4 rounded-md-sm cursor-pointer transition-all duration-300 ease-md-standard ${
                   form.stage === s.value
-                    ? 'border-[#33ff00] bg-[#33ff00]/10'
-                    : 'border-[#1f521f] bg-[#0a0a0a] hover:border-[#22aa00]'
+                    ? 'bg-md-secondary-container border-2 border-md-primary'
+                    : 'bg-md-surface-variant border-2 border-transparent hover:bg-md-secondary-container/50'
                 }`}
               >
                 <input
@@ -171,11 +171,11 @@ export default function Onboarding() {
                   value={s.value}
                   checked={form.stage === s.value}
                   onChange={() => update('stage', s.value)}
-                  className="accent-[#33ff00]"
+                  className="accent-[#6750A4] w-4 h-4"
                 />
                 <div>
-                  <div className="text-[#33ff00] font-medium">[{s.label}]</div>
-                  <div className="text-[#1a6b1a] text-sm">{s.desc}</div>
+                  <div className="text-md-on-background font-medium">{s.label}</div>
+                  <div className="text-md-on-surface-variant text-sm">{s.desc}</div>
                 </div>
               </label>
             ))}
@@ -183,46 +183,46 @@ export default function Onboarding() {
         )}
 
         {step === 3 && (
-          <OnboardingStep title="Your Needs" subtitle="Select required modules">
+          <OnboardingStep title="Your Needs" subtitle="What do you need help with?">
             {NEEDS_OPTIONS.map((need) => (
               <label
                 key={need}
-                className={`flex items-center gap-3 p-3 border cursor-pointer transition font-mono ${
+                className={`flex items-center gap-3 p-3.5 rounded-md-sm cursor-pointer transition-all duration-300 ease-md-standard ${
                   form.needs.includes(need)
-                    ? 'border-[#33ff00] bg-[#33ff00]/10'
-                    : 'border-[#1f521f] bg-[#0a0a0a] hover:border-[#22aa00]'
+                    ? 'bg-md-secondary-container border-2 border-md-primary'
+                    : 'bg-md-surface-variant border-2 border-transparent hover:bg-md-secondary-container/50'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={form.needs.includes(need)}
                   onChange={() => toggleNeed(need)}
-                  className="accent-[#33ff00]"
+                  className="accent-[#6750A4] w-4 h-4"
                 />
-                <span className="text-[#33ff00]">{need}</span>
+                <span className="text-md-on-background font-medium">{need}</span>
               </label>
             ))}
-            <label className="flex items-center gap-3 p-3 border border-dashed border-[#1f521f] bg-[#0a0a0a] cursor-pointer hover:border-[#33ff00] transition font-mono">
+            <label className="flex items-center gap-3 p-3.5 rounded-md-sm border-2 border-dashed border-md-border bg-md-surface-variant cursor-pointer hover:border-md-primary transition-all duration-300 ease-md-standard">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={(e) => selectAll(e.target.checked)}
-                className="accent-[#33ff00]"
+                className="accent-[#6750A4] w-4 h-4"
               />
-              <span className="text-[#33ff00] font-medium">[ SELECT ALL ]</span>
+              <span className="text-md-on-background font-medium">Select All</span>
             </label>
           </OnboardingStep>
         )}
 
-        {error && <p className="text-red-400 text-sm mt-4 font-mono">[ERROR] {error}</p>}
+        {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
 
         <div className="flex justify-between mt-8">
           {step > 0 ? (
             <button
               onClick={back}
-              className="px-5 py-2.5 border border-[#1f521f] text-[#22aa00] hover:bg-[#1a1a1a] transition font-mono"
+              className="rounded-full bg-md-surface-variant text-md-on-surface-variant px-6 py-2.5 font-medium hover:bg-md-secondary-container transition-all duration-300 ease-md-standard"
             >
-              [ ← BACK ]
+              ← Back
             </button>
           ) : (
             <div />
@@ -230,21 +230,20 @@ export default function Onboarding() {
           {step < 3 ? (
             <button
               onClick={next}
-              className="px-6 py-2.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] font-mono font-medium transition"
+              className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 font-medium hover:shadow-md active:scale-95 transition-all duration-300 ease-md-standard"
             >
-              [ NEXT → ]
+              Next →
             </button>
           ) : (
             <button
               onClick={submit}
               disabled={submitting}
-              className="px-6 py-2.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] font-mono font-medium transition disabled:opacity-50"
+              className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 font-medium hover:shadow-md active:scale-95 transition-all duration-300 ease-md-standard disabled:opacity-50"
             >
-              {submitting ? '[INITIALIZING...]' : '[ INITIALIZE > ]'}
+              {submitting ? 'Creating...' : 'Create Project'}
             </button>
           )}
         </div>
-        <div className="text-xs text-[#1a6b1a] mt-4">└──────────────────┘</div>
       </div>
     </div>
   );
