@@ -214,10 +214,18 @@ Order by priority (critical first). Be specific and actionable.`;
     }));
 
     if (rows.length > 0) {
-      // Dedup guard: skip features that already exist for this project
+      // Dedup guard: skip features that already exist (exact or fuzzy match)
       const { data: existing } = await supabase.from("features").select("name").eq("project_id", project_id);
-      const existingNames = new Set((existing || []).map(f => f.name.toLowerCase()));
-      const newRows = rows.filter(r => !existingNames.has(r.name.toLowerCase()));
+      const existingNames = (existing || []).map(f => f.name.toLowerCase());
+      const isSimilar = (a, b) => {
+        if (a === b) return true;
+        if (a.includes(b) || b.includes(a)) return true;
+        // Word overlap: if >60% of words match, consider similar
+        const wa = new Set(a.split(/\s+/)), wb = new Set(b.split(/\s+/));
+        const overlap = [...wa].filter(w => wb.has(w)).length;
+        return overlap / Math.min(wa.size, wb.size) >= 0.6;
+      };
+      const newRows = rows.filter(r => !existingNames.some(e => isSimilar(r.name.toLowerCase(), e)));
       if (newRows.length < rows.length) {
         console.log(`[Refinery] Dedup: ${rows.length - newRows.length} duplicate features skipped for ${project_id}`);
       }
