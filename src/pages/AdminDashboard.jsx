@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [totalUsers, setTotalUsers] = useState(0)
+  const [totalCost, setTotalCost] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(null)
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
       .then(data => {
         setProjects(data.projects || [])
         setTotalUsers(data.total_users || 0)
+        setTotalCost(data.total_platform_cost || 0)
         setLoading(false)
       })
       .catch(err => {
@@ -93,6 +95,10 @@ export default function AdminDashboard() {
           <span className="text-[10px] text-[#1a6b1a] block">PROJECTS</span>
           <span className="text-2xl font-bold">{projects.length}</span>
         </div>
+        <div className="border border-[#ffb000]/30 px-4 py-2">
+          <span className="text-[10px] text-[#ffb000] block">AI COST</span>
+          <span className="text-2xl font-bold text-[#ffb000]">${totalCost.toFixed(2)}</span>
+        </div>
         {Object.entries(statusCounts).map(([s, c]) => (
           <div key={s} className="border border-[#1f521f] px-3 py-2">
             <span className="text-[10px] text-[#1a6b1a] block">{s.toUpperCase()}</span>
@@ -116,6 +122,7 @@ export default function AdminDashboard() {
               <th className="text-right py-2 px-2">Builds</th>
               <th className="text-right py-2 px-2">Tests</th>
               <th className="text-right py-2 px-2">Deploys</th>
+              <th className="text-right py-2 px-2 text-[#ffb000]">Cost</th>
               <th className="text-right py-2 px-2">Created</th>
             </tr>
           </thead>
@@ -146,6 +153,7 @@ export default function AdminDashboard() {
                   <td className="py-2 px-2 text-right text-[#22aa00]">{p.builds}</td>
                   <td className="py-2 px-2 text-right text-[#22aa00]">{p.tests}</td>
                   <td className="py-2 px-2 text-right text-[#22aa00]">{p.deployments}</td>
+                  <td className="py-2 px-2 text-right text-[#ffb000]">{p.cost_usd > 0 ? `$${p.cost_usd.toFixed(2)}` : '—'}</td>
                   <td className="py-2 px-2 text-right text-[10px] text-[#1a6b1a]">{new Date(p.created_at).toLocaleDateString()}</td>
                 </tr>
               )

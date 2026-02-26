@@ -53,6 +53,16 @@ router.get("/projects", requireAdmin, async (req, res) => {
 
     const count = (data, pid) => (data || []).filter(r => r.project_id === pid).length;
 
+    // Get cost per project
+    const { data: costLogs } = await supabase.from("ai_usage_logs").select("project_id, cost_usd").in("project_id", ids);
+    const costMap = {};
+    let totalPlatformCost = 0;
+    (costLogs || []).forEach(l => {
+      const c = Number(l.cost_usd) || 0;
+      costMap[l.project_id] = (costMap[l.project_id] || 0) + c;
+      totalPlatformCost += c;
+    });
+
     // Get user emails via auth admin
     const userIds = [...new Set((projects || []).map(p => p.user_id))];
     const userEmails = {};
@@ -80,9 +90,10 @@ router.get("/projects", requireAdmin, async (req, res) => {
       deploy_url: ((deployRes.data || []).find(d => d.project_id === p.id && d.status === 'live') || {}).vercel_url
         || ((deployRes.data || []).find(d => d.project_id === p.id && d.status === 'live') || {}).url
         || null,
+      cost_usd: Math.round((costMap[p.id] || 0) * 10000) / 10000,
     }));
 
-    res.json({ projects: result, total_users: Object.keys(userEmails).length });
+    res.json({ projects: result, total_users: Object.keys(userEmails).length, total_platform_cost: Math.round(totalPlatformCost * 100) / 100 });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
