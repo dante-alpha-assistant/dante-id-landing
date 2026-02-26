@@ -21,6 +21,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import Validator from './pages/Validator'
 import Iterate from './pages/Iterate'
 import Usage from './pages/Usage'
+import QADashboard from './pages/QADashboard'
 import Docs from './pages/Docs'
 import RepoSelector from './components/RepoSelector'
 
@@ -45,6 +46,7 @@ function App() {
           <Route path="/validator/:project_id" element={<ProtectedRoute><Validator /></ProtectedRoute>} />
           <Route path="/iterate/:project_id" element={<ProtectedRoute><Iterate /></ProtectedRoute>} />
           <Route path="/usage/:project_id" element={<ProtectedRoute><Usage /></ProtectedRoute>} />
+          <Route path="/qa/:project_id" element={<ProtectedRoute><QADashboard /></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/docs" element={<Docs />} />
 <Route path="/github/repos" element={<ProtectedRoute><RepoSelector /></ProtectedRoute>} />
