@@ -180,9 +180,20 @@ export default function Landing() {
             >
               [≡]
             </button>
-            <Link to={ctaLink} className="text-sm border border-[#33ff00] text-[#33ff00] px-4 py-2 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
-              [ GET STARTED ]
-            </Link>
+            {user ? (
+              <>
+                <Link to="/dashboard" className="text-sm text-[#22aa00] hover:text-[#33ff00] transition-colors hidden md:inline">
+                  [ DASHBOARD ]
+                </Link>
+                <Link to="/dashboard" className="text-sm border border-[#33ff00] text-[#33ff00] px-4 py-2 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
+                  [ MY PROJECTS ]
+                </Link>
+              </>
+            ) : (
+              <Link to={ctaLink} className="text-sm border border-[#33ff00] text-[#33ff00] px-4 py-2 hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
+                [ GET STARTED ]
+              </Link>
+            )}
           </div>
         </div>
         {mobileNav && (
