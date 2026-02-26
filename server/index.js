@@ -217,6 +217,14 @@ app.get("/api/projects/:id", requireAuth, async (req, res) => {
   res.json({ project: data });
 });
 
+// --- GET /api/projects/:id/features ---
+app.get("/api/projects/:id/features", requireAuth, async (req, res) => {
+  const { data: project } = await supabase.from("projects").select("id").eq("id", req.params.id).eq("user_id", req.user.id).single();
+  if (!project) return res.status(404).json({ error: "Project not found" });
+  const { data: features } = await supabase.from("features").select("*").eq("project_id", req.params.id).order("sort_order");
+  res.json({ features: features || [] });
+});
+
 // --- POST /api/projects/:id/resume — advance to next pipeline step ---
 app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
   try {
