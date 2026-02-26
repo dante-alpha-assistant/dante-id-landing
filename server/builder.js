@@ -328,6 +328,10 @@ router.post("/build-all", requireAuth, async (req, res) => {
       })));
     }
 
+    // Advance status after all builds complete
+    await supabase.from("projects").update({ status: "tested" }).eq("id", project_id);
+    console.log(`[Builder] build-all complete for ${project_id}: ${results.length} features built, status → tested`);
+
     return res.json({ built: results.length, results });
   } catch (err) {
     return res.status(500).json({ error: err.message });
