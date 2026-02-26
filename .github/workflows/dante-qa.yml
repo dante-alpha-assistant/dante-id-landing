@@ -1,0 +1,49 @@
+name: Dante QA Pipeline
+
+on:
+  repository_dispatch:
+    types: [dante-qa]
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: 'Preview URL to test'
+        required: true
+      repo_full_name:
+        description: 'Repository full name'
+        required: true
+      pr_number:
+        description: 'PR number'
+        required: true
+
+jobs:
+  lint-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint || true
+      - run: npm run build || true
+
+  playwright-test:
+    needs: lint-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npx playwright test --project=chromium
+        env:
+          PREVIEW_URL: ${{ github.event.inputs.preview_url || github.event.client_payload.preview_url }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-screenshots
+          path: playwright-report/
