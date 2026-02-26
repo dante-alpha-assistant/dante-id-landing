@@ -228,7 +228,7 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
       refining: { next: "designed", module: "foundry", endpoint: "/api/foundry/generate-all-architecture" },
       designed: { next: "planning", module: "planner", endpoint: "/api/planner/generate-all-work-orders" },
       planning: { next: "building", module: "builder", endpoint: "/api/builder/build-all" },
-      building: { next: "tested", module: "inspector", endpoint: "/api/inspector/run-tests" },
+      building: { next: "tested", module: "inspector", endpoint: "/api/inspector/run-all" },
       tested: { next: "live", module: "deployer", endpoint: "/api/deployer/deploy" },
     };
 
@@ -331,7 +331,7 @@ app.post("/api/projects/:id/retry-step", requireAuth, async (req, res) => {
       foundry: "/api/foundry/generate-all-architecture",
       planner: "/api/planner/generate-all-work-orders",
       builder: "/api/builder/build-all",
-      inspector: "/api/inspector/run-tests",
+      inspector: "/api/inspector/run-all",
       deployer: "/api/deployer/deploy",
     };
     const endpoint = endpoints[stepName];

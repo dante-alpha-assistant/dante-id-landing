@@ -346,7 +346,7 @@ router.post("/build-all", requireAuth, async (req, res) => {
 
     // Auto-advance to inspector
     const autoToken = process.env.SUPABASE_SERVICE_KEY;
-    fetch(`http://localhost:3001/api/inspector/run-tests`, {
+    fetch(`http://localhost:3001/api/inspector/run-all`, {
       method: "POST",
       headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },
       body: JSON.stringify({ project_id }),

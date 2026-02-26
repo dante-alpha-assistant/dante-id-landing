@@ -442,4 +442,55 @@ Provide specific code fixes for each failed/warning test.`;
   }
 });
 
+// --- POST /run-all — run tests for all built features in a project ---
+router.post("/run-all", requireAuth, async (req, res) => {
+  const { project_id } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id required" });
+
+  try {
+    const { data: builds } = await supabase
+      .from("builds")
+      .select("feature_id")
+      .eq("project_id", project_id)
+      .in("status", ["review", "complete"]);
+
+    if (!builds?.length) return res.status(400).json({ error: "No builds found" });
+
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    const results = [];
+    for (const b of builds) {
+      console.log(`[Inspector All] Testing feature ${b.feature_id} for project ${project_id}`);
+      try {
+        const r = await fetch("http://localhost:3001/api/inspector/run-tests", {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + serviceKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ project_id, feature_id: b.feature_id }),
+        });
+        const data = await r.json().catch(() => ({}));
+        results.push({ feature_id: b.feature_id, status: r.status < 300 ? "tested" : "failed" });
+      } catch (err) {
+        console.error(`[Inspector All] Feature ${b.feature_id} failed:`, err.message);
+        results.push({ feature_id: b.feature_id, status: "error", error: err.message });
+      }
+    }
+
+    // Update project status
+    await supabase.from("projects").update({ status: "tested" }).eq("id", project_id);
+    console.log(`[Inspector All] Complete for ${project_id} — ${results.length} features tested`);
+
+    // Auto-advance to deployer
+    const autoToken = process.env.SUPABASE_SERVICE_KEY;
+    fetch("http://localhost:3001/api/deployer/deploy", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ project_id }),
+    }).then(r => console.log(`[Inspector→Deployer] Auto-advance: ${r.status}`))
+      .catch(err => console.error(`[Inspector→Deployer] Auto-advance failed:`, err.message));
+
+    res.json({ tested: results.length, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
