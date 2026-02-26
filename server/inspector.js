@@ -456,8 +456,47 @@ router.post("/run-all", requireAuth, async (req, res) => {
 
     if (!builds?.length) return res.status(400).json({ error: "No builds found" });
 
+    // Static analysis: check cross-file imports
+    const { data: allBuilds } = await supabase
+      .from("builds")
+      .select("feature_id, files")
+      .eq("project_id", project_id)
+      .in("status", ["review", "complete"]);
+
+    const allFiles = new Set();
+    const importIssues = [];
+    for (const b of (allBuilds || [])) {
+      for (const f of (b.files || [])) {
+        allFiles.add(f.path || f.filename);
+      }
+    }
+    for (const b of (allBuilds || [])) {
+      for (const f of (b.files || [])) {
+        const content = f.content || "";
+        const imports = content.match(/from\s+['"]\.\/([^'"]+)['"]/g) || [];
+        for (const imp of imports) {
+          const match = imp.match(/from\s+['"]\.\/(.*)['"]/);
+          if (match) {
+            const importPath = match[1];
+            // Check common extensions
+            const exists = [importPath, `${importPath}.jsx`, `${importPath}.tsx`, `${importPath}.js`, `${importPath}.ts`, `${importPath}/index.jsx`, `${importPath}/index.js`]
+              .some(p => allFiles.has(p) || allFiles.has(`src/${p}`) || allFiles.has(`./src/${p}`));
+            if (!exists) {
+              importIssues.push({ file: f.path || f.filename, import: importPath });
+            }
+          }
+        }
+      }
+    }
+    if (importIssues.length > 0) {
+      console.log(`[Inspector All] Found ${importIssues.length} broken imports for ${project_id}:`, importIssues.slice(0, 5));
+    }
+
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;
     const results = [];
+    if (importIssues.length > 0) {
+      results.push({ check: "import_validation", status: "warning", issues: importIssues.length, details: importIssues.slice(0, 10) });
+    }
     for (const b of builds) {
       console.log(`[Inspector All] Testing feature ${b.feature_id} for project ${project_id}`);
       try {

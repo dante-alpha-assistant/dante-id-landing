@@ -345,6 +345,22 @@ router.post("/deploy", requireAuth, async (req, res) => {
 
         if (buildState === "READY") {
           logs.push(logEntry(`Vercel URL: ${vercelUrl}`));
+
+          // Post-deploy render check — verify the page isn't blank
+          try {
+            await new Promise(r => setTimeout(r, 3000)); // Wait for CDN propagation
+            const checkRes = await fetch(vercelUrl, { headers: { "User-Agent": "dante-deploy-check/1.0" } });
+            const html = await checkRes.text();
+            const hasContent = html.includes("<div") && (html.length > 500);
+            const hasScript = html.includes("<script");
+            logs.push(logEntry(`Render check: ${checkRes.status}, ${html.length} bytes, content=${hasContent}, scripts=${hasScript}`));
+            if (checkRes.status !== 200) {
+              logs.push(logEntry(`⚠️ Deploy returned HTTP ${checkRes.status} — marking as degraded`));
+            }
+          } catch (checkErr) {
+            logs.push(logEntry(`Render check failed: ${checkErr.message}`));
+          }
+
           logs.push(logEntry(`Canonical URL: ${canonicalUrl}`));
           logs.push(logEntry("[DONE]"));
 
