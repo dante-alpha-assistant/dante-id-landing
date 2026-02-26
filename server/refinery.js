@@ -214,10 +214,19 @@ Order by priority (critical first). Be specific and actionable.`;
     }));
 
     if (rows.length > 0) {
-      const { error: insertError } = await supabase.from("features").insert(rows);
-      if (insertError) {
-        console.error("Features insert error:", insertError);
-        return res.status(500).json({ error: "Failed to save features" });
+      // Dedup guard: skip features that already exist for this project
+      const { data: existing } = await supabase.from("features").select("name").eq("project_id", project_id);
+      const existingNames = new Set((existing || []).map(f => f.name.toLowerCase()));
+      const newRows = rows.filter(r => !existingNames.has(r.name.toLowerCase()));
+      if (newRows.length < rows.length) {
+        console.log(`[Refinery] Dedup: ${rows.length - newRows.length} duplicate features skipped for ${project_id}`);
+      }
+      if (newRows.length > 0) {
+        const { error: insertError } = await supabase.from("features").insert(newRows);
+        if (insertError) {
+          console.error("Features insert error:", insertError);
+          return res.status(500).json({ error: "Failed to save features" });
+        }
       }
     }
 
