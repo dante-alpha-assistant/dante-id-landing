@@ -190,7 +190,8 @@ router.post("/deploy", requireAuth, async (req, res) => {
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "-")
         .replace(/-+/g, "-")
-        .slice(0, 40);
+        .replace(/-$/, "")
+        .slice(0, 20);
       const projectName = `dante-${slug}-${project_id.slice(0, 4)}`;
 
       // Generate path-based URL: dante.id/{username}/{slug-hash}
@@ -339,8 +340,9 @@ router.post("/deploy", requireAuth, async (req, res) => {
           }
         }
 
-        // Use actual URL from Vercel API, fallback to project name pattern
-        const vercelUrl = actualUrl || `https://${projectName}.vercel.app`;
+        // Production URL is always {projectName}.vercel.app (not the preview hash URL)
+        const vercelUrl = `https://${projectName}.vercel.app`;
+        const previewUrl = actualUrl; // Keep for logging
         const canonicalUrl = `https://dante.id${canonicalPath}`;
 
         if (buildState === "READY") {
