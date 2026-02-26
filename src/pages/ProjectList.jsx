@@ -10,6 +10,8 @@ export default function ProjectList() {
   const [loading, setLoading] = useState(true)
   const [ghStatus, setGhStatus] = useState(null)
   const [deployUrls, setDeployUrls] = useState({})
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const STAGES = [
     { key: 'refinery', label: 'R', full: 'Refinery', route: id => `/refinery/${id}` },
@@ -172,6 +174,11 @@ export default function ProjectList() {
                             onClick={(e) => { e.stopPropagation(); navigate(`/usage/${p.id}`) }}
                             className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors cursor-pointer"
                           >[ 💰 ]</span>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); setDeleteConfirm(p) }}
+                            className="border border-[#1f521f] px-2 py-0.5 text-[#1a6b1a] hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
+                            title="Delete Project"
+                          >[ 🗑 ]</span>
                         </div>
                       </div>
                     </>
@@ -182,6 +189,46 @@ export default function ProjectList() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteConfirm(null)}>
+          <div className="border border-red-500/50 bg-[#0a0a0a] p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-red-500 font-bold mb-3">[ DELETE PROJECT ]</h3>
+            <p className="text-[#22aa00] text-sm mb-1">
+              Delete <span className="text-[#33ff00] font-bold">{deleteConfirm.name || deleteConfirm.company_name || (deleteConfirm.idea && deleteConfirm.idea.slice(0, 40)) || 'Untitled'}</span>?
+            </p>
+            <p className="text-[#1a6b1a] text-xs mb-6">This will permanently remove the project, all features, builds, and deployments. This cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                disabled={deleting}
+                onClick={() => setDeleteConfirm(null)}
+                className="text-sm border border-[#1f521f] text-[#22aa00] px-4 py-2 hover:border-[#33ff00] transition-colors"
+              >[ CANCEL ]</button>
+              <button
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true)
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    await fetch(`/api/projects/${deleteConfirm.id}`, {
+                      method: 'DELETE',
+                      headers: { Authorization: `Bearer ${session.access_token}` },
+                    })
+                    setProjects(prev => prev.filter(p => p.id !== deleteConfirm.id))
+                    setDeleteConfirm(null)
+                  } catch (err) {
+                    console.error('Delete failed:', err)
+                  } finally {
+                    setDeleting(false)
+                  }
+                }}
+                className="text-sm border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-[#0a0a0a] transition-colors"
+              >{deleting ? '[ DELETING... ]' : '[ DELETE ]'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

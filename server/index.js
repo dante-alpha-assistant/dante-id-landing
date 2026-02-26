@@ -217,6 +217,24 @@ app.get("/api/projects/:id", requireAuth, async (req, res) => {
   res.json({ project: data });
 });
 
+// --- DELETE /api/projects/:id ---
+app.delete("/api/projects/:id", requireAuth, async (req, res) => {
+  const pid = req.params.id;
+  const { data: project } = await supabase.from("projects").select("id").eq("id", pid).eq("user_id", req.user.id).single();
+  if (!project) return res.status(404).json({ error: "Project not found" });
+  // Cascade delete in order
+  await supabase.from("deployments").delete().eq("project_id", pid);
+  await supabase.from("builds").delete().eq("project_id", pid);
+  await supabase.from("test_results").delete().eq("project_id", pid);
+  await supabase.from("pipeline_steps").delete().eq("project_id", pid);
+  await supabase.from("blueprints").delete().eq("project_id", pid);
+  await supabase.from("features").delete().eq("project_id", pid);
+  await supabase.from("prds").delete().eq("project_id", pid);
+  await supabase.from("projects").delete().eq("id", pid);
+  console.log(`[API] Deleted project ${pid}`);
+  res.json({ deleted: true, project_id: pid });
+});
+
 // --- GET /api/projects/:id/features ---
 app.get("/api/projects/:id/features", requireAuth, async (req, res) => {
   const { data: project } = await supabase.from("projects").select("id").eq("id", req.params.id).eq("user_id", req.user.id).single();
