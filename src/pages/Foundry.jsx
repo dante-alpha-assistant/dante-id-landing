@@ -20,19 +20,19 @@ async function apiCall(base, path, options = {}) {
 }
 
 const PRIORITY_LABELS = {
-  critical: { text: '[CRITICAL]', cls: 'text-[#ff3333]' },
-  high: { text: '[HIGH]', cls: 'text-[#ffb000]' },
-  medium: { text: '[MEDIUM]', cls: 'text-[#33ff00]' },
-  low: { text: '[LOW]', cls: 'text-[#22aa00]' },
-  'nice-to-have': { text: '[NICE]', cls: 'text-[#1a6b1a]' }
+  critical: { text: 'Critical', cls: 'text-red-500' },
+  high: { text: 'High', cls: 'text-amber-500' },
+  medium: { text: 'Medium', cls: 'text-md-primary' },
+  low: { text: 'Low', cls: 'text-md-on-surface-variant' },
+  'nice-to-have': { text: 'Nice', cls: 'text-md-outline' }
 }
 
 const METHOD_COLORS = {
-  GET: 'text-[#33ff00] bg-[#33ff00]/10',
-  POST: 'text-[#33ff00] bg-[#33ff00]/10',
-  PUT: 'text-[#ffb000] bg-[#ffb000]/10',
-  DELETE: 'text-[#ff3333] bg-[#ff3333]/10',
-  PATCH: 'text-[#ffb000] bg-[#ffb000]/10'
+  GET: 'text-md-primary bg-md-primary/10',
+  POST: 'text-md-primary bg-md-primary/10',
+  PUT: 'text-amber-500 bg-amber-500/10',
+  DELETE: 'text-red-500 bg-red-500/10',
+  PATCH: 'text-amber-500 bg-amber-500/10'
 }
 
 const TABS = ['API', 'UI', 'DATA', 'TESTS']
@@ -239,34 +239,34 @@ export default function Foundry() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#33ff00] font-mono terminal-blink">[LOADING...]</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary animate-pulse">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-surface">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-outline-variant">
         <div className="flex items-center gap-4">
-          <span className="text-xl font-bold tracking-tight" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>dante_</span>
-          <span className="text-[#1a6b1a]">/</span>
-          <span className="text-sm text-[#22aa00] uppercase">Foundry</span>
+          <span className="text-xl font-bold tracking-tight">dante_</span>
+          <span className="text-md-outline">/</span>
+          <span className="text-sm text-md-on-surface-variant uppercase">Foundry</span>
         </div>
         <button
           onClick={() => navigate('/dashboard')}
-          className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+          className="text-sm text-md-on-surface-variant hover:bg-md-primary hover:text-md-on-primary border border-md-outline-variant px-3 py-1 transition-all ease-md-standard duration-300 uppercase"
         >
-          [ DASHBOARD ]
+          Dashboard
         </button>
       </div>
 
       {/* AI Loading overlay with auto-flow progress */}
       {(aiLoading || foundationLoading || diagramsLoading) && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 flex flex-col items-center gap-4 min-w-[320px]">
-            <div className="text-[#33ff00] terminal-blink text-lg">[PROCESSING...]</div>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-md-surface-container rounded-md-lg p-8 shadow-sm flex flex-col items-center gap-4 min-w-[320px]">
+            <div className="text-md-primary animate-pulse text-lg">Processing...</div>
             {autoFlowRunning ? (
               <div className="w-full space-y-2">
                 {[
@@ -275,33 +275,33 @@ export default function Foundry() {
                   { step: 3, label: 'Feature Blueprints' },
                 ].map(s => (
                   <div key={s.step} className="flex items-center gap-2 text-xs">
-                    <span className={autoFlowStep > s.step ? 'text-[#33ff00]' : autoFlowStep === s.step ? 'text-[#33ff00] terminal-blink' : 'text-[#1a6b1a]'}>
+                    <span className={autoFlowStep > s.step ? 'text-md-primary' : autoFlowStep === s.step ? 'text-md-primary animate-pulse' : 'text-md-outline'}>
                       {autoFlowStep > s.step ? '✓' : autoFlowStep === s.step ? '►' : '○'}
                     </span>
-                    <span className={autoFlowStep >= s.step ? 'text-[#33ff00]' : 'text-[#1a6b1a]'}>
+                    <span className={autoFlowStep >= s.step ? 'text-md-primary' : 'text-md-outline'}>
                       Step {s.step}/3: {s.label}
                     </span>
                     {autoFlowStep === 3 && s.step === 3 && batchProgress && (
-                      <span className="text-[#22aa00]">({batchProgress.current}/{batchProgress.total})</span>
+                      <span className="text-md-on-surface-variant">({batchProgress.current}/{batchProgress.total})</span>
                     )}
                   </div>
                 ))}
               </div>
             ) : batchProgress ? (
-              <p className="text-sm text-[#22aa00]">Generating blueprint {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
+              <p className="text-sm text-md-on-surface-variant">Generating blueprint {batchProgress.current}/{batchProgress.total}: {batchProgress.featureName}</p>
             ) : foundationLoading ? (
-              <p className="text-sm text-[#22aa00]">Generating foundation document...</p>
+              <p className="text-sm text-md-on-surface-variant">Generating foundation document...</p>
             ) : diagramsLoading ? (
-              <p className="text-sm text-[#22aa00]">Generating system diagrams...</p>
+              <p className="text-sm text-md-on-surface-variant">Generating system diagrams...</p>
             ) : (
-              <p className="text-sm text-[#22aa00]">AI is thinking...</p>
+              <p className="text-sm text-md-on-surface-variant">AI is thinking...</p>
             )}
           </div>
         </div>
       )}
 
       {/* Section tabs */}
-      <div className="flex border-b border-[#1f521f]">
+      <div className="flex border-b border-md-outline-variant">
         {[
           { key: 'foundation', label: '1. FOUNDATION', done: !!foundation },
           { key: 'diagrams', label: '2. SYSTEM DIAGRAMS', done: !!systemDiagrams },
@@ -310,10 +310,10 @@ export default function Foundry() {
           <button
             key={tab.key}
             onClick={() => setActiveSection(tab.key)}
-            className={`px-5 py-3 text-xs font-bold uppercase transition-colors border-b-2 ${
+            className={`px-5 py-3 text-xs font-bold uppercase transition-all ease-md-standard duration-300 border-b-2 ${
               activeSection === tab.key
-                ? 'text-[#33ff00] border-[#33ff00] bg-[#33ff00]/5'
-                : 'text-[#1a6b1a] border-transparent hover:text-[#22aa00]'
+                ? 'text-md-primary border-md-primary bg-md-primary/5'
+                : 'text-md-outline border-transparent hover:text-md-on-surface-variant'
             }`}
           >
             {tab.label} {tab.done ? '✓' : ''}
@@ -329,45 +329,45 @@ export default function Foundry() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold uppercase">Foundation Document</h3>
                 <button onClick={generateFoundation} disabled={foundationLoading}
-                  className="px-3 py-1.5 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] disabled:opacity-40 text-xs transition-colors">
-                  [ REGENERATE ]
+                  className="px-3 py-1.5 border border-md-outline-variant text-md-on-surface-variant hover:border-md-primary hover:text-md-primary disabled:opacity-40 text-xs transition-all ease-md-standard duration-300">
+                  Regenerate
                 </button>
               </div>
               {Object.entries(foundation.content || {}).map(([key, val]) => (
-                <div key={key} className="border border-[#1f521f] p-4">
-                  <h4 className="text-sm font-bold text-[#33ff00] mb-2 uppercase">{key.replace(/_/g, ' ')}</h4>
+                <div key={key} className="border border-md-outline-variant rounded-md-lg p-4">
+                  <h4 className="text-sm font-bold text-md-primary mb-2 uppercase">{key.replace(/_/g, ' ')}</h4>
                   {typeof val === 'object' && !Array.isArray(val) ? (
                     <div className="space-y-1">
                       {Object.entries(val).map(([k, v]) => (
                         <div key={k} className="flex gap-2 text-xs">
-                          <span className="text-[#1a6b1a] min-w-[100px]">{k}:</span>
-                          <span className="text-[#22aa00]">{typeof v === 'string' ? v : JSON.stringify(v)}</span>
+                          <span className="text-md-outline min-w-[100px]">{k}:</span>
+                          <span className="text-md-on-surface-variant">{typeof v === 'string' ? v : JSON.stringify(v)}</span>
                         </div>
                       ))}
                     </div>
                   ) : Array.isArray(val) ? (
-                    <ul className="space-y-1">{val.map((item, i) => <li key={i} className="text-xs text-[#22aa00]">→ {item}</li>)}</ul>
+                    <ul className="space-y-1">{val.map((item, i) => <li key={i} className="text-xs text-md-on-surface-variant">→ {item}</li>)}</ul>
                   ) : (
-                    <p className="text-xs text-[#22aa00]">{String(val)}</p>
+                    <p className="text-xs text-md-on-surface-variant">{String(val)}</p>
                   )}
                 </div>
               ))}
               <button onClick={() => setActiveSection('diagrams')}
-                className="w-full py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
-                [ CONTINUE → SYSTEM DIAGRAMS ]
+                className="w-full py-3 border-2 border-md-primary text-md-primary font-bold hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300">
+                Continue to System Diagrams →
               </button>
             </div>
           ) : (
             <div className="max-w-2xl mx-auto text-center py-20 space-y-6">
-              <p className="text-[#22aa00] mb-2">No foundation document yet. Generate project-wide architecture decisions.</p>
+              <p className="text-md-on-surface-variant mb-2">No foundation document yet. Generate project-wide architecture decisions.</p>
               <div className="flex flex-col items-center gap-3">
                 <button onClick={generateAllArchitecture} disabled={foundationLoading || autoFlowRunning}
-                  className="px-8 py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 transition-colors">
-                  {autoFlowRunning ? '[ GENERATING... ]' : '[ GENERATE ALL ARCHITECTURE ]'}
+                  className="px-8 py-4 border-2 border-md-primary text-md-primary text-lg font-bold hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 transition-all ease-md-standard duration-300">
+                  {autoFlowRunning ? 'Generating...' : 'Generate All Architecture'}
                 </button>
-                <p className="text-[10px] text-[#1a6b1a]">Foundation → System Diagrams → Feature Blueprints (one click)</p>
+                <p className="text-[10px] text-md-outline">Foundation → System Diagrams → Feature Blueprints (one click)</p>
                 <button onClick={generateFoundation} disabled={foundationLoading}
-                  className="text-xs text-[#1a6b1a] hover:text-[#22aa00] transition-colors">
+                  className="text-xs text-md-outline hover:text-md-on-surface-variant transition-all ease-md-standard duration-300">
                   or generate foundation only →
                 </button>
               </div>
@@ -384,32 +384,32 @@ export default function Foundry() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold uppercase">System Diagrams</h3>
                 <button onClick={generateDiagrams} disabled={diagramsLoading}
-                  className="px-3 py-1.5 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] disabled:opacity-40 text-xs transition-colors">
-                  [ REGENERATE ]
+                  className="px-3 py-1.5 border border-md-outline-variant text-md-on-surface-variant hover:border-md-primary hover:text-md-primary disabled:opacity-40 text-xs transition-all ease-md-standard duration-300">
+                  Regenerate
                 </button>
               </div>
               {Object.entries(systemDiagrams.content || {}).map(([key, diagram]) => (
-                <div key={key} className="border border-[#1f521f] p-4">
-                  <h4 className="text-sm font-bold text-[#33ff00] mb-3 uppercase">{diagram?.title || key}</h4>
+                <div key={key} className="border border-md-outline-variant rounded-md-lg p-4">
+                  <h4 className="text-sm font-bold text-md-primary mb-3 uppercase">{diagram?.title || key}</h4>
                   {diagram?.mermaid ? (
                     <MermaidDiagram code={diagram.mermaid} title={diagram?.title || key} />
                   ) : (
-                    <pre className="text-xs text-[#22aa00] bg-[#050505] p-4 border border-[#1f521f] overflow-x-auto whitespace-pre-wrap">{JSON.stringify(diagram, null, 2)}</pre>
+                    <pre className="text-xs text-md-on-surface-variant bg-md-surface-variant p-4 border border-md-outline-variant overflow-x-auto whitespace-pre-wrap">{JSON.stringify(diagram, null, 2)}</pre>
                   )}
                 </div>
               ))}
               <button onClick={() => setActiveSection('features')}
-                className="w-full py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors">
-                [ CONTINUE → FEATURE BLUEPRINTS ]
+                className="w-full py-3 border-2 border-md-primary text-md-primary font-bold hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300">
+                Continue to Feature Blueprints →
               </button>
             </div>
           ) : (
             <div className="max-w-2xl mx-auto text-center py-20">
-              <p className="text-[#22aa00] mb-2">No system diagrams yet.</p>
-              <p className="text-xs text-[#1a6b1a] mb-6">{foundation ? 'Foundation ready — generate diagrams based on your architecture.' : 'Generate a Foundation document first.'}</p>
+              <p className="text-md-on-surface-variant mb-2">No system diagrams yet.</p>
+              <p className="text-xs text-md-outline mb-6">{foundation ? 'Foundation ready — generate diagrams based on your architecture.' : 'Generate a Foundation document first.'}</p>
               <button onClick={foundation ? generateDiagrams : generateFoundation} disabled={diagramsLoading || foundationLoading}
-                className="px-6 py-3 border-2 border-[#33ff00] text-[#33ff00] font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 transition-colors">
-                {!foundation ? '[ GENERATE FOUNDATION FIRST ]' : diagramsLoading ? '[ GENERATING... ]' : '[ GENERATE SYSTEM DIAGRAMS ]'}
+                className="px-6 py-3 border-2 border-md-primary text-md-primary font-bold hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 transition-all ease-md-standard duration-300">
+                {!foundation ? 'Generate Foundation First' : diagramsLoading ? 'Generating...' : 'Generate System Diagrams'}
               </button>
             </div>
           )}
@@ -420,22 +420,22 @@ export default function Foundry() {
       {activeSection === 'features' && (
       <div className="flex h-[calc(100vh-105px)]">
         {/* Left Panel - Features (35%) */}
-        <div className="w-[35%] border-r border-[#1f521f] overflow-y-auto p-6">
+        <div className="w-[35%] border-r border-md-outline-variant overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>FEATURES</h3>
+            <h3 className="text-lg font-semibold uppercase">FEATURES</h3>
             {missingCount > 0 && (
               <button
                 onClick={generateAll}
                 disabled={aiLoading}
-                className="px-3 py-1.5 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 text-xs font-medium transition-colors uppercase"
+                className="px-3 py-1.5 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 text-xs font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                [ GENERATE ALL ({missingCount}) ]
+                Generate All ({missingCount})
               </button>
             )}
           </div>
 
           {features.length === 0 ? (
-            <p className="text-sm text-[#1a6b1a] text-center mt-8">
+            <p className="text-sm text-md-outline text-center mt-8">
               No features found. Go to Refinery first to generate a PRD and extract features.
             </p>
           ) : (
@@ -446,15 +446,15 @@ export default function Foundry() {
                   <div
                     key={f.id}
                     onClick={() => selectFeature(f)}
-                    className={`p-3 cursor-pointer border transition-colors ${
+                    className={`p-3 cursor-pointer border transition-all ease-md-standard duration-300 ${
                       selectedFeature?.id === f.id
-                        ? 'bg-[#0f0f0f] border-[#33ff00]'
-                        : 'bg-[#0f0f0f] border-[#1f521f] hover:border-[#33ff00]'
+                        ? 'bg-md-surface-container border-md-primary'
+                        : 'bg-md-surface-container border-md-outline-variant hover:border-md-primary'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="text-sm font-medium text-[#33ff00] flex-1 break-words">
-                        {selectedFeature?.id === f.id ? '> ' : '  '}{f.name}
+                      <h4 className="text-sm font-medium text-md-primary flex-1 break-words">
+                        {f.name}
                       </h4>
                       <span className={`text-[10px] font-bold shrink-0 ${priority.cls}`}>
                         {priority.text}
@@ -462,12 +462,12 @@ export default function Foundry() {
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                       {blueprints[f.id] ? (
-                        <span className="text-[10px] text-[#33ff00] font-bold">
-                          [OK] Blueprint
+                        <span className="text-[10px] text-md-primary font-bold">
+                          ✓ Blueprint
                         </span>
                       ) : (
-                        <span className="text-[10px] text-[#1a6b1a] font-bold">
-                          [NONE] No blueprint
+                        <span className="text-[10px] text-md-outline font-bold">
+                          No blueprint
                         </span>
                       )}
                     </div>
@@ -482,41 +482,41 @@ export default function Foundry() {
         <div className="w-[65%] overflow-y-auto p-6">
           {!selectedFeature ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-[#1a6b1a] text-sm">Select a feature to view its blueprint</p>
+              <p className="text-md-outline text-sm">Select a feature to view its blueprint</p>
             </div>
           ) : !content ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
-              <p className="text-[#22aa00] text-sm">No blueprint generated for &quot;{selectedFeature.name}&quot;</p>
+              <p className="text-md-on-surface-variant text-sm">No blueprint generated for &quot;{selectedFeature.name}&quot;</p>
               <button
                 onClick={() => generateBlueprint(selectedFeature.id)}
                 disabled={aiLoading}
-                className="px-6 py-3 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] disabled:opacity-40 text-sm font-medium transition-colors uppercase"
+                className="px-6 py-3 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary disabled:opacity-40 text-sm font-medium transition-all ease-md-standard duration-300 uppercase"
               >
-                [ GENERATE BLUEPRINT ]
+                Generate Blueprint
               </button>
             </div>
           ) : (
             <div>
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold uppercase" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{selectedFeature.name}</h2>
-                <span className="text-[10px] text-[#1a6b1a]">v{currentBlueprint.version}</span>
+                <h2 className="text-xl font-semibold uppercase">{selectedFeature.name}</h2>
+                <span className="text-[10px] text-md-outline">v{currentBlueprint.version}</span>
               </div>
 
               {/* Action buttons */}
               <div className="flex items-center gap-2 mb-6">
                 <button
                   onClick={() => setShowRefineInput(!showRefineInput)}
-                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
+                  className="px-3 py-1.5 bg-transparent border border-md-outline-variant text-xs text-md-on-surface-variant hover:border-md-primary hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300 uppercase"
                 >
-                  [ REFINE ]
+                  Refine
                 </button>
                 <button
                   onClick={() => generateBlueprint(selectedFeature.id)}
                   disabled={aiLoading}
-                  className="px-3 py-1.5 bg-transparent border border-[#1f521f] text-xs text-[#22aa00] hover:border-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors uppercase"
+                  className="px-3 py-1.5 bg-transparent border border-md-outline-variant text-xs text-md-on-surface-variant hover:border-md-primary hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300 uppercase"
                 >
-                  [ REGENERATE ]
+                  Regenerate
                 </button>
               </div>
 
@@ -524,8 +524,8 @@ export default function Foundry() {
               {showRefineInput && (
                 <div className="mb-6 flex gap-2">
                   <input
-                    className="flex-1 bg-[#0d0d0d] border border-[#1f521f] px-3 py-2 text-sm text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] font-mono"
-                    style={{ caretColor: '#33ff00' }}
+                    className="flex-1 bg-md-surface-variant border border-md-outline-variant px-3 py-2 text-sm text-md-primary placeholder-md-outline focus:outline-none focus:border-md-primary"
+                    
                     placeholder="How should I improve this blueprint?"
                     value={refineInput}
                     onChange={(e) => setRefineInput(e.target.value)}
@@ -534,26 +534,26 @@ export default function Foundry() {
                   />
                   <button
                     onClick={() => { if (refineInput.trim()) { refineBlueprint(refineInput); setRefineInput('') } }}
-                    className="px-4 py-2 border border-[#33ff00] text-[#33ff00] hover:bg-[#33ff00] hover:text-[#0a0a0a] text-sm transition-colors uppercase"
+                    className="px-4 py-2 border border-md-primary text-md-primary hover:bg-md-primary hover:text-md-on-primary text-sm transition-all ease-md-standard duration-300 uppercase"
                   >
-                    [ GO ]
+                    Go
                   </button>
                 </div>
               )}
 
               {/* Tabs */}
-              <div className="flex gap-1 mb-6 border-b border-[#1f521f]">
+              <div className="flex gap-2 mb-6">
                 {TABS.map((tab, i) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(i)}
-                    className={`px-4 py-2 text-sm font-medium transition-colors border border-b-0 ${
+                    className={`px-5 py-2 text-sm font-medium rounded-full transition-all ease-md-standard duration-300 ${
                       activeTab === i
-                        ? 'bg-[#33ff00] text-[#0a0a0a] border-[#33ff00]'
-                        : 'text-[#22aa00] border-[#1f521f] hover:text-[#33ff00] bg-transparent'
+                        ? 'bg-md-secondary-container text-md-on-secondary-container'
+                        : 'text-md-on-surface-variant bg-transparent hover:bg-md-surface-variant'
                     }`}
                   >
-                    [ {tab} ]
+                    {tab}
                   </button>
                 ))}
               </div>
@@ -573,9 +573,9 @@ export default function Foundry() {
         {Object.keys(blueprints).length > 0 && (
           <button
             onClick={() => navigate(`/planner/${project_id}`)}
-            className="w-full py-4 border-2 border-[#33ff00] text-[#33ff00] text-lg font-bold hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors"
+            className="w-full py-4 border-2 border-md-primary text-md-primary text-lg font-bold hover:bg-md-primary hover:text-md-on-primary transition-all ease-md-standard duration-300"
           >
-            [ CONTINUE → PLANNER: Create Work Orders {missingCount > 0 ? `(${missingCount} blueprints remaining)` : ''} ]
+            Continue to Planner → {missingCount > 0 ? `(${missingCount} blueprints remaining)` : ''}
           </button>
         )}
     </div>
@@ -583,36 +583,36 @@ export default function Foundry() {
 }
 
 function ApiTab({ data }) {
-  if (!data) return <p className="text-[#1a6b1a] text-sm">No API data</p>
+  if (!data) return <p className="text-md-outline text-sm">No API data</p>
   const endpoints = data.endpoints || []
   const integrations = data.integrations || []
 
   return (
     <div className="space-y-4">
       {endpoints.map((ep, i) => (
-        <div key={i} className="bg-[#0f0f0f] border border-[#1f521f] p-4">
+        <div key={i} className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
-            <span className={`text-[10px] px-2 py-0.5 font-mono font-bold ${METHOD_COLORS[ep.method] || 'text-[#22aa00]'}`}>
+            <span className={`text-[10px] px-2 py-0.5 font-bold ${METHOD_COLORS[ep.method] || 'text-md-on-surface-variant'}`}>
               {ep.method}
             </span>
-            <span className="text-sm font-mono text-[#33ff00]">{ep.path}</span>
+            <span className="text-sm text-md-primary">{ep.path}</span>
             {ep.auth_required && (
-              <span className="text-[10px] px-1.5 py-0.5 text-[#ffb000]">[AUTH]</span>
+              <span className="text-[10px] px-1.5 py-0.5 text-amber-500">Auth</span>
             )}
           </div>
-          <p className="text-xs text-[#22aa00] mb-3">{ep.description}</p>
+          <p className="text-xs text-md-on-surface-variant mb-3">{ep.description}</p>
           {ep.request_body && (
             <div className="mb-2">
-              <span className="text-[10px] text-[#1a6b1a] uppercase">REQUEST</span>
-              <pre className="text-xs text-[#22aa00] bg-[#0a0a0a] border border-[#1f521f] p-2 mt-1 overflow-x-auto">
+              <span className="text-[10px] text-md-outline uppercase">REQUEST</span>
+              <pre className="text-xs text-md-on-surface-variant bg-md-background border border-md-outline-variant rounded-md-lg p-2 mt-1 overflow-x-auto">
                 {typeof ep.request_body === 'string' ? ep.request_body : JSON.stringify(ep.request_body, null, 2)}
               </pre>
             </div>
           )}
           {ep.response && (
             <div>
-              <span className="text-[10px] text-[#1a6b1a] uppercase">RESPONSE</span>
-              <pre className="text-xs text-[#22aa00] bg-[#0a0a0a] border border-[#1f521f] p-2 mt-1 overflow-x-auto">
+              <span className="text-[10px] text-md-outline uppercase">RESPONSE</span>
+              <pre className="text-xs text-md-on-surface-variant bg-md-background border border-md-outline-variant rounded-md-lg p-2 mt-1 overflow-x-auto">
                 {typeof ep.response === 'string' ? ep.response : JSON.stringify(ep.response, null, 2)}
               </pre>
             </div>
@@ -620,11 +620,11 @@ function ApiTab({ data }) {
         </div>
       ))}
       {integrations.length > 0 && (
-        <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-          <h4 className="text-xs text-[#1a6b1a] uppercase mb-2">INTEGRATIONS</h4>
+        <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+          <h4 className="text-xs text-md-outline uppercase mb-2">INTEGRATIONS</h4>
           <div className="flex flex-wrap gap-2">
             {integrations.map((int, i) => (
-              <span key={i} className="text-xs px-2 py-1 bg-[#0a0a0a] border border-[#1f521f] text-[#22aa00]">{int}</span>
+              <span key={i} className="text-xs px-2 py-1 bg-md-background border border-md-outline-variant text-md-on-surface-variant">{int}</span>
             ))}
           </div>
         </div>
@@ -634,7 +634,7 @@ function ApiTab({ data }) {
 }
 
 function UiTab({ data }) {
-  if (!data) return <p className="text-[#1a6b1a] text-sm">No UI data</p>
+  if (!data) return <p className="text-md-outline text-sm">No UI data</p>
   const components = data.components || []
   const routes = data.routes || []
   const userFlow = data.user_flow || []
@@ -642,24 +642,24 @@ function UiTab({ data }) {
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="text-xs text-[#1a6b1a] uppercase mb-3">COMPONENTS</h4>
+        <h4 className="text-xs text-md-outline uppercase mb-3">COMPONENTS</h4>
         <div className="space-y-2">
           {components.map((c, i) => (
-            <div key={i} className="bg-[#0f0f0f] border border-[#1f521f] p-3">
+            <div key={i} className="bg-md-surface-container rounded-md-lg p-3 shadow-sm">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-[#33ff00]">{c.name}</span>
-                <span className="text-[10px] px-2 py-0.5 text-[#33ff00] bg-[#33ff00]/10">[{c.type?.toUpperCase()}]</span>
+                <span className="text-sm font-medium text-md-primary">{c.name}</span>
+                <span className="text-[10px] px-2 py-0.5 text-md-primary bg-md-primary/10">[{c.type?.toUpperCase()}]</span>
               </div>
-              <p className="text-xs text-[#22aa00]">{c.description}</p>
+              <p className="text-xs text-md-on-surface-variant">{c.description}</p>
               {c.props?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {c.props.map((p, j) => (
-                    <span key={j} className="text-[10px] px-1.5 py-0.5 bg-[#0a0a0a] text-[#22aa00] font-mono border border-[#1f521f]">{p}</span>
+                    <span key={j} className="text-[10px] px-1.5 py-0.5 bg-md-background text-md-on-surface-variant border border-md-outline-variant">{p}</span>
                   ))}
                 </div>
               )}
               {c.children?.length > 0 && (
-                <div className="mt-2 text-[10px] text-[#1a6b1a]">
+                <div className="mt-2 text-[10px] text-md-outline">
                   Children: {c.children.join(', ')}
                 </div>
               )}
@@ -670,12 +670,12 @@ function UiTab({ data }) {
 
       {routes.length > 0 && (
         <div>
-          <h4 className="text-xs text-[#1a6b1a] uppercase mb-3">ROUTES</h4>
+          <h4 className="text-xs text-md-outline uppercase mb-3">ROUTES</h4>
           <div className="space-y-1">
             {routes.map((r, i) => (
-              <div key={i} className="flex items-center gap-3 bg-[#0f0f0f] border border-[#1f521f] p-2">
-                <span className="text-xs font-mono text-[#33ff00]">{r.path}</span>
-                <span className="text-xs text-[#22aa00]">→ {r.component}</span>
+              <div key={i} className="flex items-center gap-3 bg-md-surface-container rounded-md-lg p-2 shadow-sm">
+                <span className="text-xs text-md-primary">{r.path}</span>
+                <span className="text-xs text-md-on-surface-variant">→ {r.component}</span>
               </div>
             ))}
           </div>
@@ -684,11 +684,11 @@ function UiTab({ data }) {
 
       {userFlow.length > 0 && (
         <div>
-          <h4 className="text-xs text-[#1a6b1a] uppercase mb-3">USER FLOW</h4>
+          <h4 className="text-xs text-md-outline uppercase mb-3">USER FLOW</h4>
           <ol className="space-y-1">
             {userFlow.map((step, i) => (
-              <li key={i} className="text-xs text-[#22aa00] flex gap-2">
-                <span className="text-[#33ff00] shrink-0">{i + 1}.</span>
+              <li key={i} className="text-xs text-md-on-surface-variant flex gap-2">
+                <span className="text-md-primary shrink-0">{i + 1}.</span>
                 {step}
               </li>
             ))}
@@ -700,18 +700,18 @@ function UiTab({ data }) {
 }
 
 function DataModelTab({ data }) {
-  if (!data) return <p className="text-[#1a6b1a] text-sm">No data model</p>
+  if (!data) return <p className="text-md-outline text-sm">No data model</p>
   const tables = data.tables || []
   const indexes = data.indexes || []
 
   return (
     <div className="space-y-4">
       {tables.map((t, i) => (
-        <div key={i} className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-          <h4 className="text-sm font-medium text-[#33ff00] mb-3 font-mono" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.3)' }}>{t.name}</h4>
+        <div key={i} className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+          <h4 className="text-sm font-medium text-md-primary mb-3">{t.name}</h4>
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-[#1a6b1a] border-b border-[#1f521f]">
+              <tr className="text-md-outline border-b border-md-outline-variant">
                 <th className="text-left py-1 pr-4">COLUMN</th>
                 <th className="text-left py-1 pr-4">TYPE</th>
                 <th className="text-left py-1">CONSTRAINTS</th>
@@ -719,20 +719,20 @@ function DataModelTab({ data }) {
             </thead>
             <tbody>
               {(t.columns || []).map((col, j) => (
-                <tr key={j} className="border-b border-[#0a0a0a]">
-                  <td className="py-1.5 pr-4 text-[#33ff00] font-mono">{col.name}</td>
-                  <td className="py-1.5 pr-4 text-[#22aa00] font-mono">{col.type}</td>
-                  <td className="py-1.5 text-[#1a6b1a]">{col.constraints}</td>
+                <tr key={j} className="border-b border-md-outline-variant">
+                  <td className="py-1.5 pr-4 text-md-primary">{col.name}</td>
+                  <td className="py-1.5 pr-4 text-md-on-surface-variant">{col.type}</td>
+                  <td className="py-1.5 text-md-outline">{col.constraints}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {t.relationships?.length > 0 && (
-            <div className="mt-3 pt-2 border-t border-[#1f521f]">
-              <span className="text-[10px] text-[#1a6b1a] uppercase">RELATIONSHIPS</span>
+            <div className="mt-3 pt-2 border-t border-md-outline-variant">
+              <span className="text-[10px] text-md-outline uppercase">RELATIONSHIPS</span>
               <ul className="mt-1 space-y-0.5">
                 {t.relationships.map((r, j) => (
-                  <li key={j} className="text-xs text-[#22aa00]">{'>'} {r}</li>
+                  <li key={j} className="text-xs text-md-on-surface-variant">• {r}</li>
                 ))}
               </ul>
             </div>
@@ -740,11 +740,11 @@ function DataModelTab({ data }) {
         </div>
       ))}
       {indexes.length > 0 && (
-        <div className="bg-[#0f0f0f] border border-[#1f521f] p-4">
-          <h4 className="text-xs text-[#1a6b1a] uppercase mb-2">INDEXES</h4>
+        <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+          <h4 className="text-xs text-md-outline uppercase mb-2">INDEXES</h4>
           <ul className="space-y-1">
             {indexes.map((idx, i) => (
-              <li key={i} className="text-xs text-[#22aa00] font-mono">{'>'} {idx}</li>
+              <li key={i} className="text-xs text-md-on-surface-variant">• {idx}</li>
             ))}
           </ul>
         </div>
@@ -754,11 +754,11 @@ function DataModelTab({ data }) {
 }
 
 function TestsTab({ data }) {
-  if (!data) return <p className="text-[#1a6b1a] text-sm">No tests</p>
+  if (!data) return <p className="text-md-outline text-sm">No tests</p>
   const sections = [
-    { key: 'unit', label: 'UNIT TESTS', color: 'text-[#33ff00]' },
-    { key: 'integration', label: 'INTEGRATION TESTS', color: 'text-[#22aa00]' },
-    { key: 'e2e', label: 'E2E TESTS', color: 'text-[#ffb000]' }
+    { key: 'unit', label: 'UNIT TESTS', color: 'text-md-primary' },
+    { key: 'integration', label: 'INTEGRATION TESTS', color: 'text-md-on-surface-variant' },
+    { key: 'e2e', label: 'E2E TESTS', color: 'text-amber-500' }
   ]
 
   return (
@@ -771,12 +771,12 @@ function TestsTab({ data }) {
             <h4 className={`text-xs uppercase mb-3 ${color}`}>{label} ({tests.length})</h4>
             <div className="space-y-2">
               {tests.map((t, i) => (
-                <div key={i} className="bg-[#0f0f0f] border border-[#1f521f] p-3">
-                  <h5 className="text-sm font-medium text-[#33ff00] mb-1">{t.name}</h5>
-                  <p className="text-xs text-[#22aa00] mb-2">{t.description}</p>
-                  <div className="text-[10px] text-[#1a6b1a]">
+                <div key={i} className="bg-md-surface-container rounded-md-lg p-3 shadow-sm">
+                  <h5 className="text-sm font-medium text-md-primary mb-1">{t.name}</h5>
+                  <p className="text-xs text-md-on-surface-variant mb-2">{t.description}</p>
+                  <div className="text-[10px] text-md-outline">
                     <span className="uppercase">EXPECTED:</span>{' '}
-                    <span className="text-[#22aa00]">{t.expected}</span>
+                    <span className="text-md-on-surface-variant">{t.expected}</span>
                   </div>
                 </div>
               ))}
