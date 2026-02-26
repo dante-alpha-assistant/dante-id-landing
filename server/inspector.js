@@ -281,29 +281,8 @@ Analyze each code file against the test specifications. Generate comprehensive t
       return res.json({ test_result: inserted, summary: aiResult.summary, blockers });
     }
 
-    // Update project status
+    // Update project status (run-all handles auto-advance to deployer)
     await supabase.from("projects").update({ status: "tested" }).eq("id", project_id);
-
-    // Auto-advance: trigger deployer
-    console.log(`[Inspector] Tests passed for ${project_id} — auto-advancing to deployer`);
-    const autoToken = process.env.SUPABASE_SERVICE_KEY;
-    fetch(`http://localhost:3001/api/deployer/deploy`, {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },
-      body: JSON.stringify({ project_id }),
-    }).then(async r => {
-      console.log(`[Inspector→Deployer] Auto-advance response: ${r.status}`);
-    }).catch(err => {
-      console.error(`[Inspector→Deployer] Auto-advance failed:`, err.message);
-    });
-
-    // Log pipeline step
-    await supabase.from("pipeline_steps").insert({
-      project_id,
-      step: "deployer",
-      status: "running",
-      started_at: new Date().toISOString(),
-    }).catch(() => {});
 
     return res.json({ test_result: testResult, summary: aiResult.summary, blockers });
   } catch (err) {
