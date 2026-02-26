@@ -14,11 +14,11 @@ const sections = [
 
 function renderValue(val) {
   if (!val) return null
-  if (typeof val === 'string') return <p className="text-sm text-gray-400 leading-relaxed">{val}</p>
+  if (typeof val === 'string') return <p className="text-sm text-md-on-surface-variant leading-relaxed">{val}</p>
   if (Array.isArray(val)) return (
     <ul className="list-disc list-inside space-y-1">
       {val.map((item, i) => (
-        <li key={i} className="text-sm text-gray-400">
+        <li key={i} className="text-sm text-md-on-surface-variant">
           {typeof item === 'string' ? item : typeof item === 'object' ? Object.values(item).filter(v => typeof v === 'string').join(' — ') : JSON.stringify(item)}
         </li>
       ))}
@@ -28,13 +28,13 @@ function renderValue(val) {
     <div className="space-y-2">
       {Object.entries(val).map(([k, v]) => (
         <div key={k}>
-          <span className="text-xs font-medium text-gray-500 uppercase">{k.replace(/_/g, ' ')}</span>
+          <span className="text-xs font-medium text-md-on-surface-variant uppercase">{k.replace(/_/g, ' ')}</span>
           <div className="ml-2">{renderValue(v)}</div>
         </div>
       ))}
     </div>
   )
-  return <p className="text-sm text-gray-400">{String(val)}</p>
+  return <p className="text-sm text-md-on-surface-variant">{String(val)}</p>
 }
 
 export default function BusinessPlanView({ content }) {
@@ -43,7 +43,6 @@ export default function BusinessPlanView({ content }) {
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }))
 
-  // Support both v1 (milestones as array) and v2 (milestones as object with quarters)
   const milestones = Array.isArray(content.milestones)
     ? content.milestones
     : content.milestones
@@ -59,10 +58,10 @@ export default function BusinessPlanView({ content }) {
         if (!content[key]) return null
         const isOpen = !!open[key]
         return (
-          <div key={key} className="border border-[#333] rounded-lg overflow-hidden">
+          <div key={key} className="bg-md-surface-container rounded-md-lg overflow-hidden shadow-sm">
             <button
               onClick={() => toggle(key)}
-              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-md-on-surface hover:bg-md-surface-variant/50 transition-colors"
             >
               {label}
               <span className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▾</span>
@@ -78,11 +77,11 @@ export default function BusinessPlanView({ content }) {
       })}
 
       {milestones.length > 0 && (
-        <div className="border border-[#333] rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-300 mb-2">Milestones</h4>
+        <div className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
+          <h4 className="text-sm font-medium text-md-on-surface mb-2">Milestones</h4>
           <ol className="list-decimal list-inside space-y-1">
             {milestones.map((m, i) => (
-              <li key={i} className="text-sm text-gray-400">{m}</li>
+              <li key={i} className="text-sm text-md-on-surface-variant">{m}</li>
             ))}
           </ol>
         </div>

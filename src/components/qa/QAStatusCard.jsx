@@ -1,16 +1,16 @@
 export default function QAStatusCard({ title, value, status, icon }) {
-  const borderColor = status === 'pass' ? 'border-green-500' : status === 'fail' ? 'border-red-500' : 'border-zinc-800'
-  const statusColor = status === 'pass' ? 'text-green-400' : status === 'fail' ? 'text-red-400' : 'text-zinc-500'
+  const borderColor = status === 'pass' ? 'border-emerald-500' : status === 'fail' ? 'border-md-error' : 'border-md-outline-variant'
+  const statusColor = status === 'pass' ? 'text-emerald-600' : status === 'fail' ? 'text-md-error' : 'text-md-on-surface-variant'
 
   return (
-    <div className={`bg-[#0a0a0a] border ${borderColor} rounded-none p-4 font-mono`}>
+    <div className={`bg-md-surface-container border ${borderColor} rounded-md-lg p-4 shadow-sm`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-zinc-500 text-xs uppercase tracking-wider">{title}</span>
+        <span className="text-md-on-surface-variant text-xs uppercase tracking-wider">{title}</span>
         {icon && <span className="text-lg">{icon}</span>}
       </div>
       <div className={`text-2xl font-bold ${statusColor}`}>{value}</div>
-      <div className={`text-xs mt-1 ${statusColor} uppercase`}>
-        {status === 'pass' ? '● PASSING' : status === 'fail' ? '● FAILING' : '● UNKNOWN'}
+      <div className={`text-xs mt-1 ${statusColor}`}>
+        {status === 'pass' ? '● Passing' : status === 'fail' ? '● Failing' : '● Unknown'}
       </div>
     </div>
   )

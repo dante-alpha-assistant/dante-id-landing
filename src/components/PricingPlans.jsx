@@ -63,24 +63,24 @@ export default function PricingPlans({ currentPlan = 'free', onManageBilling }) 
       {plans.map((plan) => (
         <div
           key={plan.id}
-          className={`rounded-2xl border p-6 flex flex-col ${
+          className={`rounded-md-lg p-6 flex flex-col shadow-sm hover:shadow-md transition-shadow ${
             plan.highlight
-              ? 'border-blue-500 bg-blue-950/20 shadow-lg shadow-blue-500/10'
-              : 'border-[#333] bg-[#111]'
+              ? 'bg-md-primary-container border-2 border-md-primary'
+              : 'bg-md-surface-container border border-md-outline-variant'
           }`}
         >
           {plan.highlight && (
-            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Most Popular</span>
+            <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs px-2 py-0.5 self-start mb-2 font-semibold">Most Popular</span>
           )}
-          <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+          <h3 className="text-xl font-bold text-md-on-surface">{plan.name}</h3>
           <div className="mt-2 mb-4">
-            <span className="text-3xl font-bold text-white">{plan.price}</span>
-            <span className="text-gray-400 text-sm">{plan.period}</span>
+            <span className="text-3xl font-bold text-md-on-surface">{plan.price}</span>
+            <span className="text-md-on-surface-variant text-sm">{plan.period}</span>
           </div>
           <ul className="space-y-2 flex-1 mb-6">
             {plan.features.map((f) => (
-              <li key={f} className="text-sm text-gray-300 flex items-start gap-2">
-                <span className="text-green-400 mt-0.5">✓</span>
+              <li key={f} className="text-sm text-md-on-surface-variant flex items-start gap-2">
+                <span className="text-md-primary mt-0.5">✓</span>
                 {f}
               </li>
             ))}
@@ -88,7 +88,7 @@ export default function PricingPlans({ currentPlan = 'free', onManageBilling }) 
           {plan.id === currentPlan ? (
             <button
               onClick={onManageBilling}
-              className="w-full py-2.5 rounded-xl text-sm font-medium bg-[#222] text-gray-400 border border-[#333] hover:bg-[#333] transition-colors"
+              className="w-full py-2.5 rounded-full text-sm font-medium bg-md-surface-variant text-md-on-surface-variant hover:shadow-sm transition-all"
             >
               {currentPlan === 'free' ? 'Current Plan' : 'Manage Billing'}
             </button>
@@ -96,10 +96,10 @@ export default function PricingPlans({ currentPlan = 'free', onManageBilling }) 
             <button
               onClick={() => handleUpgrade(plan.id)}
               disabled={loading === plan.id}
-              className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              className={`w-full py-2.5 rounded-full text-sm font-medium transition-all ${
                 plan.highlight
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                  : 'bg-white/10 hover:bg-white/20 text-white'
+                  ? 'bg-md-primary hover:shadow-md text-md-on-primary'
+                  : 'bg-md-secondary-container text-md-on-secondary-container hover:shadow-sm'
               } disabled:opacity-50`}
             >
               {loading === plan.id ? 'Loading...' : plan.cta}

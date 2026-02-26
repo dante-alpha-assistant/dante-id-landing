@@ -23,33 +23,33 @@ export default function QualityGatesConfig({ gates: initialGates, onSave }) {
   }
 
   return (
-    <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-4 font-mono">
+    <div className="bg-md-surface-container border border-md-outline-variant rounded-md-lg p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[#33ff00] text-sm uppercase tracking-wider">Quality Gates</h3>
-        <button onClick={() => onSave?.(gates)} className="px-3 py-1 text-xs uppercase border border-[#33ff00] text-[#33ff00] rounded-none hover:bg-[#33ff00]/10">Save</button>
+        <h3 className="text-md-on-surface text-sm font-semibold">Quality Gates</h3>
+        <button onClick={() => onSave?.(gates)} className="px-4 py-1.5 text-xs font-medium rounded-full bg-md-primary text-md-on-primary hover:shadow-md transition-all">Save</button>
       </div>
       <div className="space-y-3">
         {gates.map(gate => (
-          <div key={gate.key} className="flex items-center gap-3 py-2 border-b border-zinc-900">
+          <div key={gate.key} className="flex items-center gap-3 py-2 border-b border-md-outline-variant last:border-b-0">
             <button
               onClick={() => toggle(gate.key)}
-              className={`w-8 h-4 rounded-none border ${gate.enabled !== false ? 'bg-[#33ff00]/20 border-[#33ff00]' : 'bg-zinc-900 border-zinc-700'} relative transition-colors`}
+              className={`relative w-12 h-7 rounded-full transition-colors ${gate.enabled !== false ? 'bg-md-primary' : 'bg-md-surface-variant'}`}
             >
-              <div className={`w-3 h-3 rounded-none absolute top-0.5 transition-all ${gate.enabled !== false ? 'right-0.5 bg-[#33ff00]' : 'left-0.5 bg-zinc-600'}`} />
+              <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-all ${gate.enabled !== false ? 'left-[calc(100%-1.625rem)]' : 'left-0.5'}`} />
             </button>
-            <span className={`text-xs flex-1 ${gate.enabled !== false ? 'text-zinc-300' : 'text-zinc-600'}`}>{gate.label}</span>
+            <span className={`text-xs flex-1 ${gate.enabled !== false ? 'text-md-on-surface' : 'text-md-on-surface-variant'}`}>{gate.label}</span>
             {gate.threshold !== null && (
               <div className="flex items-center gap-1">
                 <input
                   type="number"
                   value={gate.threshold}
                   onChange={(e) => updateThreshold(gate.key, e.target.value)}
-                  className="w-16 bg-zinc-900 border border-zinc-800 rounded-none px-2 py-0.5 text-xs text-zinc-300 text-right focus:border-[#33ff00] outline-none"
+                  className="w-16 rounded-t-lg rounded-b-none border-b-2 border-md-outline bg-md-surface-variant px-2 py-0.5 text-xs text-md-on-surface text-right focus:border-md-primary outline-none transition-colors"
                 />
-                <span className="text-zinc-600 text-[10px]">{gate.unit}</span>
+                <span className="text-md-on-surface-variant text-[10px]">{gate.unit}</span>
               </div>
             )}
-            <span className={`text-[10px] uppercase ${gate.enabled !== false ? 'text-green-500' : 'text-zinc-600'}`}>
+            <span className={`rounded-full text-[10px] px-2 py-0.5 ${gate.enabled !== false ? 'bg-md-secondary-container text-md-on-secondary-container' : 'bg-md-surface-variant text-md-on-surface-variant'}`}>
               {gate.enabled !== false ? '● Active' : '○ Disabled'}
             </span>
           </div>

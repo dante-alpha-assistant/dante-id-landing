@@ -11,7 +11,7 @@ export default function CopyButton({ text, label = 'Copy' }) {
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white/5 hover:bg-white/10 border border-[#333] rounded transition-colors shrink-0"
+      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-full bg-md-secondary-container text-md-on-secondary-container hover:shadow-sm transition-all shrink-0"
     >
       {copied ? '✓ Copied' : `📋 ${label}`}
     </button>

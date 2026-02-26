@@ -11,7 +11,7 @@ const icons = {
   landing_page: '🌐',
   business_plan: '📊',
   growth_strategy: '🚀',
-  personal_brand: '🧑‍💼',
+  personal_brand: '🧑💼',
   pitch_deck: '📑',
   competitor_analysis: '🏆',
 }
@@ -27,10 +27,10 @@ const titles = {
 }
 
 const badgeStyles = {
-  pending: 'bg-gray-800 text-gray-400',
-  generating: 'bg-blue-900/50 text-blue-400 animate-pulse',
-  completed: 'bg-green-900/50 text-green-400',
-  failed: 'bg-red-900/50 text-red-400',
+  pending: 'bg-md-surface-variant text-md-on-surface-variant',
+  generating: 'bg-md-tertiary-container text-md-on-tertiary-container animate-pulse',
+  completed: 'bg-md-secondary-container text-md-on-secondary-container',
+  failed: 'bg-md-error-container text-md-on-error-container',
 }
 
 const views = {
@@ -48,25 +48,25 @@ export default function DeliverableCard({ deliverable, onToggle, isExpanded, onR
   const View = views[type]
 
   return (
-    <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+    <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md transition-shadow">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between"
       >
         <div className="flex items-center gap-3">
           <span className="text-xl">{icons[type] || '📦'}</span>
-          <span className="font-medium text-white">{titles[type] || type}</span>
+          <span className="font-medium text-md-on-surface">{titles[type] || type}</span>
         </div>
         <div className="flex items-center gap-2">
           {status === 'failed' && onRetry && (
             <button
               onClick={(e) => { e.stopPropagation(); onRetry(); }}
-              className="px-3 py-1 text-xs font-medium bg-red-900/30 text-red-400 hover:bg-red-900/50 rounded-full transition-colors"
+              className="px-3 py-1 text-xs font-medium rounded-full bg-md-error text-md-on-error hover:shadow-sm transition-all"
             >
               ↻ Retry
             </button>
           )}
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${badgeStyles[status] || badgeStyles.pending}`}>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyles[status] || badgeStyles.pending}`}>
             {status}
           </span>
         </div>
@@ -75,11 +75,11 @@ export default function DeliverableCard({ deliverable, onToggle, isExpanded, onR
       {(status === 'generating' || status === 'pending') && (
         <div className="mt-4 flex items-center gap-3">
           <div className="flex gap-1">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="w-2 h-2 bg-md-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-md-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-md-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
-          <span className="text-xs text-gray-500">{status === 'generating' ? 'AI is working on this...' : 'Queued'}</span>
+          <span className="text-xs text-md-on-surface-variant">{status === 'generating' ? 'AI is working on this...' : 'Queued'}</span>
         </div>
       )}
 

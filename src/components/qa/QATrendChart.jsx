@@ -2,19 +2,19 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export default function QATrendChart({ data, dataKey, title }) {
   return (
-    <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-4 font-mono">
-      <h3 className="text-[#33ff00] text-sm uppercase tracking-wider mb-4">{title}</h3>
+    <div className="bg-md-surface-container border border-md-outline-variant rounded-md-lg p-4 shadow-sm">
+      <h3 className="text-md-on-surface text-sm font-semibold mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-          <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 10, fontFamily: 'monospace' }} stroke="#27272a" />
-          <YAxis tick={{ fill: '#71717a', fontSize: 10, fontFamily: 'monospace' }} stroke="#27272a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--md-outline-variant, #cac4d0)" />
+          <XAxis dataKey="date" tick={{ fill: 'var(--md-on-surface-variant, #79747e)', fontSize: 10 }} stroke="var(--md-outline-variant, #cac4d0)" />
+          <YAxis tick={{ fill: 'var(--md-on-surface-variant, #79747e)', fontSize: 10 }} stroke="var(--md-outline-variant, #cac4d0)" />
           <Tooltip
-            contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #27272a', fontFamily: 'monospace', fontSize: 12 }}
-            labelStyle={{ color: '#33ff00' }}
-            itemStyle={{ color: '#33ff00' }}
+            contentStyle={{ backgroundColor: 'var(--md-surface-container, #f3edf7)', border: '1px solid var(--md-outline-variant, #cac4d0)', borderRadius: '12px', fontSize: 12 }}
+            labelStyle={{ color: 'var(--md-on-surface, #1d1b20)' }}
+            itemStyle={{ color: 'var(--md-primary, #6750a4)' }}
           />
-          <Line type="monotone" dataKey={dataKey} stroke="#33ff00" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey={dataKey} stroke="var(--md-primary, #6750a4)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
