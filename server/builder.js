@@ -265,8 +265,31 @@ Project: ${project?.company_name || project?.full_name || "Unknown"}
 
 Generate concise, working code for this feature. Focus on core logic, keep files short.`;
 
-    console.log('[Builder] Calling AI for feature:', feature.name);
-    const result = await callAI(CODE_GEN_SYSTEM, userPrompt);
+    // Inject file manifest of already-built features for cross-feature imports
+    let manifestContext = "";
+    try {
+      const { data: existingBuilds } = await supabase
+        .from("builds")
+        .select("files, feature_id")
+        .eq("project_id", project_id)
+        .in("status", ["review", "complete"])
+        .neq("feature_id", feature_id);
+      if (existingBuilds?.length) {
+        const fileList = [];
+        for (const b of existingBuilds) {
+          for (const f of (b.files || [])) {
+            fileList.push(f.path || f.filename);
+          }
+        }
+        if (fileList.length > 0) {
+          manifestContext = `\n\n## Already Built Files (available for import)\nThese files already exist from other features. Import them directly — do NOT recreate them:\n${fileList.map(f => `- ${f}`).join("\n")}\n`;
+        }
+      }
+    } catch (_) {}
+
+    const fullPrompt = userPrompt + manifestContext;
+    console.log('[Builder] Calling AI for feature:', feature.name, manifestContext ? `(${manifestContext.split('\n').length - 4} existing files)` : '(no prior builds)');
+    const result = await callAI(CODE_GEN_SYSTEM, fullPrompt);
     console.log('[Builder] AI returned, files:', (result.files || []).length, 'keys:', Object.keys(result).join(','));
 
     const files = result.files || [];

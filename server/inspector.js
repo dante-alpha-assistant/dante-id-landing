@@ -474,7 +474,11 @@ router.post("/run-all", requireAuth, async (req, res) => {
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;
     const results = [];
     if (importIssues.length > 0) {
-      results.push({ check: "import_validation", status: "warning", issues: importIssues.length, details: importIssues.slice(0, 10) });
+      results.push({ check: "import_validation", status: "failed", issues: importIssues.length, details: importIssues.slice(0, 10) });
+      // Hard block: don't proceed to AI tests or deployer if imports are broken
+      console.log(`[Inspector All] BLOCKED: ${importIssues.length} broken imports — skipping AI tests and deploy`);
+      await supabase.from("projects").update({ status: "tested", stage: "inspector" }).eq("id", project_id);
+      return res.json({ tested: 0, blocked: true, reason: "broken_imports", issues: importIssues.length, details: importIssues.slice(0, 20), results });
     }
     for (const b of builds) {
       console.log(`[Inspector All] Testing feature ${b.feature_id} for project ${project_id}`);
