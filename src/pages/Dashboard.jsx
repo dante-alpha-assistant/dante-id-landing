@@ -444,7 +444,9 @@ export default function Dashboard() {
             competitor_analysis: { icon: '🔍', label: 'Competitor Analysis', desc: 'Market landscape, differentiation, SWOT' },
             personal_brand: { icon: '👤', label: 'Personal Brand', desc: 'Founder positioning, social presence' },
           }
-          const completedTypes = new Set((deliverables || []).filter(d => d.status === 'completed').map(d => d.type))
+          const deliverableMap = {}
+          for (const d of (deliverables || [])) { deliverableMap[d.type] = d }
+          const completedTypes = new Set(Object.keys(deliverableMap).filter(t => deliverableMap[t].status === 'completed'))
           const needs = (project.needs || []).filter(n => !completedTypes.has(n))
           return needs.length > 0 ? (
             <div className="border border-[#1f521f] p-5 mt-6">
@@ -453,17 +455,42 @@ export default function Dashboard() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {needs.map(need => {
                   const meta = NEED_META[need] || { icon: '📦', label: need.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), desc: '' }
+                  const del = deliverableMap[need]
+                  const isGenerating = del?.status === 'pending' || del?.status === 'generating'
                   return (
-                    <div key={need} className="border border-[#1f521f] p-3 hover:border-[#33ff00] transition-colors group">
+                    <button
+                      key={need}
+                      disabled={isGenerating}
+                      onClick={async () => {
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession()
+                          const r = await fetch(`/api/projects/${project.id}/generate-need`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                            body: JSON.stringify({ need_type: need }),
+                          })
+                          if (r.ok) {
+                            // Refresh deliverables from Supabase
+                            const { data: refreshed } = await supabase.from('deliverables').select('*').eq('project_id', project.id)
+                            if (refreshed) setDeliverables(refreshed)
+                          }
+                        } catch (e) { console.error('Generate need failed:', e) }
+                      }}
+                      className="border border-[#1f521f] p-3 hover:border-[#33ff00] transition-colors group text-left disabled:opacity-50"
+                    >
                       <div className="flex items-start justify-between">
                         <div>
                           <span className="text-lg mr-2">{meta.icon}</span>
                           <span className="text-sm text-[#33ff00] font-bold">{meta.label}</span>
                         </div>
-                        <span className="text-[8px] border border-[#ffb000]/40 text-[#ffb000] px-1.5 py-0.5">COMING SOON</span>
+                        {isGenerating ? (
+                          <span className="text-[8px] border border-[#ffb000]/40 text-[#ffb000] px-1.5 py-0.5 animate-pulse">GENERATING...</span>
+                        ) : (
+                          <span className="text-[8px] border border-[#33ff00]/40 text-[#33ff00] px-1.5 py-0.5 group-hover:bg-[#33ff00] group-hover:text-[#0a0a0a] transition-colors">START →</span>
+                        )}
                       </div>
                       <p className="text-[#1a6b1a] text-xs mt-1">{meta.desc}</p>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
