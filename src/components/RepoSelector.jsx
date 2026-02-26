@@ -56,7 +56,6 @@ export default function RepoSelector() {
       })
       
       if (res.ok) {
-        // Update local state
         setRepos(prev => prev.map(r => 
           r.id === repo.id 
             ? { ...r, enabled: !r.enabled, webhook_status: repo.enabled ? 'disconnected' : 'pending' }
@@ -76,78 +75,74 @@ export default function RepoSelector() {
   const getWebhookStatusIcon = (status) => {
     switch (status) {
       case 'connected':
-        return <span className="text-[#33ff00]">●</span>
+        return <span className="text-emerald-500">●</span>
       case 'pending':
-        return <span className="text-[#ffb000] animate-pulse">◐</span>
+        return <span className="text-md-tertiary animate-pulse">◐</span>
       case 'error':
-        return <span className="text-red-500">✗</span>
+        return <span className="text-md-error">✗</span>
       default:
-        return <span className="text-[#1a6b1a]">○</span>
+        return <span className="text-md-on-surface-variant">○</span>
     }
   }
 
   const getWebhookStatusText = (status) => {
     switch (status) {
       case 'connected':
-        return <span className="text-[#33ff00]">WEBHOOK ACTIVE</span>
+        return <span className="text-emerald-600">Webhook Active</span>
       case 'pending':
-        return <span className="text-[#ffb000]">WEBHOOK PENDING</span>
+        return <span className="text-md-tertiary">Webhook Pending</span>
       case 'error':
-        return <span className="text-red-500">WEBHOOK ERROR</span>
+        return <span className="text-md-error">Webhook Error</span>
       default:
-        return <span className="text-[#1a6b1a]">WEBHOOK INACTIVE</span>
+        return <span className="text-md-on-surface-variant">Webhook Inactive</span>
     }
   }
 
-  const glowStyle = { textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
+    <div className="min-h-screen bg-md-background text-md-on-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f521f]">
-        <span className="text-xl font-bold tracking-tight" style={glowStyle}>
-          dante<span className="text-[#ffb000]">.id</span>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-outline-variant">
+        <span className="text-xl font-bold tracking-tight text-md-on-background">
+          dante<span className="text-md-primary">.id</span>
         </span>
         <button
           onClick={() => navigate('/dashboard')}
-          className="text-sm text-[#22aa00] hover:bg-[#33ff00] hover:text-[#0a0a0a] border border-[#1f521f] px-3 py-1 transition-colors uppercase"
+          className="text-sm rounded-full bg-md-secondary-container text-md-on-secondary-container px-4 py-2 font-medium hover:shadow-sm transition-all"
         >
-          [ ← BACK ]
+          ← Back
         </button>
       </div>
 
       {/* Content */}
       <div className="max-w-3xl mx-auto mt-10 px-4 pb-16">
-        <div className="border border-[#1f521f] bg-[#0f0f0f] p-6">
-          <div className="text-xs text-[#1a6b1a] mb-4">+--- REPOSITORY SELECTOR ---+</div>
-
-          <h1 className="text-lg font-bold mb-2" style={glowStyle}>
-            [ SELECT REPOSITORIES ]
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm">
+          <h1 className="text-lg font-bold text-md-on-surface mb-2">
+            Select Repositories
           </h1>
-          <p className="text-[#22aa00] text-sm mb-6">
+          <p className="text-md-on-surface-variant text-sm mb-6">
             Enable AI QA automation on your repositories. Toggle to enable or disable webhook integration.
           </p>
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="text-[#33ff00] terminal-blink">[FETCHING REPOSITORIES...]</div>
+              <div className="text-md-on-surface-variant animate-pulse">Fetching repositories...</div>
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <span className="text-[#ffb000]">⚠</span>
-              <p className="text-[#ffb000] mt-2">{error}</p>
+              <span className="text-md-tertiary">⚠</span>
+              <p className="text-md-tertiary mt-2">{error}</p>
               <button
                 onClick={fetchRepos}
-                className="mt-4 px-4 py-2 border border-[#1f521f] text-[#22aa00] hover:border-[#33ff00] hover:text-[#33ff00] transition-colors"
+                className="mt-4 px-4 py-2 rounded-full bg-md-secondary-container text-md-on-secondary-container font-medium hover:shadow-sm transition-all"
               >
-                [ RETRY ]
+                Retry
               </button>
             </div>
           ) : repos.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-[#1f521f]">
-              <span className="text-[#1a6b1a] text-2xl">📦</span>
-              <p className="text-[#22aa00] mt-2">No repositories found</p>
-              <p className="text-[#1a6b1a] text-xs mt-1">
+            <div className="text-center py-12 border border-dashed border-md-outline-variant rounded-md-lg">
+              <span className="text-2xl">📦</span>
+              <p className="text-md-on-surface-variant mt-2">No repositories found</p>
+              <p className="text-md-on-surface-variant text-xs mt-1">
                 Make sure your GitHub account has access to repositories.
               </p>
             </div>
@@ -156,23 +151,23 @@ export default function RepoSelector() {
               {repos.map((repo) => (
                 <div
                   key={repo.id}
-                  className="border border-[#1f521f] bg-[#0a0a0a] p-4 flex items-center justify-between gap-4"
+                  className="bg-md-surface rounded-md-lg p-4 flex items-center justify-between gap-4 border border-md-outline-variant"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[#ffb000]">
+                      <span className="text-md-tertiary">
                         {repo.is_private ? '🔒' : '📖'}
                       </span>
-                      <span className="text-[#33ff00] font-bold truncate" title={`${repo.owner}/${repo.name}`}>
+                      <span className="text-md-on-surface font-semibold truncate" title={`${repo.owner}/${repo.name}`}>
                         {repo.owner}/{repo.name}
                       </span>
                       {repo.is_private ? (
-                        <span className="text-[10px] border border-[#ffb000]/40 text-[#ffb000] px-1.5 py-0.5">
-                          PRIVATE
+                        <span className="rounded-full bg-md-tertiary-container text-md-on-tertiary-container text-xs px-2 py-0.5">
+                          Private
                         </span>
                       ) : (
-                        <span className="text-[10px] border border-[#1f521f] text-[#1a6b1a] px-1.5 py-0.5">
-                          PUBLIC
+                        <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs px-2 py-0.5">
+                          Public
                         </span>
                       )}
                     </div>
@@ -185,17 +180,17 @@ export default function RepoSelector() {
                   <button
                     onClick={() => handleToggle(repo)}
                     disabled={togglingRepo === repo.id}
-                    className={`relative w-14 h-7 border transition-colors ${
+                    className={`relative w-14 h-7 rounded-full transition-colors ${
                       repo.enabled
-                        ? 'border-[#33ff00] bg-[#33ff00]/10'
-                        : 'border-[#1f521f] bg-[#0f0f0f]'
+                        ? 'bg-md-primary'
+                        : 'bg-md-surface-variant'
                     } disabled:opacity-50`}
                   >
                     <div
-                      className={`absolute top-0.5 w-5 h-5 border transition-all ${
+                      className={`absolute top-0.5 w-6 h-6 rounded-full transition-all bg-white shadow-sm ${
                         repo.enabled
-                          ? 'left-[calc(100%-1.375rem)] border-[#33ff00] bg-[#33ff00]'
-                          : 'left-0.5 border-[#1f521f] bg-[#1f521f]'
+                          ? 'left-[calc(100%-1.625rem)]'
+                          : 'left-0.5'
                       }`}
                     />
                     <span className="sr-only">
@@ -206,24 +201,22 @@ export default function RepoSelector() {
               ))}
             </div>
           )}
-
-          <div className="text-xs text-[#1a6b1a] mt-6">+{'─'.repeat(27)}+</div>
         </div>
 
         {/* Legend */}
-        <div className="mt-6 text-xs text-[#1a6b1a]">
+        <div className="mt-6 text-xs text-md-on-surface-variant">
           <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1">
-              <span className="text-[#33ff00]">●</span> Connected
+              <span className="text-emerald-500">●</span> Connected
             </span>
             <span className="flex items-center gap-1">
-              <span className="text-[#ffb000]">◐</span> Pending
+              <span className="text-md-tertiary">◐</span> Pending
             </span>
             <span className="flex items-center gap-1">
-              <span className="text-red-500">✗</span> Error
+              <span className="text-md-error">✗</span> Error
             </span>
             <span className="flex items-center gap-1">
-              <span className="text-[#1a6b1a]">○</span> Inactive
+              <span className="text-md-on-surface-variant">○</span> Inactive
             </span>
           </div>
         </div>

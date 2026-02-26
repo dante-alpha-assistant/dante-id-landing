@@ -54,14 +54,12 @@ export default function DomainManager({ projectId }) {
     setLoading(true)
 
     try {
-      // Check availability first
       const check = await checkDomain(newDomain.trim())
       if (!check) {
         setError('Failed to check domain availability')
         return
       }
 
-      // Configure domain
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/domains/configure', {
         method: 'POST',
@@ -122,7 +120,7 @@ export default function DomainManager({ projectId }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Custom Domains</h3>
+        <h3 className="text-lg font-semibold text-md-on-surface">Custom Domains</h3>
       </div>
 
       {/* Add Domain Form */}
@@ -132,85 +130,85 @@ export default function DomainManager({ projectId }) {
           value={newDomain}
           onChange={(e) => setNewDomain(e.target.value)}
           placeholder="yourdomain.com"
-          className="flex-1 bg-[#222] border border-[#333] rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="flex-1 rounded-t-lg rounded-b-none border-b-2 border-md-outline bg-md-surface-variant h-14 px-4 text-md-on-surface placeholder-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
           disabled={loading}
         />
         <button
           type="submit"
           disabled={loading || !newDomain.trim()}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          className="bg-md-primary hover:shadow-md disabled:opacity-50 text-md-on-primary px-6 rounded-full font-medium transition-all"
         >
           {loading ? 'Adding...' : 'Add Domain'}
         </button>
       </form>
 
       {checking && (
-        <p className="text-sm text-gray-500">Checking domain availability...</p>
+        <p className="text-sm text-md-on-surface-variant">Checking domain availability...</p>
       )}
 
       {error && (
-        <div className="p-3 bg-red-900/20 border border-red-800/50 rounded-lg text-red-400 text-sm">
+        <div className="p-3 bg-md-error-container rounded-md-lg text-md-on-error-container text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="p-3 bg-green-900/20 border border-green-800/50 rounded-lg text-green-400 text-sm">
+        <div className="p-3 bg-md-secondary-container rounded-md-lg text-md-on-secondary-container text-sm">
           {success}
         </div>
       )}
 
       {/* Domain List */}
       {domains.length === 0 ? (
-        <p className="text-gray-500 text-sm">No custom domains configured yet.</p>
+        <p className="text-md-on-surface-variant text-sm">No custom domains configured yet.</p>
       ) : (
         <div className="space-y-3">
           {domains.map((domain) => (
-            <div key={domain.id} className="bg-[#111] border border-[#222] rounded-xl p-4">
+            <div key={domain.id} className="bg-md-surface-container rounded-md-lg p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="text-lg">🌐</span>
-                  <span className="font-medium text-white">{domain.domain}</span>
+                  <span className="font-medium text-md-on-surface">{domain.domain}</span>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
+                <span className={`rounded-full text-xs px-2 py-0.5 ${
                   domain.status === 'active' 
-                    ? 'bg-green-900/50 text-green-400' 
+                    ? 'bg-md-secondary-container text-md-on-secondary-container' 
                     : domain.status === 'pending'
-                    ? 'bg-yellow-900/50 text-yellow-400'
-                    : 'bg-red-900/50 text-red-400'
+                    ? 'bg-md-tertiary-container text-md-on-tertiary-container'
+                    : 'bg-md-error-container text-md-on-error-container'
                 }`}>
                   {domain.status}
                 </span>
               </div>
 
               {domain.status === 'pending' && domain.dns_config && (
-                <div className="mt-3 p-3 bg-[#0a0a0a] rounded-lg">
-                  <p className="text-sm text-gray-400 mb-2">Add these DNS records:</p>
+                <div className="mt-3 p-3 bg-md-surface-variant rounded-md-lg">
+                  <p className="text-sm text-md-on-surface-variant mb-2">Add these DNS records:</p>
                   {domain.dns_config.type === 'CNAME' ? (
                     <div className="space-y-2">
                       {domain.dns_config.records.map((record, i) => (
                         <div key={i} className="flex gap-4 text-sm">
-                          <span className="text-gray-500 w-16">Type:</span>
-                          <span className="text-blue-400">{record.type}</span>
+                          <span className="text-md-on-surface-variant w-16">Type:</span>
+                          <span className="text-md-primary">{record.type}</span>
                         </div>
                       ))}
                       <div className="flex gap-4 text-sm">
-                        <span className="text-gray-500 w-16">Value:</span>
-                        <code className="text-green-400">{domain.dns_config.records[0]?.value}</code>
+                        <span className="text-md-on-surface-variant w-16">Value:</span>
+                        <code className="text-md-primary">{domain.dns_config.records[0]?.value}</code>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-400">A Records:</p>
+                      <p className="text-sm text-md-on-surface-variant">A Records:</p>
                       {domain.dns_config.records.map((record, i) => (
-                        <code key={i} className="text-green-400 text-sm block">{record.value}</code>
+                        <code key={i} className="text-md-primary text-sm block">{record.value}</code>
                       ))}
                     </div>
                   )}
                   <button
                     onClick={() => verifyDomain(domain.domain)}
                     disabled={loading}
-                    className="mt-3 text-sm text-blue-400 hover:text-blue-300"
+                    className="mt-3 text-sm text-md-primary hover:underline font-medium"
                   >
                     Verify Domain →
                   </button>
