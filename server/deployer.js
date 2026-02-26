@@ -306,43 +306,85 @@ router.post("/deploy", requireAuth, async (req, res) => {
           }
         }
 
-        // Always use the project name as the canonical Vercel URL
+        // Poll Vercel deployment status until READY or ERROR (max 120s)
+        const deploymentId = vercelData.id || redeployData?.id;
+        logs.push(logEntry(`Polling Vercel build status for ${deploymentId}...`));
+        let buildState = "BUILDING";
+        const pollStart = Date.now();
+        while (buildState === "BUILDING" && Date.now() - pollStart < 120000) {
+          await new Promise(r => setTimeout(r, 5000));
+          try {
+            const statusRes = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
+              headers: { Authorization: `Bearer ${VERCEL_TOKEN}` },
+            });
+            const statusData = await statusRes.json();
+            buildState = statusData.readyState || statusData.state || "BUILDING";
+            logs.push(logEntry(`Build status: ${buildState}`));
+          } catch (e) {
+            logs.push(logEntry(`Poll error: ${e.message}`));
+          }
+        }
+
         const vercelUrl = `https://${projectName}.vercel.app`;
         const canonicalUrl = `https://dante.id${canonicalPath}`;
-        logs.push(logEntry(`Vercel URL: ${vercelUrl}`));
-        logs.push(logEntry(`Canonical URL: ${canonicalUrl}`));
-        logs.push(logEntry("[DONE]"));
 
-        await supabase
-          .from("deployments")
-          .update({
-            status: "live",
+        if (buildState === "READY") {
+          logs.push(logEntry(`Vercel URL: ${vercelUrl}`));
+          logs.push(logEntry(`Canonical URL: ${canonicalUrl}`));
+          logs.push(logEntry("[DONE]"));
+
+          await supabase
+            .from("deployments")
+            .update({
+              status: "live",
+              url: canonicalUrl,
+              vercel_deployment_id: deploymentId,
+              vercel_url: vercelUrl,
+              canonical_path: canonicalPath,
+              logs,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", deployment.id);
+
+          await supabase
+            .from("deployments")
+            .update({ status: "done", updated_at: new Date().toISOString() })
+            .eq("project_id", project_id)
+            .eq("status", "live")
+            .neq("id", deployment.id);
+
+          await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
+
+          return res.json({
+            deployment_id: deployment.id,
             url: canonicalUrl,
-            vercel_deployment_id: vercelData.id,
             vercel_url: vercelUrl,
-            canonical_path: canonicalPath,
-            logs,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", deployment.id);
+            status: "live",
+          });
+        } else {
+          // Build failed
+          const errorMsg = buildState === "ERROR" ? "Vercel build failed — generated code has compile errors" : `Build timed out (state: ${buildState})`;
+          logs.push(logEntry(`[DEPLOY FAILED] ${errorMsg}`));
 
-        // Mark any previous 'live' deployments as old
-        await supabase
-          .from("deployments")
-          .update({ status: "done", updated_at: new Date().toISOString() })
-          .eq("project_id", project_id)
-          .eq("status", "live")
-          .neq("id", deployment.id);
+          await supabase
+            .from("deployments")
+            .update({
+              status: "failed",
+              vercel_deployment_id: deploymentId,
+              logs,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", deployment.id);
 
-        // Update project status
-        await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
+          // Revert project to tested so user can fix and retry
+          await supabase.from("projects").update({ status: "tested", stage: "building" }).eq("id", project_id);
 
-        return res.json({
-          deployment_id: deployment.id,
-          url: canonicalUrl,
-          vercel_url: vercelUrl,
-          status: "live",
-        });
+          return res.status(422).json({
+            deployment_id: deployment.id,
+            status: "failed",
+            error: errorMsg,
+          });
+        }
       } catch (fetchErr) {
         logs.push(logEntry(`Network error: ${fetchErr.message}`));
         await supabase
