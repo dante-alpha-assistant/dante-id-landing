@@ -554,30 +554,34 @@ app.post("/api/regenerate", requireAuth, genLimiter, async (req, res) => {
 
 // --- Generate a single deliverable type (for What's Next) ---
 app.post("/api/projects/:id/generate-need", requireAuth, genLimiter, async (req, res) => {
-  const project_id = req.params.id;
-  const { need_type } = req.body;
-  if (!need_type) return res.status(400).json({ error: "need_type required" });
+  try {
+    const project_id = req.params.id;
+    const { need_type } = req.body;
+    console.log(`[Need] ${need_type} for ${project_id} by ${req.user?.id}`);
+    if (!need_type) return res.status(400).json({ error: "need_type required" });
 
-  // Verify ownership
-  const { data: project } = await supabase.from("projects").select("id").eq("id", project_id).eq("user_id", req.user.id).single();
-  if (!project) return res.status(404).json({ error: "Project not found" });
+    // Verify ownership
+    const { data: project } = await supabase.from("projects").select("id").eq("id", project_id).eq("user_id", req.user.id).single();
+    if (!project) return res.status(404).json({ error: "Project not found or not yours" });
 
-  // Check if deliverable already exists
-  const { data: existing } = await supabase.from("deliverables").select("id, status").eq("project_id", project_id).eq("type", need_type).single();
-  if (existing?.status === 'completed') return res.json({ status: "already_complete", deliverable_id: existing.id });
+    // Check if deliverable already exists
+    const { data: existing } = await supabase.from("deliverables").select("id, status").eq("project_id", project_id).eq("type", need_type).single();
+    if (existing?.status === 'completed') return res.json({ status: "already_complete", deliverable_id: existing.id });
 
-  if (existing) {
-    // Retry existing
-    await supabase.from("deliverables").update({ status: "pending", content: null }).eq("id", existing.id);
-    retrySingleDeliverable(project_id, existing.id).catch(err => console.error(`[Need] Retry error for ${need_type}:`, err));
-    return res.status(202).json({ status: "retrying", deliverable_id: existing.id });
+    if (existing) {
+      await supabase.from("deliverables").update({ status: "pending", content: null }).eq("id", existing.id);
+      retrySingleDeliverable(project_id, existing.id).catch(err => console.error(`[Need] Retry error for ${need_type}:`, err));
+      return res.status(202).json({ status: "retrying", deliverable_id: existing.id });
+    }
+
+    const { data: newDel, error: insErr } = await supabase.from("deliverables").insert({ project_id, type: need_type, status: "pending" }).select().single();
+    if (insErr || !newDel) return res.status(500).json({ error: "Failed to create deliverable", details: insErr?.message });
+    retrySingleDeliverable(project_id, newDel.id).catch(err => console.error(`[Need] Generate error for ${need_type}:`, err));
+    res.status(202).json({ status: "generating", deliverable_id: newDel.id });
+  } catch (err) {
+    console.error(`[Need] Unhandled error:`, err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  // Create new deliverable and generate
-  const { data: newDel } = await supabase.from("deliverables").insert({ project_id, type: need_type, status: "pending" }).select().single();
-  if (!newDel) return res.status(500).json({ error: "Failed to create deliverable" });
-  retrySingleDeliverable(project_id, newDel.id).catch(err => console.error(`[Need] Generate error for ${need_type}:`, err));
-  res.status(202).json({ status: "generating", deliverable_id: newDel.id });
 });
 
 app.post("/api/retry-deliverable", requireAuth, genLimiter, async (req, res) => {
