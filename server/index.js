@@ -205,6 +205,17 @@ app.get("/api/projects", requireAuth, async (req, res) => {
     (data || []).forEach(p => { p.deploy_url = urlMap[p.id] || null; });
   }
 
+  // Attach feature counts
+  if (projectIds.length > 0) {
+    const { data: features } = await supabase.from("features").select("project_id, status").in("project_id", projectIds);
+    const countMap = {}, builtMap = {};
+    (features || []).forEach(f => {
+      countMap[f.project_id] = (countMap[f.project_id] || 0) + 1;
+      if (['built', 'tested', 'deployed'].includes(f.status)) builtMap[f.project_id] = (builtMap[f.project_id] || 0) + 1;
+    });
+    (data || []).forEach(p => { p.features_count = countMap[p.id] || 0; p.features_built = builtMap[p.id] || 0; });
+  }
+
   res.json({ projects: data || [] });
 });
 
