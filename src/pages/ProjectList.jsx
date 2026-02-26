@@ -12,6 +12,7 @@ export default function ProjectList() {
   const [deployUrls, setDeployUrls] = useState({})
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [qaSummaries, setQaSummaries] = useState({})
 
   const STAGES = [
     { key: 'refinery', label: 'R', full: 'Refinery', route: id => `/refinery/${id}` },
@@ -47,6 +48,18 @@ export default function ProjectList() {
       .then(({ data }) => {
         setProjects(data || [])
         setLoading(false)
+        // Fetch QA summaries for all projects
+        ;(data || []).forEach(p => {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) return
+            fetch(`/api/qa/${p.id}/summary`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+              .then(r => r.ok ? r.json() : null)
+              .then(summary => {
+                if (summary) setQaSummaries(prev => ({ ...prev, [p.id]: summary }))
+              })
+              .catch(() => {})
+          })
+        })
         // Fetch deploy URLs for live projects
         const liveProjects = (data || []).filter(p => p.status === 'live' || p.status === 'completed')
         if (liveProjects.length > 0) {
@@ -130,6 +143,17 @@ export default function ProjectList() {
                   </h3>
                   <span className="text-[10px] text-[#1a6b1a] whitespace-nowrap">
                     {new Date(p.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono text-xs px-2 py-0.5 border border-[#1f521f] rounded-none">
+                    {qaSummaries[p.id] ? (
+                      qaSummaries[p.id].issues === 0 || qaSummaries[p.id].passing
+                        ? <span className="text-green-400">✓ Passing</span>
+                        : <span className="text-red-400">✗ {qaSummaries[p.id].issues || 0} issues</span>
+                    ) : (
+                      <span className="text-[#1a6b1a]">⚪ No QA</span>
+                    )}
                   </span>
                 </div>
                 <p className="text-xs text-[#22aa00] line-clamp-2 mb-3">
