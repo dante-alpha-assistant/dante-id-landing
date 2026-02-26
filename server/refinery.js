@@ -393,4 +393,41 @@ router.put("/:project_id/features", requireAuth, async (req, res) => {
   }
 });
 
+// --- POST /generate-all --- One-shot: PRD + extract features + update status
+router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
+  const { project_id, idea } = req.body;
+  if (!project_id) return res.status(400).json({ error: "project_id required" });
+  const token = req.headers.authorization;
+  const base = "http://localhost:3001/api/refinery";
+  const headers = { Authorization: token, "Content-Type": "application/json" };
+
+  try {
+    // 1. Generate PRD
+    console.log(`[Refinery All] Generating PRD for ${project_id}`);
+    const prdRes = await fetch(`${base}/generate-prd`, { method: "POST", headers, body: JSON.stringify({ project_id, idea }) });
+    const prdData = await prdRes.json().catch(() => ({}));
+    const prdId = prdData?.prd?.id;
+
+    if (!prdId) {
+      console.error("[Refinery All] PRD generation failed:", JSON.stringify(prdData).slice(0, 200));
+      return res.status(500).json({ error: "PRD generation failed" });
+    }
+
+    // 2. Extract features
+    console.log(`[Refinery All] Extracting features for ${project_id}, prd ${prdId}`);
+    const featRes = await fetch(`${base}/extract-features`, { method: "POST", headers, body: JSON.stringify({ project_id, prd_id: prdId }) });
+    const featText = await featRes.text().catch(() => "");
+    console.log(`[Refinery All] Features response: ${featRes.status} ${featText.slice(0, 200)}`);
+
+    // 3. Update status
+    await supabase.from("projects").update({ status: "refining", stage: "building" }).eq("id", project_id);
+    console.log(`[Refinery All] Complete for ${project_id}`);
+
+    res.json({ success: true, prd_id: prdId });
+  } catch (err) {
+    console.error("[Refinery All] Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

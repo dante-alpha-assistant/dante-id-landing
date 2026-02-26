@@ -224,7 +224,7 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
     if (!project) return res.status(404).json({ error: "Project not found" });
 
     const pipeline = {
-      pending: { next: "refining", module: "refinery", endpoint: "/api/refinery/generate" },
+      pending: { next: "refining", module: "refinery", endpoint: "/api/refinery/generate-all" },
       refining: { next: "designed", module: "foundry", endpoint: "/api/foundry/generate-all-architecture" },
       designed: { next: "planning", module: "planner", endpoint: "/api/planner/generate-all-work-orders" },
       planning: { next: "building", module: "builder", endpoint: "/api/builder/build-all" },
