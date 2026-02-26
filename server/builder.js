@@ -150,6 +150,13 @@ DATA OPERATIONS (use Supabase client, NOT fetch):
 - Delete: supabase.from('table').delete().eq('id', id)
 - Auth: supabase.auth.signUp/signInWithPassword/signOut/getUser
 
+BRANDING:
+- The app name, tagline, and description will be provided in the prompt. Use them throughout the UI.
+- The sign-in/sign-up page MUST show the app name as a large heading, with a one-line tagline below it.
+- Use a consistent brand color derived from the project context (not generic gray).
+- The main layout/nav should show the app name, not "My App" or generic text.
+- Every page should feel intentional and branded, not scaffolded.
+
 CRITICAL RULES:
 - Every import MUST resolve to a file you create. No phantom imports.
 - Use \`any\` type freely. No complex type hierarchies.
@@ -251,7 +258,15 @@ Files to modify: ${JSON.stringify(wo.files_to_modify || [])}
 Acceptance criteria: ${JSON.stringify(wo.acceptance_criteria || [])}`).join("\n\n")}`
       : "";
 
-    const userPrompt = `Feature: ${feature.name}
+    const projectName = project?.name || project?.company_name || "App";
+    const projectIdea = project?.idea || "";
+    const userPrompt = `## App Branding
+App Name: ${projectName}
+App Description: ${projectIdea}
+Use "${projectName}" as the app name on all pages (auth, nav, headings). Make the UI feel branded and polished.
+
+## Feature Details
+Feature: ${feature.name}
 Description: ${feature.description || ""}
 Priority: ${feature.priority || "medium"}
 Acceptance Criteria: ${JSON.stringify(feature.acceptance_criteria || [])}
