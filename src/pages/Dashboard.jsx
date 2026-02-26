@@ -446,17 +446,20 @@ export default function Dashboard() {
           }
           const deliverableMap = {}
           for (const d of (deliverables || [])) { deliverableMap[d.type] = d }
-          const completedTypes = new Set(Object.keys(deliverableMap).filter(t => deliverableMap[t].status === 'completed'))
-          const needs = (project.needs || []).filter(n => !completedTypes.has(n))
-          return needs.length > 0 ? (
+          // Show all known deliverable types, driven by deliverables table not needs array
+          const ALL_TYPES = Object.keys(NEED_META)
+          const incomplete = ALL_TYPES.filter(t => deliverableMap[t]?.status !== 'completed')
+          const completed = ALL_TYPES.filter(t => deliverableMap[t]?.status === 'completed')
+          return incomplete.length > 0 ? (
             <div className="border border-[#1f521f] p-5 mt-6">
               <h3 className="text-[#33ff00] font-bold mb-1 text-sm">[ WHAT'S NEXT ]</h3>
-              <p className="text-[#1a6b1a] text-xs mb-4">Your app is live. Now build your company.</p>
+              <p className="text-[#1a6b1a] text-xs mb-4">Your app is live. Now build your company. ({completed.length}/{ALL_TYPES.length} complete)</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                {needs.map(need => {
-                  const meta = NEED_META[need] || { icon: '📦', label: need.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), desc: '' }
+                {incomplete.map(need => {
+                  const meta = NEED_META[need]
                   const del = deliverableMap[need]
                   const isGenerating = del?.status === 'pending' || del?.status === 'generating'
+                  const isFailed = del?.status === 'failed'
                   return (
                     <button
                       key={need}
@@ -470,13 +473,12 @@ export default function Dashboard() {
                             body: JSON.stringify({ need_type: need }),
                           })
                           if (r.ok) {
-                            // Refresh deliverables from Supabase
                             const { data: refreshed } = await supabase.from('deliverables').select('*').eq('project_id', project.id)
                             if (refreshed) setDeliverables(refreshed)
                           }
                         } catch (e) { console.error('Generate need failed:', e) }
                       }}
-                      className="border border-[#1f521f] p-3 hover:border-[#33ff00] transition-colors group text-left disabled:opacity-50"
+                      className={`border p-3 transition-colors group text-left disabled:opacity-50 ${isFailed ? 'border-red-500/30 hover:border-red-500' : 'border-[#1f521f] hover:border-[#33ff00]'}`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -485,6 +487,8 @@ export default function Dashboard() {
                         </div>
                         {isGenerating ? (
                           <span className="text-[8px] border border-[#ffb000]/40 text-[#ffb000] px-1.5 py-0.5 animate-pulse">GENERATING...</span>
+                        ) : isFailed ? (
+                          <span className="text-[8px] border border-red-500/40 text-red-500 px-1.5 py-0.5 group-hover:bg-red-500 group-hover:text-[#0a0a0a] transition-colors">RETRY →</span>
                         ) : (
                           <span className="text-[8px] border border-[#33ff00]/40 text-[#33ff00] px-1.5 py-0.5 group-hover:bg-[#33ff00] group-hover:text-[#0a0a0a] transition-colors">START →</span>
                         )}
