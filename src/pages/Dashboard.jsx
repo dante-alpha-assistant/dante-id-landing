@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [legacyOpen, setLegacyOpen] = useState(false)
   const [pipelineSteps, setPipelineSteps] = useState([])
   const [resuming, setResuming] = useState(false)
+  const [usage, setUsage] = useState(null)
 
   const [pipelineStatus, setPipelineStatus] = useState({
     refinery: { status: 'waiting', text: 'Waiting...' },
@@ -201,7 +202,11 @@ export default function Dashboard() {
   useEffect(() => {
     fetchPipelineStatus()
     fetchPipelineSteps()
-  }, [fetchPipelineStatus, fetchPipelineSteps])
+    // Fetch usage data
+    if (project?.id) {
+      apiCall('', `/api/projects/${project.id}/usage`).then(d => { if (d && !d.error) setUsage(d) }).catch(() => {})
+    }
+  }, [fetchPipelineStatus, fetchPipelineSteps, project?.id])
 
   // Auto-refresh pipeline steps every 5s when any step is running
   useEffect(() => {
@@ -506,6 +511,41 @@ export default function Dashboard() {
             </div>
           )
         })()}
+
+        {/* Cost Summary */}
+        {usage && usage.total_calls > 0 && (
+          <div className="border border-[#1f521f] p-5 mt-6">
+            <h3 className="text-[#33ff00] font-bold mb-3 text-sm">[ AI COSTS ]</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
+              <div>
+                <div className="text-[#1a6b1a] text-xs">Total Cost</div>
+                <div className="text-[#33ff00] text-lg font-bold">${usage.total_cost_usd?.toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-[#1a6b1a] text-xs">AI Calls</div>
+                <div className="text-[#33ff00] text-lg font-bold">{usage.total_calls}</div>
+              </div>
+              <div>
+                <div className="text-[#1a6b1a] text-xs">Input Tokens</div>
+                <div className="text-[#33ff00] text-lg font-bold">{(usage.total_input_tokens / 1000).toFixed(1)}K</div>
+              </div>
+              <div>
+                <div className="text-[#1a6b1a] text-xs">Output Tokens</div>
+                <div className="text-[#33ff00] text-lg font-bold">{(usage.total_output_tokens / 1000).toFixed(1)}K</div>
+              </div>
+            </div>
+            {usage.by_module && Object.keys(usage.by_module).length > 0 && (
+              <div className="text-xs space-y-1">
+                {Object.entries(usage.by_module).sort((a,b) => b[1].cost - a[1].cost).map(([mod, d]) => (
+                  <div key={mod} className="flex justify-between text-[#1a6b1a]">
+                    <span>{mod}</span>
+                    <span>${d.cost?.toFixed(4)} ({d.calls} calls)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bottom links */}
         <div className="flex gap-4 text-xs text-[#1a6b1a] mt-4">
