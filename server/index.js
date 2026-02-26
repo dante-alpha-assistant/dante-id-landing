@@ -2093,46 +2093,53 @@ app.post("/api/admin/rebuild", async (req, res) => {
   }
 });
 
-// --- Builder Watchdog: auto-fail stale builds ---
+// --- Builder Watchdog: auto-fail stale builds + unstick projects ---
 async function builderWatchdog() {
   const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   
-  // Find builds stuck in 'generating' for >15min
+  // 1. Find builds stuck in 'generating' for >15min
   const { data: staleBuilds } = await supabase
     .from("builds")
     .select("id, project_id, feature_id, updated_at")
     .eq("status", "generating")
     .lt("updated_at", fifteenMinAgo);
 
-  if (!staleBuilds?.length) return;
-
-  console.log(`[Watchdog] Found ${staleBuilds.length} stale builds`);
-  for (const b of staleBuilds) {
-    await supabase.from("builds").update({
-      status: "failed",
-      logs: [{ ts: new Date().toISOString(), msg: "Watchdog: build stale >15min, marked failed" }],
-      updated_at: new Date().toISOString(),
-    }).eq("id", b.id);
-    console.log(`[Watchdog] Marked build ${b.id} as failed (stale since ${b.updated_at})`);
+  if (staleBuilds?.length) {
+    console.log(`[Watchdog] Found ${staleBuilds.length} stale builds`);
+    for (const b of staleBuilds) {
+      await supabase.from("builds").update({
+        status: "failed",
+        logs: [{ ts: new Date().toISOString(), msg: "Watchdog: build stale >15min, marked failed" }],
+        updated_at: new Date().toISOString(),
+      }).eq("id", b.id);
+      console.log(`[Watchdog] Marked build ${b.id} as failed (stale since ${b.updated_at})`);
+    }
   }
 
-  // Check if any projects are stuck at 'building' with all builds done/failed
-  const projectIds = [...new Set(staleBuilds.map(b => b.project_id))];
-  for (const pid of projectIds) {
-    const { data: remaining } = await supabase.from("builds").select("id").eq("project_id", pid).eq("status", "generating");
-    if (!remaining?.length) {
-      // All builds done or failed — advance project
-      const { data: reviewBuilds } = await supabase.from("builds").select("id").eq("project_id", pid).eq("status", "review");
-      if (reviewBuilds?.length) {
-        console.log(`[Watchdog] Project ${pid}: ${reviewBuilds.length} builds complete, advancing to inspector`);
-        await supabase.from("projects").update({ status: "building" }).eq("id", pid);
-        fetch(`http://localhost:3001/api/inspector/run-all`, {
-          method: "POST",
-          headers: { "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({ project_id: pid }),
-        }).then(r => console.log(`[Watchdog→Inspector] ${pid}: ${r.status}`))
-          .catch(err => console.error(`[Watchdog→Inspector] ${pid} failed:`, err.message));
-      }
+  // 2. Find projects stuck at 'building' with all builds complete (no 'generating')
+  const { data: stuckProjects } = await supabase
+    .from("projects")
+    .select("id, name, updated_at")
+    .eq("status", "building")
+    .lt("updated_at", fifteenMinAgo);
+
+  for (const p of (stuckProjects || [])) {
+    const { data: generating } = await supabase.from("builds").select("id").eq("project_id", p.id).eq("status", "generating");
+    if (generating?.length) continue; // Still building, skip
+
+    const { data: reviewBuilds } = await supabase.from("builds").select("id").eq("project_id", p.id).eq("status", "review");
+    if (reviewBuilds?.length) {
+      console.log(`[Watchdog] Project ${p.id} (${p.name}): stuck at building but ${reviewBuilds.length} builds complete — advancing to inspector`);
+      await supabase.from("projects").update({ status: "building", updated_at: new Date().toISOString() }).eq("id", p.id);
+      fetch(`http://localhost:3001/api/inspector/run-all`, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: p.id }),
+      }).then(r => console.log(`[Watchdog→Inspector] ${p.id}: ${r.status}`))
+        .catch(err => console.error(`[Watchdog→Inspector] ${p.id} failed:`, err.message));
+    } else {
+      console.log(`[Watchdog] Project ${p.id} (${p.name}): stuck at building with no complete builds — marking failed`);
+      await supabase.from("projects").update({ status: "tested", stage: "builder", updated_at: new Date().toISOString() }).eq("id", p.id);
     }
   }
 }
