@@ -402,9 +402,13 @@ router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
   const headers = { Authorization: token, "Content-Type": "application/json" };
 
   try {
-    // 1. Generate PRD
+    // 1. Get project idea
+    const { data: project } = await supabase.from("projects").select("idea, description").eq("id", project_id).single();
+    const ideaText = idea || project?.idea || project?.description || "Build a software application";
+
+    // 2. Generate PRD
     console.log(`[Refinery All] Generating PRD for ${project_id}`);
-    const prdRes = await fetch(`${base}/generate-prd`, { method: "POST", headers, body: JSON.stringify({ project_id, idea }) });
+    const prdRes = await fetch(`${base}/generate-prd`, { method: "POST", headers, body: JSON.stringify({ project_id, idea_description: ideaText }) });
     const prdData = await prdRes.json().catch(() => ({}));
     const prdId = prdData?.prd?.id;
 
