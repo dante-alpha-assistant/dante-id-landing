@@ -41,11 +41,11 @@ export default function Pricing() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-md-background text-md-on-background">
       <div className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Simple, transparent pricing</h1>
-          <p className="text-gray-400 text-lg">Launch your startup with AI. Upgrade when you're ready to scale.</p>
+          <h1 className="text-4xl font-bold mb-4 text-md-on-background">Simple, transparent pricing</h1>
+          <p className="text-md-on-surface-variant text-lg">Launch your startup with AI. Upgrade when you're ready to scale.</p>
         </div>
 
         <PricingPlans
@@ -54,8 +54,8 @@ export default function Pricing() {
         />
 
         {!user && (
-          <p className="text-center text-gray-500 mt-8 text-sm">
-            <button onClick={() => navigate('/signup')} className="text-blue-400 hover:underline">
+          <p className="text-center text-md-on-surface-variant mt-8 text-sm">
+            <button onClick={() => navigate('/signup')} className="text-md-primary hover:underline">
               Sign up free
             </button>{' '}
             to get started

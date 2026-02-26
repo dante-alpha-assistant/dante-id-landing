@@ -96,22 +96,22 @@ export default function QADashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-mono">
-        <div className="text-[#33ff00] text-sm animate-pulse">▶ Loading QA Dashboard...</div>
+      <div className="min-h-screen bg-md-background flex items-center justify-center">
+        <div className="text-md-primary text-sm animate-pulse">Loading QA Dashboard...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-300 font-mono p-6">
+    <div className="min-h-screen bg-md-background text-md-on-background p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <button onClick={() => navigate(`/dashboard/${project_id}`)} className="text-zinc-600 text-xs hover:text-[#33ff00] mb-1">← Back to Dashboard</button>
-          <h1 className="text-[#33ff00] text-xl uppercase tracking-wider">QA Dashboard</h1>
-          <p className="text-zinc-600 text-xs">Project: {project_id}</p>
+          <button onClick={() => navigate(`/dashboard/${project_id}`)} className="text-md-on-surface-variant text-xs hover:text-md-primary mb-1 transition-colors">← Back to Dashboard</button>
+          <h1 className="text-md-on-background text-xl font-semibold tracking-tight">QA Dashboard</h1>
+          <p className="text-md-on-surface-variant text-xs">Project: {project_id}</p>
         </div>
-        <button onClick={load} className="px-3 py-1 text-xs uppercase border border-zinc-800 rounded-none text-zinc-500 hover:border-[#33ff00] hover:text-[#33ff00]">↻ Refresh</button>
+        <button onClick={load} className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 text-sm font-medium active:scale-95 transition-transform">↻ Refresh</button>
       </div>
 
       {/* Status Cards */}

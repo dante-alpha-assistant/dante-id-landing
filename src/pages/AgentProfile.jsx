@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 const statusDot = (online) => (
-  <span className={`inline-block w-2.5 h-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-red-500'}`} />
+  <span className={`inline-block w-2.5 h-2.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-400'}`} />
 )
 
 const priorityStyles = {
-  P0: 'text-red-400',
-  P1: 'text-orange-400',
-  P2: 'text-yellow-300',
-  P3: 'text-emerald-400'
+  P0: 'text-red-500',
+  P1: 'text-orange-500',
+  P2: 'text-yellow-600',
+  P3: 'text-emerald-600'
 }
 
 function formatDate(iso) {
@@ -324,14 +324,18 @@ export default function AgentProfile() {
     { key: 'done', title: 'Done' }
   ]
 
+  const inputClasses = "bg-md-background border border-md-border/30 rounded-md-sm px-3 py-2 text-sm text-md-on-background focus:outline-none focus:border-md-primary"
+  const btnOutline = "rounded-full border border-md-border/30 px-4 py-2 text-sm text-md-on-surface-variant hover:bg-md-surface-variant/50 transition-colors"
+  const btnPrimary = "rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 text-sm font-medium active:scale-95 transition-transform"
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#222]">
-        <span className="text-xl font-bold tracking-tight">dante.</span>
+    <div className="min-h-screen bg-md-background text-md-on-background">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-md-border/20">
+        <span className="text-xl font-semibold tracking-tight">dante.</span>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/fleet')}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-md-on-surface-variant hover:text-md-primary transition-colors"
           >
             Back to Fleet
           </button>
@@ -340,88 +344,88 @@ export default function AgentProfile() {
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
         {agent ? (
-          <div className="bg-white/5 border border-[#333] rounded-2xl p-6 space-y-6">
+          <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <div className="text-2xl font-semibold flex items-center gap-2">
+                <div className="text-2xl font-semibold flex items-center gap-2 text-md-on-background">
                   <span className="text-3xl">{agent.emoji}</span>
                   {agent.name}
                 </div>
-                <p className="text-gray-400 mt-1">{agent.role}</p>
-                <div className="text-sm text-gray-400 mt-3 space-y-1">
-                  <div>Model: <span className="text-gray-200">{agent.model}</span></div>
-                  <div>Host: <span className="text-gray-200">{agent.host}</span></div>
+                <p className="text-md-on-surface-variant mt-1">{agent.role}</p>
+                <div className="text-sm text-md-on-surface-variant mt-3 space-y-1">
+                  <div>Model: <span className="text-md-on-background">{agent.model}</span></div>
+                  <div>Host: <span className="text-md-on-background">{agent.host}</span></div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-300">
+              <div className="flex items-center gap-2 text-sm">
                 {statusDot(online)}
-                <span className={`px-3 py-1 rounded-full border ${online ? 'border-emerald-500/40 text-emerald-300' : 'border-red-500/40 text-red-300'}`}>
+                <span className={`px-3 py-1 rounded-full border ${online ? 'border-emerald-500/40 text-emerald-600' : 'border-red-400/40 text-red-500'}`}>
                   {online ? 'Online' : 'Offline'}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">Tasks Done</div>
-                <div className="text-xl font-semibold">{metrics.tasksCompleted}</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">Tasks Done</div>
+                <div className="text-xl font-semibold text-md-on-background">{metrics.tasksCompleted}</div>
               </div>
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">Messages (24h)</div>
-                <div className="text-xl font-semibold">{metrics.messagesSent}</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">Messages (24h)</div>
+                <div className="text-xl font-semibold text-md-on-background">{metrics.messagesSent}</div>
               </div>
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">Uptime %</div>
-                <div className="text-xl font-semibold">{metrics.uptime}%</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">Uptime %</div>
+                <div className="text-xl font-semibold text-md-on-background">{metrics.uptime}%</div>
               </div>
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">Last Seen</div>
-                <div className="text-xl font-semibold">{formatRelative(metrics.lastSeen)}</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">Last Seen</div>
+                <div className="text-xl font-semibold text-md-on-background">{formatRelative(metrics.lastSeen)}</div>
               </div>
             </div>
 
             <div>
-              <div className="text-sm text-gray-400 mb-2">Tasks completed (7d)</div>
+              <div className="text-sm text-md-on-surface-variant mb-2">Tasks completed (7d)</div>
               <div className="grid grid-cols-7 gap-2 items-end h-24">
                 {weeklyBars.days.map((day) => (
                   <div key={day.key} className="flex flex-col items-center gap-2">
-                    <div className="w-full bg-black/40 border border-[#333] rounded-md h-16 flex items-end">
+                    <div className="w-full bg-md-background rounded-md-sm h-16 flex items-end">
                       <div
-                        className="w-full bg-emerald-500/70 rounded-md"
+                        className="w-full bg-md-primary/70 rounded-md-sm"
                         style={{ height: `${(day.count / weeklyBars.max) * 100}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-gray-500">{day.label}</span>
+                    <span className="text-[10px] text-md-on-surface-variant">{day.label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">Backlog</div>
-                <div className="text-xl font-semibold">{stats.backlog}</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">Backlog</div>
+                <div className="text-xl font-semibold text-md-on-background">{stats.backlog}</div>
               </div>
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">In Progress</div>
-                <div className="text-xl font-semibold">{stats.in_progress}</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">In Progress</div>
+                <div className="text-xl font-semibold text-md-on-background">{stats.in_progress}</div>
               </div>
-              <div className="bg-black/30 border border-[#333] rounded-lg p-3">
-                <div className="text-gray-400">Done</div>
-                <div className="text-xl font-semibold">{stats.done}</div>
+              <div className="bg-md-background rounded-md-sm p-3">
+                <div className="text-md-on-surface-variant">Done</div>
+                <div className="text-xl font-semibold text-md-on-background">{stats.done}</div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-gray-400">Loading agent...</div>
+          <div className="text-md-on-surface-variant">Loading agent...</div>
         )}
 
-        <div className="bg-white/5 border border-[#333] rounded-2xl p-6">
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Task Board</h2>
+            <h2 className="text-lg font-semibold text-md-on-background">Task Board</h2>
             <button
               onClick={() => setShowForm((prev) => !prev)}
-              className="text-xs px-3 py-1.5 rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
+              className={btnOutline}
             >
               {showForm ? 'Close' : 'New Task'}
             </button>
@@ -430,19 +434,19 @@ export default function AgentProfile() {
           {showForm && (
             <form onSubmit={handleCreateTask} className="mb-6 grid gap-3 md:grid-cols-4">
               <input
-                className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                className={inputClasses}
                 placeholder="Task title"
                 value={formData.title}
                 onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
               />
               <input
-                className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                className={inputClasses}
                 placeholder="Short description"
                 value={formData.description}
                 onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
               />
               <select
-                className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                className={inputClasses}
                 value={formData.agentId || agentId}
                 onChange={(e) => setFormData((p) => ({ ...p, agentId: e.target.value }))}
               >
@@ -452,7 +456,7 @@ export default function AgentProfile() {
               </select>
               <div className="flex items-center gap-3">
                 <select
-                  className="flex-1 bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                  className={`flex-1 ${inputClasses}`}
                   value={formData.priority}
                   onChange={(e) => setFormData((p) => ({ ...p, priority: e.target.value }))}
                 >
@@ -461,44 +465,39 @@ export default function AgentProfile() {
                   <option value="P2">P2</option>
                   <option value="P3">P3</option>
                 </select>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500"
-                >
-                  Add
-                </button>
+                <button type="submit" className={btnPrimary}>Add</button>
               </div>
             </form>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {columns.map((col) => (
-              <div key={col.key} className="bg-black/30 border border-[#333] rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-gray-300 mb-3">{col.title}</h3>
+              <div key={col.key} className="bg-md-background rounded-md-sm p-4">
+                <h3 className="text-sm font-semibold text-md-on-surface-variant mb-3">{col.title}</h3>
                 <div className="space-y-3">
                   {tasks.filter((t) => t.status === col.key).map((task) => {
                     const isOpen = !!expanded[task.id]
                     return (
-                      <div key={task.id} className="bg-white/5 border border-[#333] rounded-lg p-3">
+                      <div key={task.id} className="bg-md-surface-container rounded-md-sm p-3 shadow-sm">
                         <button
                           onClick={() => setExpanded((p) => ({ ...p, [task.id]: !isOpen }))}
                           className="w-full text-left"
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-medium text-white">{task.title}</p>
-                              <p className={`text-xs ${priorityStyles[task.priority] || 'text-gray-400'}`}>{task.priority}</p>
+                              <p className="text-sm font-medium text-md-on-background">{task.title}</p>
+                              <p className={`text-xs ${priorityStyles[task.priority] || 'text-md-on-surface-variant'}`}>{task.priority}</p>
                             </div>
-                            <span className="text-xs text-gray-500">{formatDate(task.createdAt)}</span>
+                            <span className="text-xs text-md-on-surface-variant">{formatDate(task.createdAt)}</span>
                           </div>
                         </button>
                         {isOpen && (
-                          <div className="mt-3 text-xs text-gray-300 space-y-2">
+                          <div className="mt-3 text-xs text-md-on-surface-variant space-y-2">
                             <p>{task.description || 'No description provided.'}</p>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-500">Status:</span>
+                              <span className="text-md-on-surface-variant">Status:</span>
                               <select
-                                className="bg-black/40 border border-[#333] rounded px-2 py-1 text-xs"
+                                className={inputClasses + ' text-xs'}
                                 value={task.status}
                                 onChange={(e) => updateTask(task.id, { status: e.target.value })}
                               >
@@ -513,7 +512,7 @@ export default function AgentProfile() {
                     )
                   })}
                   {tasks.filter((t) => t.status === col.key).length === 0 && (
-                    <div className="text-xs text-gray-500">No tasks</div>
+                    <div className="text-xs text-md-on-surface-variant">No tasks</div>
                   )}
                 </div>
               </div>
@@ -521,23 +520,23 @@ export default function AgentProfile() {
           </div>
         </div>
 
-        <div className="bg-white/5 border border-[#333] rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-3">Activity Feed</h2>
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold mb-3 text-md-on-background">Activity Feed</h2>
           <div className="space-y-3">
             {activity.slice(0, activityLimit).map((item) => (
-              <div key={item.id} className="bg-black/30 border border-[#333] rounded-lg p-3 text-sm">
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+              <div key={item.id} className="bg-md-background rounded-md-sm p-3 text-sm">
+                <div className="flex items-center justify-between text-xs text-md-on-surface-variant mb-2">
                   <span>{formatRelative(item.timestamp)}</span>
                   <span>#{item.channel}</span>
                 </div>
-                <div className="text-gray-200 text-sm">
+                <div className="text-md-on-background text-sm">
                   {(item.content || '').slice(0, 200)}
                   {(item.content || '').length > 200 ? '…' : ''}
                 </div>
               </div>
             ))}
             {activity.length === 0 && (
-              <div className="bg-black/30 border border-[#333] rounded-lg p-4 text-sm text-gray-400">
+              <div className="bg-md-background rounded-md-sm p-4 text-sm text-md-on-surface-variant">
                 No activity yet.
               </div>
             )}
@@ -545,77 +544,77 @@ export default function AgentProfile() {
           {activity.length > activityLimit && (
             <button
               onClick={() => setActivityLimit((prev) => prev + 10)}
-              className="mt-4 text-xs px-3 py-1.5 rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
+              className={`mt-4 ${btnOutline}`}
             >
               Load more
             </button>
           )}
         </div>
 
-        <div className="bg-white/5 border border-[#333] rounded-2xl p-6">
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm">
           <button
             onClick={() => setShowMemory((prev) => !prev)}
             className="w-full flex items-center justify-between"
           >
-            <h2 className="text-lg font-semibold">Memory Viewer</h2>
-            <span className="text-sm text-gray-400">{showMemory ? 'Hide' : 'Show'}</span>
+            <h2 className="text-lg font-semibold text-md-on-background">Memory Viewer</h2>
+            <span className="text-sm text-md-on-surface-variant">{showMemory ? 'Hide' : 'Show'}</span>
           </button>
           {showMemory && (
-            <div className="mt-4 text-sm text-gray-300 space-y-6">
+            <div className="mt-4 text-sm text-md-on-surface-variant space-y-6">
               {memory?.available ? (
                 <>
                   <div>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-200 mb-2">SOUL.md</h3>
+                      <h3 className="text-sm font-semibold text-md-on-background mb-2">SOUL.md</h3>
                       <button
                         onClick={() => handleSaveMemory('SOUL.md', memoryEdits.soul)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
+                        className={btnOutline}
                       >
                         Save
                       </button>
                     </div>
                     <textarea
-                      className="w-full min-h-[160px] bg-black/30 border border-[#333] rounded-lg p-3 text-xs text-gray-300"
+                      className={`w-full min-h-[160px] ${inputClasses} text-xs`}
                       value={memoryEdits.soul}
                       onChange={(e) => setMemoryEdits((p) => ({ ...p, soul: e.target.value }))}
                     />
                   </div>
                   <div>
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-200 mb-2">MEMORY.md</h3>
+                      <h3 className="text-sm font-semibold text-md-on-background mb-2">MEMORY.md</h3>
                       <button
                         onClick={() => handleSaveMemory('MEMORY.md', memoryEdits.memory)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
+                        className={btnOutline}
                       >
                         Save
                       </button>
                     </div>
                     <textarea
-                      className="w-full min-h-[160px] bg-black/30 border border-[#333] rounded-lg p-3 text-xs text-gray-300"
+                      className={`w-full min-h-[160px] ${inputClasses} text-xs`}
                       value={memoryEdits.memory}
                       onChange={(e) => setMemoryEdits((p) => ({ ...p, memory: e.target.value }))}
                     />
                   </div>
                   {memorySaved && (
-                    <div className="text-xs text-emerald-400">{memorySaved}</div>
+                    <div className="text-xs text-emerald-600">{memorySaved}</div>
                   )}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-200 mb-2">Daily Notes</h3>
+                    <h3 className="text-sm font-semibold text-md-on-background mb-2">Daily Notes</h3>
                     <div className="space-y-3">
                       {dailyNotes.map((note) => (
-                        <div key={note.file} className="bg-black/30 border border-[#333] rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-2">{note.file}</div>
-                          <pre className="whitespace-pre-wrap text-xs text-gray-300">{note.content || 'Empty.'}</pre>
+                        <div key={note.file} className="bg-md-background rounded-md-sm p-3">
+                          <div className="text-xs text-md-on-surface-variant mb-2">{note.file}</div>
+                          <pre className="whitespace-pre-wrap text-xs text-md-on-background">{note.content || 'Empty.'}</pre>
                         </div>
                       ))}
                       {dailyNotes.length === 0 && (
-                        <div className="text-xs text-gray-500">No daily notes found.</div>
+                        <div className="text-xs text-md-on-surface-variant">No daily notes found.</div>
                       )}
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="bg-black/30 border border-[#333] rounded-lg p-4 text-sm text-gray-400">
+                <div className="bg-md-background rounded-md-sm p-4 text-sm text-md-on-surface-variant">
                   Remote agent — connect via gateway API.
                 </div>
               )}
@@ -623,25 +622,25 @@ export default function AgentProfile() {
           )}
         </div>
 
-        <div className="bg-white/5 border border-[#333] rounded-2xl p-6">
+        <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm">
           <button
             onClick={() => setShowCron((prev) => !prev)}
             className="w-full flex items-center justify-between"
           >
-            <h2 className="text-lg font-semibold">Cron Jobs</h2>
-            <span className="text-sm text-gray-400">{showCron ? 'Hide' : 'Show'}</span>
+            <h2 className="text-lg font-semibold text-md-on-background">Cron Jobs</h2>
+            <span className="text-sm text-md-on-surface-variant">{showCron ? 'Hide' : 'Show'}</span>
           </button>
           {showCron && (
             <div className="mt-4 space-y-4">
               <form onSubmit={handleCreateCron} className="grid gap-3 md:grid-cols-6">
                 <input
-                  className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm md:col-span-2"
+                  className={`${inputClasses} md:col-span-2`}
                   placeholder="Job name"
                   value={cronForm.name}
                   onChange={(e) => setCronForm((p) => ({ ...p, name: e.target.value }))}
                 />
                 <select
-                  className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                  className={inputClasses}
                   value={cronForm.scheduleKind}
                   onChange={(e) => setCronForm((p) => ({ ...p, scheduleKind: e.target.value }))}
                 >
@@ -650,7 +649,7 @@ export default function AgentProfile() {
                   <option value="at">At</option>
                 </select>
                 <input
-                  className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm md:col-span-2"
+                  className={`${inputClasses} md:col-span-2`}
                   placeholder={cronForm.scheduleKind === 'cron' ? 'Cron expression' : cronForm.scheduleKind === 'every' ? 'Every (ms)' : 'At (ISO)'}
                   value={cronForm.scheduleKind === 'cron' ? cronForm.expr : cronForm.scheduleKind === 'every' ? cronForm.everyMs : cronForm.at}
                   onChange={(e) => {
@@ -664,97 +663,82 @@ export default function AgentProfile() {
                   }}
                 />
                 <input
-                  className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm"
+                  className={inputClasses}
                   placeholder="Session target"
                   value={cronForm.sessionTarget}
                   onChange={(e) => setCronForm((p) => ({ ...p, sessionTarget: e.target.value }))}
                 />
                 <input
-                  className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-sm md:col-span-4"
+                  className={`${inputClasses} md:col-span-4`}
                   placeholder="Payload text"
                   value={cronForm.payloadText}
                   onChange={(e) => setCronForm((p) => ({ ...p, payloadText: e.target.value }))}
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 md:col-span-2"
+                  className={`${btnPrimary} md:col-span-2`}
                 >
                   Create
                 </button>
               </form>
 
               {cronLoading ? (
-                <div className="text-sm text-gray-400">Loading cron jobs...</div>
+                <div className="text-sm text-md-on-surface-variant">Loading cron jobs...</div>
               ) : (
                 <div className="space-y-3">
                   {cronJobs.length === 0 && (
-                    <div className="text-sm text-gray-500">No cron jobs found.</div>
+                    <div className="text-sm text-md-on-surface-variant">No cron jobs found.</div>
                   )}
                   {cronJobs.map((job) => (
-                    <div key={job.id || job.name} className="bg-black/30 border border-[#333] rounded-lg p-3 space-y-3">
+                    <div key={job.id || job.name} className="bg-md-background rounded-md-sm p-3 space-y-3">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div>
-                          <div className="text-sm font-semibold text-gray-100">{job.name || job.id}</div>
-                          <div className="text-xs text-gray-400">Schedule: {buildScheduleSummary(job.schedule || job.scheduleText)}</div>
-                          <div className="text-xs text-gray-500">Last run: {job.lastRun || job.last_run || '—'}</div>
+                          <div className="text-sm font-semibold text-md-on-background">{job.name || job.id}</div>
+                          <div className="text-xs text-md-on-surface-variant">Schedule: {buildScheduleSummary(job.schedule || job.scheduleText)}</div>
+                          <div className="text-xs text-md-on-surface-variant">Last run: {job.lastRun || job.last_run || '—'}</div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => handleToggleCron(job)}
-                            className={`px-3 py-1.5 text-xs rounded-full border ${job.enabled ? 'border-emerald-500/40 text-emerald-300' : 'border-red-500/40 text-red-300'}`}
+                            className={`px-3 py-1.5 text-xs rounded-full border ${job.enabled ? 'border-emerald-500/40 text-emerald-600' : 'border-red-400/40 text-red-500'}`}
                           >
                             {job.enabled ? 'Enabled' : 'Disabled'}
                           </button>
-                          <button
-                            onClick={() => handleRunCron(job)}
-                            className="px-3 py-1.5 text-xs rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
-                          >
-                            Run Now
-                          </button>
-                          <button
-                            onClick={() => setEditingCron(job)}
-                            className="px-3 py-1.5 text-xs rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
-                          >
-                            Edit
-                          </button>
+                          <button onClick={() => handleRunCron(job)} className={btnOutline + ' text-xs'}>Run Now</button>
+                          <button onClick={() => setEditingCron(job)} className={btnOutline + ' text-xs'}>Edit</button>
                           <button
                             onClick={() => handleDeleteCron(job.id)}
-                            className="px-3 py-1.5 text-xs rounded-full border border-red-500/40 text-red-300"
+                            className="px-3 py-1.5 text-xs rounded-full border border-red-400/40 text-red-500"
                           >
                             Delete
                           </button>
-                          <button
-                            onClick={() => loadCronHistory(job.id)}
-                            className="px-3 py-1.5 text-xs rounded-full border border-[#333] text-gray-200 hover:bg-white/10"
-                          >
-                            History
-                          </button>
+                          <button onClick={() => loadCronHistory(job.id)} className={btnOutline + ' text-xs'}>History</button>
                         </div>
                       </div>
 
                       {editingCron?.id === job.id && (
                         <div className="grid gap-2 md:grid-cols-5">
                           <input
-                            className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-xs md:col-span-2"
+                            className={`${inputClasses} text-xs md:col-span-2`}
                             placeholder="Name"
                             value={editingCron.name || ''}
                             onChange={(e) => setEditingCron((p) => ({ ...p, name: e.target.value }))}
                           />
                           <input
-                            className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-xs md:col-span-2"
+                            className={`${inputClasses} text-xs md:col-span-2`}
                             placeholder="Payload text"
                             value={editingCron?.payload?.text || ''}
                             onChange={(e) => setEditingCron((p) => ({ ...p, payload: { ...(p.payload || {}), kind: 'text', text: e.target.value } }))}
                           />
                           <input
-                            className="bg-black/40 border border-[#333] rounded-lg px-3 py-2 text-xs"
+                            className={`${inputClasses} text-xs`}
                             placeholder="Session target"
                             value={editingCron.sessionTarget || ''}
                             onChange={(e) => setEditingCron((p) => ({ ...p, sessionTarget: e.target.value }))}
                           />
                           <button
                             onClick={() => handleUpdateCron(job.id, { name: editingCron.name, payload: editingCron.payload, sessionTarget: editingCron.sessionTarget })}
-                            className="px-3 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 md:col-span-1"
+                            className={`${btnPrimary} text-xs md:col-span-1`}
                           >
                             Save
                           </button>
@@ -762,17 +746,17 @@ export default function AgentProfile() {
                       )}
 
                       {cronHistory[job.id] && (
-                        <div className="bg-black/40 border border-[#333] rounded-lg p-3 text-xs text-gray-300">
-                          <div className="text-gray-400 mb-2">Run history</div>
+                        <div className="bg-md-surface-container rounded-md-sm p-3 text-xs text-md-on-surface-variant">
+                          <div className="text-md-on-surface-variant mb-2">Run history</div>
                           <div className="space-y-1">
                             {cronHistory[job.id].map((run, idx) => (
                               <div key={idx} className="flex items-center justify-between">
                                 <span>{formatRelative(run?.timestamp || run?.ts)}</span>
-                                <span className="text-gray-500">{run?.status || run?.result || '—'}</span>
+                                <span className="text-md-on-surface-variant">{run?.status || run?.result || '—'}</span>
                               </div>
                             ))}
                             {cronHistory[job.id].length === 0 && (
-                              <div className="text-gray-500">No runs.</div>
+                              <div className="text-md-on-surface-variant">No runs.</div>
                             )}
                           </div>
                         </div>
