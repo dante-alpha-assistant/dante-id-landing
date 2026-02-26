@@ -65,6 +65,53 @@ router.post("/deploy", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "project_id is required" });
   }
 
+  // --- Internal project redirect ---
+  const { data: projectCheck } = await supabase
+    .from("projects")
+    .select("type, name")
+    .eq("id", project_id)
+    .single();
+
+  if (projectCheck?.type === "internal") {
+    console.log("[Deployer] Internal project " + project_id + " — redirecting to platform/apply");
+    try {
+      const applyRes = await fetch("http://localhost:3001/api/platform/apply", {
+        method: "POST",
+        headers: {
+          "Authorization": req.headers.authorization || ("Bearer " + process.env.SUPABASE_SERVICE_KEY),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ project_id })
+      });
+      const applyData = await applyRes.json();
+
+      if (applyData.success) {
+        await supabase.from("projects").update({ status: "live", stage: "launched" }).eq("id", project_id);
+        await supabase.from("deployments").insert({
+          project_id,
+          target: "github-pr",
+          status: "live",
+          url: applyData.pr_url,
+          vercel_url: applyData.pr_url,
+          logs: [
+            { message: "Internal project — created PR instead of Vercel deploy", timestamp: new Date().toLocaleTimeString() },
+            { message: "Branch: " + applyData.branch, timestamp: new Date().toLocaleTimeString() },
+            { message: "PR: " + applyData.pr_url, timestamp: new Date().toLocaleTimeString() },
+            { message: "Files: " + applyData.files_written, timestamp: new Date().toLocaleTimeString() },
+            { message: "[DONE]", timestamp: new Date().toLocaleTimeString() }
+          ]
+        });
+        return res.json({ success: true, deployment_type: "internal-pr", pr_url: applyData.pr_url, branch: applyData.branch, files_written: applyData.files_written });
+      } else {
+        throw new Error(applyData.error || "Platform apply failed");
+      }
+    } catch (err) {
+      console.error("[Deployer] Internal apply failed:", err.message);
+      return res.status(500).json({ error: "Internal deployment failed: " + err.message });
+    }
+  }
+  // --- End internal redirect ---
+
   const logs = [];
 
   try {
