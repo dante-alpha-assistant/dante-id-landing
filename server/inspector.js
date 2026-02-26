@@ -15,6 +15,17 @@ async function requireAuth(req, res, next) {
   }
 
   const token = authHeader.replace("Bearer ", "");
+
+  // Service key bypass for internal auto-advance calls
+  if (token === process.env.SUPABASE_SERVICE_KEY) {
+    const projectId = req.body.project_id || req.params.project_id;
+    if (projectId) {
+      const { data: proj } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+      if (proj) req.user = { id: proj.user_id, email: "system@dante.id" };
+    }
+    if (!req.user) req.user = { id: "system", email: "system@dante.id" };
+    return next();
+  }
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
@@ -275,10 +286,10 @@ Analyze each code file against the test specifications. Generate comprehensive t
 
     // Auto-advance: trigger deployer
     console.log(`[Inspector] Tests passed for ${project_id} — auto-advancing to deployer`);
-    const token = req.headers.authorization;
+    const autoToken = process.env.SUPABASE_SERVICE_KEY;
     fetch(`http://localhost:3001/api/deployer/deploy`, {
       method: "POST",
-      headers: { "Authorization": token, "Content-Type": "application/json" },
+      headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },
       body: JSON.stringify({ project_id }),
     }).then(async r => {
       console.log(`[Inspector→Deployer] Auto-advance response: ${r.status}`);

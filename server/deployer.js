@@ -14,6 +14,18 @@ async function requireAuth(req, res, next) {
   }
 
   const token = authHeader.replace("Bearer ", "");
+
+  // Service key bypass for internal auto-advance calls
+  if (token === process.env.SUPABASE_SERVICE_KEY) {
+    const projectId = req.body.project_id || req.params.project_id;
+    if (projectId) {
+      const { data: project } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+      if (project) req.user = { id: project.user_id, email: "system@dante.id" };
+    }
+    if (!req.user) req.user = { id: "system", email: "system@dante.id" };
+    return next();
+  }
+
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {

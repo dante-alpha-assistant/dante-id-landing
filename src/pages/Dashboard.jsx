@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [deliverablesLoaded, setDeliverablesLoaded] = useState(false)
   const [legacyOpen, setLegacyOpen] = useState(false)
   const [pipelineSteps, setPipelineSteps] = useState([])
+  const [resuming, setResuming] = useState(false)
 
   const [pipelineStatus, setPipelineStatus] = useState({
     refinery: { status: 'waiting', text: 'Waiting...' },
@@ -364,6 +365,31 @@ export default function Dashboard() {
             <div className="text-center py-3 text-[#33ff00] text-lg font-bold" style={glowStyle}>
               [ALL SYSTEMS OPERATIONAL] ✓
             </div>
+          )}
+
+          {/* Resume Pipeline button — unstick projects */}
+          {project.status && project.status !== 'live' && project.status !== 'completed' && (
+            <button
+              disabled={resuming}
+              onClick={async () => {
+                setResuming(true)
+                try {
+                  const { data: { session } } = await supabase.auth.getSession()
+                  await fetch(`/api/projects/${project.id}/resume`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                  })
+                  // Refresh project data
+                  const { data } = await supabase.from('projects').select('*').eq('id', project.id).single()
+                  if (data) setProject(data)
+                  fetchPipelineSteps()
+                } catch (e) { console.error('Resume failed:', e) }
+                setResuming(false)
+              }}
+              className="w-full mt-3 py-2 border border-[#ffb000] text-[#ffb000] text-sm hover:bg-[#ffb000] hover:text-[#0a0a0a] transition-colors disabled:opacity-50"
+            >
+              {resuming ? '[ RESUMING... ]' : '[ ⚡ RESUME PIPELINE → ]'}
+            </button>
           )}
 
           <div className="text-xs text-[#1a6b1a] mt-4">+{'─'.repeat(40)}+</div>

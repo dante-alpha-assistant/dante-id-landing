@@ -15,6 +15,17 @@ async function requireAuth(req, res, next) {
   }
 
   const token = authHeader.replace("Bearer ", "");
+
+  // Service key bypass for internal auto-advance calls
+  if (token === process.env.SUPABASE_SERVICE_KEY) {
+    const projectId = req.body.project_id || req.params.project_id;
+    if (projectId) {
+      const { data: proj } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+      if (proj) req.user = { id: proj.user_id, email: "system@dante.id" };
+    }
+    if (!req.user) req.user = { id: "system", email: "system@dante.id" };
+    return next();
+  }
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
@@ -397,7 +408,7 @@ router.put("/:project_id/features", requireAuth, async (req, res) => {
 router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
   const { project_id, idea } = req.body;
   if (!project_id) return res.status(400).json({ error: "project_id required" });
-  const token = req.headers.authorization;
+  const autoToken = process.env.SUPABASE_SERVICE_KEY;
   const base = "http://localhost:3001/api/refinery";
   const headers = { Authorization: token, "Content-Type": "application/json" };
 
@@ -428,10 +439,10 @@ router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
     console.log(`[Refinery All] Complete for ${project_id} — auto-advancing to foundry`);
 
     // Auto-advance to foundry
-    const token = req.headers.authorization;
+    const autoToken = process.env.SUPABASE_SERVICE_KEY;
     fetch(`http://localhost:3001/api/foundry/generate-all-architecture`, {
       method: "POST",
-      headers: { "Authorization": token, "Content-Type": "application/json" },
+      headers: { "Authorization": "Bearer " + autoToken, "Content-Type": "application/json" },
       body: JSON.stringify({ project_id }),
     }).then(r => console.log(`[Refinery→Foundry] Auto-advance: ${r.status}`))
       .catch(err => console.error(`[Refinery→Foundry] Auto-advance failed:`, err.message));
