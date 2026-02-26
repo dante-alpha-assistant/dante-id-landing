@@ -56,7 +56,7 @@ async function callAI(systemPrompt, userPrompt, maxRetries = 2) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => { console.log("[AI] Aborting after 180s"); controller.abort(); }, 180000);
+      const timeout = setTimeout(() => { console.log("[AI] Aborting after 300s"); controller.abort(); }, 300000);
       
       console.log('[AI] Attempt', attempt + 1, 'calling OpenRouter...');
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
