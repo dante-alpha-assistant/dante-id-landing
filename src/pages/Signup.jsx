@@ -32,17 +32,17 @@ export default function Signup() {
 
   if (confirmationSent) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 font-mono">
+      <div className="min-h-screen bg-md-background flex items-center justify-center px-4 font-sans">
         <div className="w-full max-w-md">
-          <div className="bg-[#0f0f0f] border border-[#1f521f] p-8 text-center space-y-4">
-            <div className="text-4xl text-[#33ff00]">✉</div>
-            <h2 className="text-xl font-bold text-[#33ff00]" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{'>'} CHECK YOUR EMAIL</h2>
-            <p className="text-[#22aa00] text-sm">
-              Confirmation link sent to <span className="text-[#33ff00] font-semibold">{email}</span>. Click it to activate your account.
+          <div className="bg-md-surface-container rounded-md-lg p-8 text-center space-y-4 shadow-sm">
+            <div className="text-4xl">✉️</div>
+            <h2 className="text-xl font-bold text-md-on-background">Check your email</h2>
+            <p className="text-md-on-surface-variant text-sm">
+              Confirmation link sent to <span className="text-md-primary font-semibold">{email}</span>. Click it to activate your account.
             </p>
-            <p className="text-[#1a6b1a] text-xs">Didn't receive it? Check your spam folder.</p>
-            <Link to="/login" className="inline-block mt-2 text-[#33ff00] hover:underline text-sm">
-              [ ← BACK TO LOGIN ]
+            <p className="text-md-on-surface-variant text-xs">Didn't receive it? Check your spam folder.</p>
+            <Link to="/login" className="inline-block mt-2 text-md-primary font-medium hover:underline text-sm">
+              ← Back to login
             </Link>
           </div>
         </div>
@@ -51,53 +51,53 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4 font-mono">
+    <div className="min-h-screen bg-md-background flex items-center justify-center px-4 font-sans">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <span className="text-3xl font-bold text-[#33ff00]" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>dante<span className="text-[#ffb000]">.id</span></span>
+            <span className="text-3xl font-bold text-md-primary">dante<span className="text-md-tertiary">.id</span></span>
           </Link>
-          <h1 className="text-2xl font-bold text-[#33ff00] mt-6" style={{ textShadow: '0 0 5px rgba(51, 255, 0, 0.5)' }}>{'>'} REGISTER</h1>
-          <p className="text-[#1a6b1a] mt-2 text-sm">Initialize new operator account</p>
+          <h1 className="text-2xl font-bold text-md-on-background mt-6">Create your account</h1>
+          <p className="text-md-on-surface-variant mt-2 text-sm">Get started with dante.id</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-[#0f0f0f] border border-[#1f521f] p-8 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-md-surface-container rounded-md-lg p-8 space-y-5 shadow-sm">
           {error && (
-            <div className="bg-[#0a0a0a] border border-red-500/30 px-4 py-3 text-red-400 text-sm font-mono">
-              [ERROR] {error}
+            <div className="bg-red-50 border border-red-200 rounded-md-sm px-4 py-3 text-red-600 text-sm">
+              {error}
             </div>
           )}
           <div>
-            <label className="block text-sm text-[#1a6b1a] mb-1.5">EMAIL</label>
+            <label className="block text-sm text-md-on-surface-variant mb-1.5">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#1f521f] text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] transition-colors font-mono caret-[#33ff00]"
+              className="w-full px-4 h-14 bg-md-surface-variant rounded-t-lg rounded-b-none border-b-2 border-md-border text-md-on-background placeholder-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors duration-300 ease-md-standard"
               placeholder="user@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm text-[#1a6b1a] mb-1.5">PASSWORD</label>
+            <label className="block text-sm text-md-on-surface-variant mb-1.5">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#1f521f] text-[#33ff00] placeholder-[#1a6b1a] focus:outline-none focus:border-[#33ff00] transition-colors font-mono caret-[#33ff00]"
+              className="w-full px-4 h-14 bg-md-surface-variant rounded-t-lg rounded-b-none border-b-2 border-md-border text-md-on-background placeholder-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors duration-300 ease-md-standard"
               placeholder="••••••••"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-transparent border border-[#33ff00] text-[#33ff00] font-mono font-medium hover:bg-[#33ff00] hover:text-[#0a0a0a] transition-colors disabled:opacity-50 uppercase"
+            className="w-full rounded-full bg-md-primary text-md-on-primary py-2.5 font-medium active:scale-95 transition-all duration-300 ease-md-standard hover:shadow-md disabled:opacity-50"
           >
-            {loading ? '[CREATING...]' : '[ CREATE ACCOUNT > ]'}
+            {loading ? 'Creating account...' : 'Create Account'}
           </button>
-          <p className="text-center text-sm text-[#1a6b1a]">
-            Already registered?{' '}
-            <Link to="/login" className="text-[#33ff00] hover:underline">[ LOGIN ]</Link>
+          <p className="text-center text-sm text-md-on-surface-variant">
+            Already have an account?{' '}
+            <Link to="/login" className="text-md-primary font-medium hover:underline">Sign in</Link>
           </p>
         </form>
       </div>
