@@ -22,12 +22,14 @@ export default function Iterate() {
   const [iterations, setIterations] = useState([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [project, setProject] = useState(null)
 
   useEffect(() => {
     apiFetch(`/${project_id}`).then(d => {
       setIterations(d.iterations || [])
       setLoading(false)
     })
+    supabase.from('projects').select('name,company_name,idea,deploy_url').eq('id', project_id).single().then(({ data }) => setProject(data))
   }, [project_id])
 
   // Poll for active iterations
@@ -70,9 +72,9 @@ export default function Iterate() {
     <div className="min-h-screen bg-[#0a0a0a] text-[#33ff00] font-mono">
       <header className="border-b border-[#1f521f] px-4 sm:px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-bold">dante.id <span className="text-[#22aa00] text-sm font-normal">// iterate</span></h1>
+          <h1 className="text-lg font-bold">dante.id <span className="text-[#22aa00] text-sm font-normal">// iterate // {project?.name || project?.company_name || 'Project'}</span></h1>
           <div className="flex gap-3">
-            <button onClick={() => navigate(`/deployer/${project_id}`)} className="text-[10px] border border-[#1f521f] px-3 py-1 hover:border-[#33ff00]">[ ← DEPLOYER ]</button>
+            <button onClick={() => navigate(`/dashboard/${project_id}`)} className="text-[10px] border border-[#1f521f] px-3 py-1 hover:border-[#33ff00]">[ ← {(project?.name || 'DASHBOARD').toUpperCase()} ]</button>
             <button onClick={() => navigate('/dashboard')} className="text-[10px] border border-[#1f521f] px-3 py-1 hover:border-[#33ff00]">[ DASHBOARD ]</button>
           </div>
         </div>
