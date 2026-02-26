@@ -333,10 +333,10 @@ router.post("/build-all", requireAuth, async (req, res) => {
     console.log(`[Builder] build-all complete for ${project_id}: ${results.length} features built — auto-advancing to inspector`);
 
     // Auto-advance to inspector
-    const token = req.headers.authorization;
+    const authToken = req.headers.authorization;
     fetch(`http://localhost:3001/api/inspector/run-tests`, {
       method: "POST",
-      headers: { "Authorization": token, "Content-Type": "application/json" },
+      headers: { "Authorization": authToken, "Content-Type": "application/json" },
       body: JSON.stringify({ project_id }),
     }).then(r => console.log(`[Builder→Inspector] Auto-advance: ${r.status}`))
       .catch(err => console.error(`[Builder→Inspector] Auto-advance failed:`, err.message));
