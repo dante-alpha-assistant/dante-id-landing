@@ -552,13 +552,16 @@ export default function Dashboard() {
         )}
 
         {/* Bottom links */}
-        <div className="flex gap-4 text-xs text-[#1a6b1a] mt-4">
+        <div className="flex gap-4 text-xs text-[#1a6b1a] mt-4 flex-wrap">
           <button onClick={() => navigate(`/analytics/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
             [ ANALYTICS ]
           </button>
           <button onClick={() => navigate(`/domains/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
             [ DOMAINS ]
           </button>
+          <a href={`/qa/${project.id}`} className="inline-block border border-[#1f521f] px-3 py-1 font-mono text-sm text-green-400 hover:bg-zinc-800 rounded-none transition-colors">
+            [ QA DASHBOARD → ]
+          </a>
         </div>
       </div>
 
