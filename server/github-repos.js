@@ -137,4 +137,206 @@ router.get("/repos", requireAuth, async (req, res) => {
   }
 });
 
+// --- POST /api/github/repos/:repo_id/enable --- Enable QA, register webhook
+router.post("/repos/:repo_id/enable", requireAuth, async (req, res) => {
+  try {
+    const repoId = parseInt(req.params.repo_id, 10);
+    if (isNaN(repoId)) {
+      return res.status(400).json({ error: "Invalid repo_id" });
+    }
+
+    const userId = req.user.id;
+    const tokenData = await getUserGitHubToken(userId);
+    if (!tokenData || !tokenData.token) {
+      return res.status(401).json({ error: "GitHub not connected" });
+    }
+
+    // Get repo details from GitHub
+    const repoRes = await fetch(`https://api.github.com/repositories/${repoId}`, {
+      headers: {
+        Authorization: `Bearer ${tokenData.token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      }
+    });
+
+    if (!repoRes.ok) {
+      const errorText = await repoRes.text().catch(() => "Unknown error");
+      console.error("GitHub API error fetching repo:", errorText);
+      return res.status(404).json({ error: "Repository not found" });
+    }
+
+    const repo = await repoRes.json();
+
+    // Register webhook with GitHub
+    const webhookRes = await fetch(`https://api.github.com/repos/${repo.full_name}/hooks`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${tokenData.token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      },
+      body: JSON.stringify({
+        name: "web",
+        config: {
+          url: "https://dante.id/api/webhooks/github",
+          content_type: "json"
+        },
+        events: ["pull_request"],
+        active: true
+      })
+    });
+
+    if (!webhookRes.ok) {
+      const errorText = await webhookRes.text().catch(() => "Unknown error");
+      console.error("GitHub webhook registration error:", errorText);
+      return res.status(500).json({ error: "Failed to register webhook" });
+    }
+
+    const webhook = await webhookRes.json();
+
+    // Upsert connected repo record
+    const { data: existing, error: existingError } = await supabase
+      .from("connected_repos")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("github_repo_id", repoId)
+      .single();
+
+    if (existingError && existingError.code !== "PGRST116") {
+      console.error("Database error checking existing repo:", existingError);
+    }
+
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from("connected_repos")
+        .update({
+          enabled: true,
+          webhook_id: webhook.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", existing.id);
+
+      if (updateError) {
+        console.error("Database error updating connected repo:", updateError);
+        return res.status(500).json({ error: "Failed to update repo status" });
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("connected_repos")
+        .insert({
+          user_id: userId,
+          github_repo_id: repoId,
+          full_name: repo.full_name,
+          webhook_id: webhook.id,
+          enabled: true
+        });
+
+      if (insertError) {
+        console.error("Database error inserting connected repo:", insertError);
+        return res.status(500).json({ error: "Failed to save repo status" });
+      }
+    }
+
+    // Clear cache
+    cache.delete(getCacheKey(userId));
+
+    res.json({
+      enabled: true,
+      repo_id: repoId,
+      full_name: repo.full_name,
+      webhook_id: webhook.id
+    });
+  } catch (err) {
+    console.error("Error enabling repo:", err.message);
+    res.status(500).json({ error: "Failed to enable repository" });
+  }
+});
+
+// --- POST /api/github/repos/:repo_id/disable --- Disable QA, remove webhook
+router.post("/repos/:repo_id/disable", requireAuth, async (req, res) => {
+  try {
+    const repoId = parseInt(req.params.repo_id, 10);
+    if (isNaN(repoId)) {
+      return res.status(400).json({ error: "Invalid repo_id" });
+    }
+
+    const userId = req.user.id;
+    const tokenData = await getUserGitHubToken(userId);
+    if (!tokenData || !tokenData.token) {
+      return res.status(401).json({ error: "GitHub not connected" });
+    }
+
+    // Get the connected repo record
+    const { data: connectedRepo, error: fetchError } = await supabase
+      .from("connected_repos")
+      .select("id, full_name, webhook_id")
+      .eq("user_id", userId)
+      .eq("github_repo_id", repoId)
+      .single();
+
+    if (fetchError && fetchError.code === "PGRST116") {
+      return res.status(404).json({ error: "Repository not connected" });
+    }
+
+    if (fetchError) {
+      console.error("Database error fetching connected repo:", fetchError);
+      return res.status(500).json({ error: "Failed to fetch repository status" });
+    }
+
+    if (!connectedRepo) {
+      return res.status(404).json({ error: "Repository not connected" });
+    }
+
+    // Remove webhook if exists
+    if (connectedRepo.webhook_id) {
+      const deleteRes = await fetch(
+        `https://api.github.com/repos/${connectedRepo.full_name}/hooks/${connectedRepo.webhook_id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28"
+          }
+        }
+      );
+
+      if (!deleteRes.ok && deleteRes.status !== 404) {
+        const errorText = await deleteRes.text().catch(() => "Unknown error");
+        console.error("GitHub webhook deletion error:", errorText);
+        // Continue anyway - webhook might already be deleted
+      }
+    }
+
+    // Update the record to disabled
+    const { error: updateError } = await supabase
+      .from("connected_repos")
+      .update({
+        enabled: false,
+        webhook_id: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", connectedRepo.id);
+
+    if (updateError) {
+      console.error("Database error updating connected repo:", updateError);
+      return res.status(500).json({ error: "Failed to update repo status" });
+    }
+
+    // Clear cache
+    cache.delete(getCacheKey(userId));
+
+    res.json({
+      enabled: false,
+      repo_id: repoId,
+      full_name: connectedRepo.full_name
+    });
+  } catch (err) {
+    console.error("Error disabling repo:", err.message);
+    res.status(500).json({ error: "Failed to disable repository" });
+  }
+});
+
 module.exports = router;
