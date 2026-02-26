@@ -251,12 +251,19 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
 
     // Fire and forget — don't wait for long AI operations
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-    console.log(`[Resume] Starting ${step.module} at ${step.endpoint} for project ${req.params.id}`);
+    const projectId = req.params.id;
+    console.log(`[Resume] Starting ${step.module} at ${step.endpoint} for project ${projectId}`);
+
+    // Fire with a long timeout (15 min) — builds can take 10+ min
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 900000); // 15 min
     fetch(`http://localhost:3001${step.endpoint}`, {
       method: "POST",
       headers: { "Authorization": "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: controller.signal,
     }).then(async r => {
+      clearTimeout(timer);
       const t = await r.text().catch(() => "");
       console.log(`[Resume] ${step.module} responded: ${r.status} ${t.slice(0, 300)}`);
       const ok = r.status >= 200 && r.status < 300;
@@ -267,15 +274,15 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
           error_message: ok ? null : t.slice(0, 500),
         }).eq("id", stepRow.id);
       }
-      // On failure, mark project so it's visible in UI
       if (!ok) {
-        console.error(`[Resume] ${step.module} failed for ${req.params.id}: ${t.slice(0, 300)}`);
+        console.error(`[Resume] ${step.module} failed for ${projectId}: ${t.slice(0, 300)}`);
         await supabase.from("projects").update({
           stage: step.module,
           updated_at: new Date().toISOString(),
-        }).eq("id", req.params.id);
+        }).eq("id", projectId);
       }
     }).catch(async err => {
+      clearTimeout(timer);
       console.error(`[Resume] ${step.module} FAILED:`, err.message);
       if (stepRow?.id) {
         await supabase.from("pipeline_steps").update({
