@@ -425,7 +425,16 @@ router.post("/generate-all", aiLimiter, requireAuth, async (req, res) => {
 
     // 3. Update status
     await supabase.from("projects").update({ status: "refining", stage: "building" }).eq("id", project_id);
-    console.log(`[Refinery All] Complete for ${project_id}`);
+    console.log(`[Refinery All] Complete for ${project_id} — auto-advancing to foundry`);
+
+    // Auto-advance to foundry
+    const token = req.headers.authorization;
+    fetch(`http://localhost:3001/api/foundry/generate-all-architecture`, {
+      method: "POST",
+      headers: { "Authorization": token, "Content-Type": "application/json" },
+      body: JSON.stringify({ project_id }),
+    }).then(r => console.log(`[Refinery→Foundry] Auto-advance: ${r.status}`))
+      .catch(err => console.error(`[Refinery→Foundry] Auto-advance failed:`, err.message));
 
     res.json({ success: true, prd_id: prdId });
   } catch (err) {

@@ -260,6 +260,17 @@ Generate work orders for this feature.`;
     }
 
     await supabase.from("projects").update({ status: "planning" }).eq("id", project_id);
+    console.log(`[Planner] Complete for ${project_id} — auto-advancing to builder`);
+
+    // Auto-advance to builder
+    const token = req.headers.authorization;
+    fetch(`http://localhost:3001/api/builder/build-all`, {
+      method: "POST",
+      headers: { "Authorization": token, "Content-Type": "application/json" },
+      body: JSON.stringify({ project_id }),
+    }).then(r => console.log(`[Planner→Builder] Auto-advance: ${r.status}`))
+      .catch(err => console.error(`[Planner→Builder] Auto-advance failed:`, err.message));
+
     return res.json({ count: totalGenerated, features_processed: eligible.length });
   } catch (err) {
     console.error("Generate all work orders error:", err.message);

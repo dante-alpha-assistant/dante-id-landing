@@ -472,7 +472,17 @@ router.post("/generate-all-architecture", aiLimiter, requireAuth, async (req, re
 
     // Update project status
     await supabase.from("projects").update({ status: "designed" }).eq("id", project_id);
-    console.log(`[Foundry All] Complete for ${project_id}`);
+    console.log(`[Foundry All] Complete for ${project_id} — auto-advancing to planner`);
+
+    // Auto-advance to planner
+    const token = req.headers.authorization;
+    fetch(`http://localhost:3001/api/planner/generate-all-work-orders`, {
+      method: "POST",
+      headers: { "Authorization": token, "Content-Type": "application/json" },
+      body: JSON.stringify({ project_id }),
+    }).then(r => console.log(`[Foundry→Planner] Auto-advance: ${r.status}`))
+      .catch(err => console.error(`[Foundry→Planner] Auto-advance failed:`, err.message));
+
     res.json({ success: true, message: "All architecture generated" });
   } catch (err) {
     console.error("[Foundry All] Error:", err.message);
