@@ -251,15 +251,16 @@ export default function Dashboard() {
   if (!project) return null
 
   // Compute pipeline progress
-  const doneCount = Object.values(pipelineStatus).filter(s => s.status === 'done').length
+  const isLive = project?.stage === 'launched' || project?.status === 'live'
+  const doneCount = isLive ? PIPELINE_STEPS.length : Object.values(pipelineStatus).filter(s => s.status === 'done').length
   const totalSteps = PIPELINE_STEPS.length
   const progressPct = Math.round((doneCount / totalSteps) * 100)
   const filledBars = Math.round((doneCount / totalSteps) * 20)
   const emptyBars = 20 - filledBars
   const progressBar = '█'.repeat(filledBars) + '░'.repeat(emptyBars)
 
-  // Find next step
-  const nextStepIdx = PIPELINE_STEPS.findIndex(s => pipelineStatus[s.key]?.status !== 'done')
+  // Find next step (none if live)
+  const nextStepIdx = isLive ? -1 : PIPELINE_STEPS.findIndex(s => pipelineStatus[s.key]?.status !== 'done')
   const nextStep = nextStepIdx >= 0 ? PIPELINE_STEPS[nextStepIdx] : null
 
   const statusIcon = (status) => {
@@ -312,7 +313,7 @@ export default function Dashboard() {
       <div className="max-w-3xl mx-auto mt-10 px-4 pb-16">
 
         {/* Pipeline Timeline */}
-        <PipelineTimeline steps={pipelineSteps} projectId={project.id} onRefresh={fetchPipelineSteps} />
+        <PipelineTimeline steps={pipelineSteps} projectId={project.id} onRefresh={fetchPipelineSteps} project={project} />
 
         {/* Pipeline Card */}
         <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 mb-8">
@@ -332,7 +333,7 @@ export default function Dashboard() {
           {/* Steps */}
           <div className="space-y-3 mb-8">
             {PIPELINE_STEPS.map((step, idx) => {
-              const st = pipelineStatus[step.key] || { status: 'waiting', text: 'Waiting...' }
+              const st = isLive ? { status: 'done', text: 'Complete' } : (pipelineStatus[step.key] || { status: 'waiting', text: 'Waiting...' })
               return (
                 <div key={step.key} className="flex items-center gap-3">
                   <span className="text-[#1a6b1a] text-sm w-4">{idx + 1}.</span>

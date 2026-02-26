@@ -25,7 +25,8 @@ function formatTime(ts) {
   return new Date(ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-export default function PipelineTimeline({ steps, projectId, onRefresh }) {
+export default function PipelineTimeline({ steps, projectId, onRefresh, project }) {
+  const isLive = project?.stage === 'launched' || project?.status === 'live'
   const [retrying, setRetrying] = useState(null)
 
   const stepMap = {}
@@ -66,7 +67,7 @@ export default function PipelineTimeline({ steps, projectId, onRefresh }) {
       <div className="relative ml-4">
         {STAGES.map((stage, idx) => {
           const step = stepMap[stage]
-          const status = step?.status || 'pending'
+          const status = isLive ? 'completed' : (step?.status || 'pending')
           const icon = STATUS_ICONS[status]
           const isLast = idx === STAGES.length - 1
 
@@ -105,8 +106,8 @@ export default function PipelineTimeline({ steps, projectId, onRefresh }) {
                     )}
                   </div>
 
-                  {/* Error message + retry */}
-                  {status === 'failed' && (
+                  {/* Error message + retry (hidden on live projects) */}
+                  {status === 'failed' && !isLive && (
                     <div className="mt-1">
                       {step?.error_message && (
                         <div className="text-xs text-[#ff3333] break-all">
