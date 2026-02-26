@@ -431,8 +431,52 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* What's Next — post-launch growth */}
+        {project?.stage === 'launched' && (() => {
+          const NEED_META = {
+            brand_identity: { icon: '🎨', label: 'Brand Identity', desc: 'Logo, colors, typography, brand guidelines' },
+            landing_page: { icon: '🌐', label: 'Landing Page', desc: 'Marketing site with hero, features, CTA' },
+            business_plan: { icon: '📊', label: 'Business Plan', desc: 'Market analysis, revenue model, projections' },
+            legal_docs: { icon: '⚖️', label: 'Legal Docs', desc: 'Terms of service, privacy policy, disclaimers' },
+            growth_strategy: { icon: '🚀', label: 'Growth Strategy', desc: 'Acquisition channels, retention loops, metrics' },
+            pitch_deck: { icon: '📈', label: 'Pitch Deck', desc: 'Investor-ready slides with financials' },
+            competitor_analysis: { icon: '🔍', label: 'Competitor Analysis', desc: 'Market landscape, differentiation, SWOT' },
+            personal_brand: { icon: '👤', label: 'Personal Brand', desc: 'Founder positioning, social presence' },
+          }
+          const completedTypes = new Set((deliverables || []).filter(d => d.status === 'completed').map(d => d.type))
+          const needs = (project.needs || []).filter(n => !completedTypes.has(n))
+          return needs.length > 0 ? (
+            <div className="border border-[#1f521f] p-5 mt-6">
+              <h3 className="text-[#33ff00] font-bold mb-1 text-sm">[ WHAT'S NEXT ]</h3>
+              <p className="text-[#1a6b1a] text-xs mb-4">Your app is live. Now build your company.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {needs.map(need => {
+                  const meta = NEED_META[need] || { icon: '📦', label: need.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), desc: '' }
+                  return (
+                    <div key={need} className="border border-[#1f521f] p-3 hover:border-[#33ff00] transition-colors group">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <span className="text-lg mr-2">{meta.icon}</span>
+                          <span className="text-sm text-[#33ff00] font-bold">{meta.label}</span>
+                        </div>
+                        <span className="text-[8px] border border-[#ffb000]/40 text-[#ffb000] px-1.5 py-0.5">COMING SOON</span>
+                      </div>
+                      <p className="text-[#1a6b1a] text-xs mt-1">{meta.desc}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="border border-[#1f521f] p-5 mt-6 text-center">
+              <p className="text-[#33ff00] text-sm">All caught up! 🎉</p>
+              <p className="text-[#1a6b1a] text-xs mt-1">Every deliverable has been generated.</p>
+            </div>
+          )
+        })()}
+
         {/* Bottom links */}
-        <div className="flex gap-4 text-xs text-[#1a6b1a]">
+        <div className="flex gap-4 text-xs text-[#1a6b1a] mt-4">
           <button onClick={() => navigate(`/analytics/${project.id}`)} className="hover:text-[#33ff00] transition-colors">
             [ ANALYTICS ]
           </button>
