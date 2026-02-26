@@ -6,6 +6,7 @@ import DeliverableCard from '../components/DeliverableCard'
 import CofounderChat from '../components/CofounderChat'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import DomainManager from '../components/DomainManager'
+import PipelineTimeline from '../components/PipelineTimeline'
 
 async function apiCall(base, path) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -38,6 +39,8 @@ export default function Dashboard() {
   const [expanded, setExpanded] = useState({})
   const [deliverablesLoaded, setDeliverablesLoaded] = useState(false)
   const [legacyOpen, setLegacyOpen] = useState(false)
+  const [pipelineSteps, setPipelineSteps] = useState([])
+
   const [pipelineStatus, setPipelineStatus] = useState({
     refinery: { status: 'waiting', text: 'Waiting...' },
     foundry: { status: 'waiting', text: 'Waiting...' },
@@ -186,9 +189,26 @@ export default function Dashboard() {
     }
   }, [project])
 
+  const fetchPipelineSteps = useCallback(async () => {
+    if (!project) return
+    try {
+      const data = await apiCall('', `/api/projects/${project.id}/pipeline-steps`)
+      if (data?.steps) setPipelineSteps(data.steps)
+    } catch {}
+  }, [project])
+
   useEffect(() => {
     fetchPipelineStatus()
-  }, [fetchPipelineStatus])
+    fetchPipelineSteps()
+  }, [fetchPipelineStatus, fetchPipelineSteps])
+
+  // Auto-refresh pipeline steps every 5s when any step is running
+  useEffect(() => {
+    const hasRunning = pipelineSteps.some(s => s.status === 'running')
+    if (!hasRunning) return
+    const interval = setInterval(fetchPipelineSteps, 5000)
+    return () => clearInterval(interval)
+  }, [pipelineSteps, fetchPipelineSteps])
 
   // Initial fetch + trigger generation only if truly empty
   useEffect(() => {
@@ -289,6 +309,9 @@ export default function Dashboard() {
 
       {/* Content */}
       <div className="max-w-3xl mx-auto mt-10 px-4 pb-16">
+
+        {/* Pipeline Timeline */}
+        <PipelineTimeline steps={pipelineSteps} projectId={project.id} onRefresh={fetchPipelineSteps} />
 
         {/* Pipeline Card */}
         <div className="border border-[#1f521f] bg-[#0f0f0f] p-6 mb-8">

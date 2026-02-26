@@ -241,6 +241,14 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
 
     const token = req.headers.authorization;
 
+    // Log pipeline step start
+    const { data: stepRow } = await supabase.from("pipeline_steps").insert({
+      project_id: req.params.id,
+      step: step.module,
+      status: "running",
+      started_at: new Date().toISOString(),
+    }).select().single();
+
     // Fire and forget — don't wait for long AI operations
     console.log(`[Resume] Starting ${step.module} at ${step.endpoint} for project ${req.params.id}`);
     fetch(`http://localhost:3001${step.endpoint}`, {
@@ -250,7 +258,24 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
     }).then(async r => {
       const t = await r.text().catch(() => "");
       console.log(`[Resume] ${step.module} responded: ${r.status} ${t.slice(0, 300)}`);
-    }).catch(err => console.error(`[Resume] ${step.module} FAILED:`, err.message));
+      if (stepRow?.id) {
+        const ok = r.status >= 200 && r.status < 300;
+        await supabase.from("pipeline_steps").update({
+          status: ok ? "completed" : "failed",
+          completed_at: new Date().toISOString(),
+          error_message: ok ? null : t.slice(0, 500),
+        }).eq("id", stepRow.id);
+      }
+    }).catch(async err => {
+      console.error(`[Resume] ${step.module} FAILED:`, err.message);
+      if (stepRow?.id) {
+        await supabase.from("pipeline_steps").update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+          error_message: err.message,
+        }).eq("id", stepRow.id);
+      }
+    });
 
     return res.json({
       resumed: true,
@@ -259,6 +284,69 @@ app.post("/api/projects/:id/resume", requireAuth, async (req, res) => {
       module: step.module,
       message: `${step.module} started. Poll GET /api/projects to check status.`,
     });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- GET /api/projects/:id/pipeline-steps ---
+app.get("/api/projects/:id/pipeline-steps", requireAuth, async (req, res) => {
+  try {
+    const { data: project } = await supabase.from("projects").select("id").eq("id", req.params.id).eq("user_id", req.user.id).single();
+    if (!project) return res.status(404).json({ error: "Project not found" });
+    const { data, error } = await supabase.from("pipeline_steps").select("*").eq("project_id", req.params.id).order("started_at", { ascending: true, nullsFirst: false });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ steps: data || [] });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// --- POST /api/projects/:id/retry-step ---
+app.post("/api/projects/:id/retry-step", requireAuth, async (req, res) => {
+  try {
+    const { step: stepName } = req.body;
+    if (!stepName) return res.status(400).json({ error: "step is required" });
+    const { data: project } = await supabase.from("projects").select("*").eq("id", req.params.id).eq("user_id", req.user.id).single();
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const endpoints = {
+      refinery: "/api/refinery/generate-all",
+      foundry: "/api/foundry/generate-all-architecture",
+      planner: "/api/planner/generate-all-work-orders",
+      builder: "/api/builder/build-all",
+      inspector: "/api/inspector/run-tests",
+      deployer: "/api/deployer/deploy",
+    };
+    const endpoint = endpoints[stepName];
+    if (!endpoint) return res.status(400).json({ error: "Invalid step" });
+
+    // Update existing failed step or insert new
+    const { data: existing } = await supabase.from("pipeline_steps").select("id").eq("project_id", req.params.id).eq("step", stepName).eq("status", "failed").order("created_at", { ascending: false }).limit(1).single();
+    let stepId;
+    if (existing) {
+      await supabase.from("pipeline_steps").update({ status: "running", started_at: new Date().toISOString(), completed_at: null, error_message: null }).eq("id", existing.id);
+      stepId = existing.id;
+    } else {
+      const { data: newStep } = await supabase.from("pipeline_steps").insert({ project_id: req.params.id, step: stepName, status: "running", started_at: new Date().toISOString() }).select().single();
+      stepId = newStep?.id;
+    }
+
+    const token = req.headers.authorization;
+    const body = { project_id: req.params.id };
+    fetch(`http://localhost:3001${endpoint}`, {
+      method: "POST",
+      headers: { "Authorization": token, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(async r => {
+      const t = await r.text().catch(() => "");
+      const ok = r.status >= 200 && r.status < 300;
+      if (stepId) await supabase.from("pipeline_steps").update({ status: ok ? "completed" : "failed", completed_at: new Date().toISOString(), error_message: ok ? null : t.slice(0, 500) }).eq("id", stepId);
+    }).catch(async err => {
+      if (stepId) await supabase.from("pipeline_steps").update({ status: "failed", completed_at: new Date().toISOString(), error_message: err.message }).eq("id", stepId);
+    });
+
+    return res.json({ retrying: true, step: stepName });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
