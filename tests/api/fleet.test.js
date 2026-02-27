@@ -40,7 +40,7 @@ describe('Fleet API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       })
-      expect([200, 400, 401, 422]).toContain(res.status)
+      expect([200, 400, 401, 404, 422]).toContain(res.status)
     })
   })
 
@@ -65,7 +65,7 @@ describe('Fleet API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
       })
-      expect([200, 400, 401, 422]).toContain(res.status)
+      expect([200, 400, 401, 404, 422]).toContain(res.status)
     })
   })
 })

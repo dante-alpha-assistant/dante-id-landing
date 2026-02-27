@@ -40,8 +40,8 @@ describe('Auth API', () => {
   })
 
   describe('GET /api/auth/github/callback', () => {
-    it('returns 400 or 401 without proper params', async () => {
-      const res = await fetch(`${BASE}/api/auth/github/callback`)
+    it('returns redirect or error without proper params', async () => {
+      const res = await fetch(`${BASE}/api/auth/github/callback`, { redirect: 'manual' })
       expect([400, 401, 404, 302]).toContain(res.status)
     })
   })
