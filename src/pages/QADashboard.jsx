@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import QAStatusCard from '../components/qa/QAStatusCard'
+import TrendSparkline from '../components/qa/TrendSparkline'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -63,14 +64,89 @@ function MiniBar({ value, max = 100, color = 'bg-emerald-500' }) {
   )
 }
 
+/* ── Mock data generators ── */
+const MOCK_COVERAGE_FILES = [
+  { path: 'src/index.js', coverage: 95, covered: 190, total: 200 },
+  { path: 'src/utils/auth.js', coverage: 72, covered: 108, total: 150 },
+  { path: 'src/api/client.js', coverage: 88, covered: 220, total: 250 },
+  { path: 'src/components/App.jsx', coverage: 64, covered: 96, total: 150 },
+  { path: 'src/hooks/useData.js', coverage: 91, covered: 182, total: 200 },
+  { path: 'src/services/worker.js', coverage: 55, covered: 55, total: 100 },
+  { path: 'lib/helpers.js', coverage: 83, covered: 166, total: 200 },
+]
+
+const MOCK_LOG_LINES = [
+  '> dante-id@1.0.0 test',
+  '> node --experimental-vm-modules node_modules/.bin/jest --coverage',
+  '',
+  'PASS src/__tests__/utils.test.js',
+  '  ✓ parseConfig returns defaults (3 ms)',
+  '  ✓ validateInput rejects empty string (1 ms)',
+  '  ✓ formatDate handles ISO strings (2 ms)',
+  '',
+  'PASS src/__tests__/api.test.js',
+  '  ✓ fetchProjects returns array (12 ms)',
+  '  ✓ handleError logs to console (1 ms)',
+  '',
+  'FAIL src/__tests__/auth.test.js',
+  '  ✕ login with invalid creds returns 401 (5 ms)',
+  '  ✓ login with valid creds returns token (8 ms)',
+  '  ✕ refresh token handles expiry (3 ms)',
+  '',
+  '  ● login with invalid creds returns 401',
+  '    Error: expected 401 but received 500',
+  '      at Object.<anonymous> (src/__tests__/auth.test.js:15:5)',
+  '',
+  'PASS src/__tests__/components.test.js',
+  '  ✓ renders dashboard without crashing (45 ms)',
+  '  ✓ status badge shows correct color (2 ms)',
+  '',
+  'FAIL src/__tests__/build.test.js',
+  '  ✕ build output includes sourcemaps (3 ms)',
+  '',
+  '  ● build output includes sourcemaps',
+  '    Error: sourcemap file not found',
+  '      at Object.<anonymous> (src/__tests__/build.test.js:8:5)',
+  '',
+  '> eslint src/ --ext .js,.jsx',
+  '  /src/utils/auth.js',
+  '    12:5  error  Unexpected var, use let or const  no-var',
+  '    45:10 error  \'unused\' is defined but never used  no-unused-vars',
+  '',
+  '✨ 2 errors and 0 warnings found.',
+  '',
+  'Test Suites: 2 failed, 3 passed, 5 total',
+  'Tests:       3 failed, 7 passed, 10 total',
+  'Snapshots:   0 total',
+  'Time:        4.231 s',
+  'Ran all test suites.',
+  '',
+  '> vite build',
+  'vite v5.0.0 building for production...',
+  '✓ 127 modules transformed.',
+  'dist/index.html          0.46 kB │ gzip: 0.30 kB',
+  'dist/assets/index.css   12.34 kB │ gzip: 3.21 kB',
+  'dist/assets/index.js   145.67 kB │ gzip: 47.89 kB',
+  '✓ built in 2.34s',
+]
+
+function generateTrendData() {
+  return Array.from({ length: 7 }, () => Math.floor(Math.random() * 30) + 70)
+}
+
 /* ── Slide-out Detail Panel ── */
 function ProjectPanel({ projectId, onClose }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [historyFilter, setHistoryFilter] = useState('all')
+  const [expandedRun, setExpandedRun] = useState(null)
+  const [logSearch, setLogSearch] = useState('')
 
   useEffect(() => {
     if (!projectId) return
     setLoading(true)
+    setActiveTab('overview')
     apiFetch(`/api/qa/global/project/${projectId}`)
       .then(setDetail)
       .catch(err => console.error('Detail load error:', err))
@@ -78,6 +154,21 @@ function ProjectPanel({ projectId, onClose }) {
   }, [projectId])
 
   if (!projectId) return null
+
+  const tabs = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'history', label: 'History' },
+    { key: 'coverage', label: 'Coverage' },
+    { key: 'logs', label: 'Logs' },
+  ]
+
+  const filteredRuns = detail?.runs?.filter(r => {
+    if (historyFilter === 'passing') return r.build_status === 'success'
+    if (historyFilter === 'failing') return r.build_status === 'failure'
+    return true
+  }) || []
+
+  const logLines = MOCK_LOG_LINES.filter(l => !logSearch || l.toLowerCase().includes(logSearch.toLowerCase()))
 
   return (
     <>
@@ -90,80 +181,209 @@ function ProjectPanel({ projectId, onClose }) {
           <button onClick={onClose} className="text-md-on-surface-variant hover:text-md-on-background text-xl leading-none">✕</button>
         </div>
 
+        {/* Tab Bar */}
+        {!loading && detail && (
+          <div className="sticky top-[57px] bg-md-surface-container z-10 flex border-b border-md-outline-variant px-6">
+            {tabs.map(t => (
+              <button key={t.key} onClick={() => setActiveTab(t.key)}
+                className={`px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === t.key ? 'border-b-2 border-emerald-500 text-md-on-surface' : 'text-md-on-surface-variant hover:text-md-on-surface'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="p-6 text-md-on-surface-variant text-sm animate-pulse">Loading project details…</div>
         ) : !detail ? (
           <div className="p-6 text-md-on-surface-variant text-sm">Failed to load project data.</div>
         ) : (
           <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Build Status</div>
-                <StatusBadge status={detail.latest?.build_status} />
-              </div>
-              <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Project Status</div>
-                <span className="text-md-on-background text-sm font-medium">{detail.project?.status || '—'}</span>
-              </div>
-              <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Tests</div>
-                <span className={`text-lg font-bold ${detail.latest?.test_failed === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {detail.latest?.test_passed ?? '—'}/{detail.latest?.test_total ?? '—'}
-                </span>
-                {detail.latest?.test_total > 0 && (
-                  <span className="text-md-on-surface-variant text-xs ml-2">
-                    ({Math.round((detail.latest.test_passed / detail.latest.test_total) * 100)}%)
-                  </span>
-                )}
-              </div>
-              <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Coverage</div>
-                <span className={`text-lg font-bold ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {detail.latest?.test_coverage != null ? `${detail.latest.test_coverage}%` : '—'}
-                </span>
-              </div>
-              <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Lint Errors</div>
-                <span className={`text-lg font-bold ${detail.latest?.lint_errors === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {detail.latest?.lint_errors ?? '—'}
-                </span>
-              </div>
-              <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Total Runs</div>
-                <span className="text-lg font-bold text-md-on-background">{detail.run_count}</span>
-              </div>
-            </div>
+            {/* ── Overview Tab ── */}
+            {activeTab === 'overview' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
+                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Build Status</div>
+                    <StatusBadge status={detail.latest?.build_status} />
+                  </div>
+                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
+                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Project Status</div>
+                    <span className="text-md-on-background text-sm font-medium">{detail.project?.status || '—'}</span>
+                  </div>
+                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
+                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Tests</div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg font-bold ${detail.latest?.test_failed === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {detail.latest?.test_passed ?? '—'}/{detail.latest?.test_total ?? '—'}
+                      </span>
+                      {detail.latest?.test_total > 0 && (
+                        <span className="text-md-on-surface-variant text-xs">
+                          ({Math.round((detail.latest.test_passed / detail.latest.test_total) * 100)}%)
+                        </span>
+                      )}
+                    </div>
+                    <TrendSparkline data={generateTrendData()} color={detail.latest?.test_failed === 0 ? 'emerald' : 'red'} />
+                  </div>
+                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
+                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Coverage</div>
+                    <span className={`text-lg font-bold ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {detail.latest?.test_coverage != null ? `${detail.latest.test_coverage}%` : '—'}
+                    </span>
+                    <TrendSparkline data={generateTrendData()} color={(detail.latest?.test_coverage ?? 0) >= 80 ? 'emerald' : 'amber'} />
+                  </div>
+                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
+                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Lint Errors</div>
+                    <span className={`text-lg font-bold ${detail.latest?.lint_errors === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {detail.latest?.lint_errors ?? '—'}
+                    </span>
+                    <TrendSparkline data={generateTrendData()} color={detail.latest?.lint_errors === 0 ? 'emerald' : 'amber'} />
+                  </div>
+                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
+                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Total Runs</div>
+                    <span className="text-lg font-bold text-md-on-background">{detail.run_count}</span>
+                    <TrendSparkline data={generateTrendData()} />
+                  </div>
+                </div>
 
-            {detail.project?.repo_url && (
-              <a href={detail.project.repo_url} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-md-primary text-sm hover:underline">
-                ↗ View on GitHub
-              </a>
+                {detail.project?.repo_url && (
+                  <a href={detail.project.repo_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-md-primary text-sm hover:underline">
+                    ↗ View on GitHub
+                  </a>
+                )}
+
+                <div>
+                  <h3 className="text-md-on-background text-sm font-semibold mb-3">CI Run History</h3>
+                  {detail.runs.length === 0 ? (
+                    <p className="text-md-on-surface-variant text-xs">No CI runs recorded yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {detail.runs.map((run, i) => (
+                        <div key={run.id || i} className={`flex items-center gap-3 px-3 py-2 rounded-md-lg text-xs ${run.build_status === 'failure' ? 'bg-red-500/10 border border-red-500/20' : 'bg-md-surface-container-high'}`}>
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${run.build_status === 'success' ? 'bg-emerald-500' : run.build_status === 'failure' ? 'bg-red-500' : 'bg-zinc-500'}`} />
+                          <span className="text-md-on-surface-variant w-36 flex-shrink-0">{new Date(run.created_at).toLocaleString()}</span>
+                          <span className="text-md-on-background flex-shrink-0">
+                            {run.test_passed}/{run.test_total} tests
+                          </span>
+                          {run.test_total > 0 && <MiniBar value={run.test_passed} max={run.test_total} color={run.test_failed === 0 ? 'bg-emerald-500' : 'bg-red-500'} />}
+                          <span className="text-md-on-surface-variant ml-auto flex-shrink-0">
+                            {run.test_coverage != null ? `${run.test_coverage}% cov` : ''}
+                          </span>
+                          {run.lint_errors > 0 && <span className="text-amber-400 flex-shrink-0">{run.lint_errors} lint</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
-            <div>
-              <h3 className="text-md-on-background text-sm font-semibold mb-3">CI Run History</h3>
-              {detail.runs.length === 0 ? (
-                <p className="text-md-on-surface-variant text-xs">No CI runs recorded yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {detail.runs.map((run, i) => (
-                    <div key={run.id || i} className={`flex items-center gap-3 px-3 py-2 rounded-md-lg text-xs ${run.build_status === 'failure' ? 'bg-red-500/10 border border-red-500/20' : 'bg-md-surface-container-high'}`}>
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${run.build_status === 'success' ? 'bg-emerald-500' : run.build_status === 'failure' ? 'bg-red-500' : 'bg-zinc-500'}`} />
-                      <span className="text-md-on-surface-variant w-36 flex-shrink-0">{new Date(run.created_at).toLocaleString()}</span>
-                      <span className="text-md-on-background flex-shrink-0">
-                        {run.test_passed}/{run.test_total} tests
-                      </span>
-                      {run.test_total > 0 && <MiniBar value={run.test_passed} max={run.test_total} color={run.test_failed === 0 ? 'bg-emerald-500' : 'bg-red-500'} />}
-                      <span className="text-md-on-surface-variant ml-auto flex-shrink-0">
-                        {run.test_coverage != null ? `${run.test_coverage}% cov` : ''}
-                      </span>
-                      {run.lint_errors > 0 && <span className="text-amber-400 flex-shrink-0">{run.lint_errors} lint</span>}
-                    </div>
+            {/* ── History Tab ── */}
+            {activeTab === 'history' && (
+              <>
+                <div className="flex gap-2 mb-4">
+                  {['all', 'passing', 'failing'].map(f => (
+                    <button key={f} onClick={() => setHistoryFilter(f)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${historyFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'bg-md-surface-container-high text-md-on-surface-variant hover:text-md-on-surface'}`}>
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
                   ))}
                 </div>
-              )}
-            </div>
+                <div className="bg-md-surface-container rounded-md-lg overflow-hidden border border-md-outline-variant">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-md-on-surface-variant uppercase tracking-wider border-b border-md-outline-variant">
+                        <th className="text-left px-3 py-2">Run #</th>
+                        <th className="text-left px-3 py-2">Date</th>
+                        <th className="text-center px-3 py-2">Status</th>
+                        <th className="text-center px-3 py-2">Tests</th>
+                        <th className="text-right px-3 py-2">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRuns.map((run, i) => (
+                        <Fragment key={run.id || i}>
+                          <tr className={`border-b border-md-outline-variant/50 cursor-pointer hover:bg-md-surface-container-high transition-colors ${run.build_status === 'failure' ? 'bg-red-500/5' : ''}`}
+                            onClick={() => setExpandedRun(expandedRun === i ? null : i)}>
+                            <td className="px-3 py-2 text-md-on-background font-mono">#{filteredRuns.length - i}</td>
+                            <td className="px-3 py-2 text-md-on-surface-variant">{new Date(run.created_at).toLocaleString()}</td>
+                            <td className="px-3 py-2 text-center"><StatusBadge status={run.build_status} /></td>
+                            <td className="px-3 py-2 text-center text-md-on-background">{run.test_passed}/{run.test_total}</td>
+                            <td className="px-3 py-2 text-right text-md-on-surface-variant">{run.duration ? `${run.duration}s` : '~4s'}</td>
+                          </tr>
+                          {expandedRun === i && run.build_status === 'failure' && (
+                            <tr>
+                              <td colSpan={5} className="px-3 py-2 bg-red-500/5 text-red-400 text-xs">
+                                Failed tests: test_auth, test_build{run.test_failed > 2 ? `, test_integration (+${run.test_failed - 3} more)` : ''}
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))}
+                      {filteredRuns.length === 0 && (
+                        <tr><td colSpan={5} className="px-3 py-6 text-center text-md-on-surface-variant">No runs match this filter.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* ── Coverage Tab ── */}
+            {activeTab === 'coverage' && (
+              <>
+                <div className="text-center py-4">
+                  <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-2">Overall Coverage</div>
+                  <span className={`text-5xl font-bold ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {detail.latest?.test_coverage != null ? `${detail.latest.test_coverage}%` : '—'}
+                  </span>
+                </div>
+                {detail.latest?.test_coverage != null ? (
+                  <div className="bg-md-surface-container rounded-md-lg overflow-hidden border border-md-outline-variant">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-md-on-surface-variant uppercase tracking-wider border-b border-md-outline-variant">
+                          <th className="text-left px-3 py-2">File Path</th>
+                          <th className="text-center px-3 py-2">Coverage %</th>
+                          <th className="text-right px-3 py-2">Lines</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {MOCK_COVERAGE_FILES.map((f, i) => (
+                          <tr key={i} className="border-b border-md-outline-variant/50">
+                            <td className={`px-3 py-2 font-mono ${f.coverage < 80 ? 'text-red-400' : 'text-md-on-background'}`}>{f.path}</td>
+                            <td className={`px-3 py-2 text-center font-medium ${f.coverage < 80 ? 'text-red-400' : 'text-emerald-400'}`}>{f.coverage}%</td>
+                            <td className="px-3 py-2 text-right text-md-on-surface-variant">{f.covered}/{f.total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-md-on-surface-variant text-sm text-center">Coverage data not available for this project</p>
+                )}
+              </>
+            )}
+
+            {/* ── Logs Tab ── */}
+            {activeTab === 'logs' && (
+              <>
+                <input type="text" placeholder="Search logs…" value={logSearch} onChange={e => setLogSearch(e.target.value)}
+                  className="w-full bg-md-surface-container-high border border-md-outline-variant rounded-md-lg px-3 py-2 text-sm text-md-on-background placeholder:text-md-on-surface-variant focus:outline-none focus:border-emerald-500 mb-3" />
+                <div className="bg-zinc-900 text-zinc-100 font-mono text-xs p-4 rounded-lg overflow-auto max-h-[60vh]">
+                  {logLines.map((line, i) => {
+                    const isError = /error|Error|FAIL/.test(line)
+                    const isPass = /pass|PASS|✓/.test(line)
+                    return (
+                      <div key={i} className={`${isError ? 'bg-red-900/30' : ''} ${isPass ? 'text-emerald-400' : ''}`}>
+                        {line || '\u00A0'}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
