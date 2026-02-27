@@ -7,6 +7,18 @@ const { repairJson } = require("./generate");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// --- Internal project context fetcher ---
+async function getInternalContext() {
+  try {
+    const res = await fetch("http://localhost:3001/api/platform/context");
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.log("[Builder] Failed to fetch platform context:", e.message);
+    return null;
+  }
+}
+
 // --- Auth middleware (same pattern as foundry.js) ---
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -171,6 +183,59 @@ Return JSON: {
   "setup_instructions": "npm install && npm run dev (set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env)"
 }`;
 
+const INTERNAL_CODE_GEN_SYSTEM = `You are a senior full-stack engineer adding a feature to an EXISTING React + Express + Supabase application (dante.id).
+
+CRITICAL: You are NOT building a new app. You are generating NEW files that integrate into an existing codebase.
+
+EXISTING CODEBASE:
+- Frontend: React 19 + Vite 7 + Tailwind 3 (JSX, not TSX)
+- Backend: Express API on port 3001 (server/*.js files)
+- Database: Supabase (tables and RLS already configured)
+- Styling: Material You (MD3) design system — see design tokens below
+- Auth: Supabase Auth with ProtectedRoute component
+
+DO NOT GENERATE THESE FILES (they already exist):
+- index.html, package.json, vite.config.*, tsconfig.json
+- tailwind.config.*, postcss.config.*
+- src/App.jsx, src/main.jsx, src/index.css
+- .env, .env.example, vercel.json
+- src/lib/supabase.ts (use existing import patterns)
+
+ONLY GENERATE:
+- New components: src/components/YourComponent.jsx
+- New pages: src/pages/YourPage.jsx
+- New hooks: src/hooks/useYourHook.js
+- New contexts: src/contexts/YourContext.jsx
+- New API routes: server/your-route.js
+- New migrations: supabase/migrations/NNN_your_migration.sql
+
+FILE FORMAT: Use .jsx for components/pages (NOT .tsx). Use .js for server files.
+
+IMPORT PATTERNS (use these exact patterns from the existing codebase):
+- Supabase: Use the supabase client from the route's own createClient() call (server-side) or useAuth() context (client-side)
+- Auth: import { useAuth } from '../contexts/AuthContext'
+- Router: import { useNavigate, useParams, Link } from 'react-router-dom'
+- Protected routes: Wrap in <ProtectedRoute> in App.jsx (you won't modify App.jsx — document what route to add)
+
+STYLING: Material You (MD3) design tokens:
+- Primary: bg-md-primary (#6750A4), text-md-on-primary
+- Surface: bg-md-surface-container (#F3EDF7), bg-md-background (#FFFBFE)
+- Cards: bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md
+- Buttons: rounded-full bg-md-primary text-md-on-primary px-6 py-2.5
+- Inputs: rounded-t-lg rounded-b-none border-b-2 border-md-border bg-md-surface-variant h-14
+- Font: font-sans (Roboto)
+
+INTEGRATION NOTES:
+- Include a "setup_instructions" field explaining what manual wiring is needed (e.g., "Add route to App.jsx", "Mount router in index.js")
+- Reference existing components when possible (don't recreate what exists)
+- Max 8 files per feature — focused, minimal additions
+
+Return JSON: {
+  "files": [{"path": "relative/path/to/file.ext", "content": "file content", "language": "jsx|js|json|sql"}],
+  "summary": "What was generated and how it integrates with the existing codebase",
+  "setup_instructions": "Manual steps needed: 1. Add <Route path='/x' element={<X/>}/> to App.jsx  2. Mount router in index.js"
+}`;
+
 // --- POST /generate-code ---
 router.post("/generate-code", requireAuth, async (req, res) => {
   const { feature_id, project_id, work_order_id } = req.body;
@@ -201,10 +266,10 @@ router.post("/generate-code", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Blueprint not found. Generate a blueprint in Foundry first." });
     }
 
-    // Fetch project + PRD for context
+    // Fetch project + PRD for context (include type for internal project detection)
     const { data: project } = await supabase
       .from("projects")
-      .select("*")
+      .select("*, type")
       .eq("id", project_id)
       .single();
 
@@ -302,9 +367,27 @@ Generate concise, working code for this feature. Focus on core logic, keep files
       }
     } catch (_) {}
 
-    const fullPrompt = userPrompt + manifestContext;
+    let fullPrompt = userPrompt + manifestContext;
+
+    // Inject codebase context for internal projects
+    let systemPrompt = CODE_GEN_SYSTEM;
+    if (project.type === 'internal') {
+      systemPrompt = INTERNAL_CODE_GEN_SYSTEM;
+      const platformCtx = await getInternalContext();
+      if (platformCtx) {
+        const ctxSummary = `\n\nEXISTING CODEBASE CONTEXT:\n` +
+          `Frontend Routes: ${JSON.stringify(platformCtx.frontend_routes)}\n` +
+          `API Routes: ${JSON.stringify(platformCtx.api_routes?.map(r => r.method + ' ' + r.path))}\n` +
+          `Database Tables: ${JSON.stringify(platformCtx.database_schema?.map(t => t.name))}\n` +
+          `Project Files: ${JSON.stringify(platformCtx.project_structure)}\n` +
+          `Design System: ${JSON.stringify(platformCtx.design_system)}\n`;
+        fullPrompt += ctxSummary;
+      }
+      console.log('[Builder] Using INTERNAL system prompt for project type:', project.type);
+    }
+
     console.log('[Builder] Calling AI for feature:', feature.name, manifestContext ? `(${manifestContext.split('\n').length - 4} existing files)` : '(no prior builds)');
-    const result = await callAI(CODE_GEN_SYSTEM, fullPrompt);
+    const result = await callAI(systemPrompt, fullPrompt);
     console.log('[Builder] AI returned, files:', (result.files || []).length, 'keys:', Object.keys(result).join(','));
 
     let files = result.files || [];
