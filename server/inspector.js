@@ -281,6 +281,26 @@ Analyze each code file against the test specifications. Generate comprehensive t
       return res.json({ test_result: inserted, summary: aiResult.summary, blockers });
     }
 
+    // Record test run history
+    try {
+      await fetch("http://localhost:3001/api/qa/record-test-run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id,
+          feature_id,
+          results: results.map(r => ({
+            test_name: r.test_name,
+            status: r.status,
+            category: r.category,
+            details: r.details
+          }))
+        })
+      });
+    } catch (e) {
+      console.log("[Inspector] Failed to record test history:", e.message);
+    }
+
     // Update project status (run-all handles auto-advance to deployer)
     await supabase.from("projects").update({ status: "tested" }).eq("id", project_id);
 

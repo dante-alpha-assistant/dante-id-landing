@@ -48,6 +48,7 @@ export default function QAProjectDetail() {
   const [error, setError] = useState(null)
   const [retrying, setRetrying] = useState(false)
   const [failures, setFailures] = useState(null)
+  const [flakyTests, setFlakyTests] = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -63,6 +64,7 @@ export default function QAProjectDetail() {
         setSparklines(await sparkRes.json())
       }
       fetch(`${API_BASE}/api/qa/global/project/${project_id}/failures`).then(r => r.json()).then(setFailures).catch(() => {})
+      fetch(`${API_BASE}/api/qa/flaky-tests/${project_id}`).then(r => r.json()).then(d => setFlakyTests(d.flaky_tests || [])).catch(() => {})
     } catch (e) {
       setError(e.message)
     } finally {
@@ -226,6 +228,37 @@ export default function QAProjectDetail() {
             <LogsTab projectId={project_id} />
           </TabPanel>
         </Tabs>
+
+        {/* Flaky Tests Section */}
+        <div className="mt-6 bg-zinc-800 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-amber-400 mb-3">🔀 Flaky Tests</h3>
+          {flakyTests === null ? (
+            <p className="text-zinc-400 text-sm">Loading...</p>
+          ) : flakyTests.length === 0 ? (
+            <p className="text-zinc-400 text-sm">No flaky tests detected</p>
+          ) : (
+            <div className="space-y-2">
+              {flakyTests.map((t, i) => (
+                <div key={i} className="flex items-center justify-between bg-zinc-700 rounded p-3">
+                  <div className="flex-1">
+                    <span className="text-white text-sm font-medium">{t.test_name}</span>
+                    {t.category && (
+                      <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-300">{t.category}</span>
+                    )}
+                    <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-300">
+                      {t.flip_count} flip{t.flip_count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-4">
+                    {t.last_5_statuses.map((s, j) => (
+                      <span key={j} className={`w-3 h-3 rounded-full ${s === 'pass' ? 'bg-green-500' : s === 'fail' ? 'bg-red-500' : 'bg-yellow-500'}`} title={s} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -911,4 +911,75 @@ router.get("/global/project/:project_id/sparkline", async (req, res) => {
   }
 });
 
+// POST /api/qa/record-test-run — record test run history
+router.post("/record-test-run", async (req, res) => {
+  try {
+    const { project_id, feature_id, results } = req.body;
+    if (!project_id || !Array.isArray(results) || results.length === 0) {
+      return res.status(400).json({ error: "project_id and results[] required" });
+    }
+    const rows = results.map(r => ({
+      project_id,
+      feature_id: feature_id || null,
+      test_name: r.test_name,
+      status: r.status,
+      category: r.category || null,
+      details: r.details || null,
+    }));
+    const { error } = await supabase.from("test_run_history").insert(rows);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ recorded: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/qa/flaky-tests/:project_id — detect flaky tests
+router.get("/flaky-tests/:project_id", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+    const { data, error } = await supabase
+      .from("test_run_history")
+      .select("test_name, status, category, run_at")
+      .eq("project_id", pid)
+      .order("run_at", { ascending: false })
+      .limit(5000);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Group by test_name, keep last 5
+    const grouped = {};
+    for (const row of (data || [])) {
+      if (!grouped[row.test_name]) grouped[row.test_name] = [];
+      if (grouped[row.test_name].length < 5) {
+        grouped[row.test_name].push(row);
+      }
+    }
+
+    const flaky_tests = [];
+    for (const [test_name, runs] of Object.entries(grouped)) {
+      const statuses = runs.map(r => r.status);
+      const hasPass = statuses.includes("pass");
+      const hasFail = statuses.includes("fail");
+      if (hasPass && hasFail) {
+        let flips = 0;
+        for (let i = 1; i < statuses.length; i++) {
+          if (statuses[i] !== statuses[i - 1]) flips++;
+        }
+        flaky_tests.push({
+          test_name,
+          category: runs[0].category,
+          flip_count: flips,
+          last_5_statuses: statuses,
+          last_run: runs[0].run_at,
+        });
+      }
+    }
+
+    res.json({ flaky_tests });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
