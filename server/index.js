@@ -136,6 +136,7 @@ app.use("/api/foundry", require("./foundry"));
 app.use("/api/planner", require("./planner"));
 
 // --- Builder module ---
+app.use("/api/builder-v2", require("./builder-v2"));
 app.use("/api/builder", require("./builder"));
 
 // --- Inspector module ---
