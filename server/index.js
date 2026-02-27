@@ -2116,9 +2116,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+const { initSelfImproveCron } = require("./cron-self-improve");
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  initSelfImproveCron(app);
 });
 
 // --- POST /api/admin/retry-failed — batch retry all stuck projects ---
