@@ -22,7 +22,7 @@ const app = express();
 
 // --- CORS: only allow dante.id ---
 app.use(cors({
-  origin: ["https://dante.id", "http://localhost:5173"],
+  origin: ["https://dante.id", "https://app.dante.id", "https://api.dante.id", "http://localhost:5173"],
   methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
   credentials: true
 }));
