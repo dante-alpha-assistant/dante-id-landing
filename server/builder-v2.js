@@ -224,20 +224,45 @@ async function pollAgentCompletion(buildId, agents, projectId, featureId) {
       try {
         const historyRes = await openclawInvoke("sessions_history", {
           sessionKey: agent.sessionKey,
-          limit: 5,
+          limit: 20,
+          includeTools: true,
         });
         
         // /tools/invoke wraps result in { ok, result: { details } }
         const msgs = historyRes?.result?.details?.messages || historyRes?.messages || [];
         if (msgs.length > 0) {
-          const lastMsg = msgs[msgs.length - 1];
-          if (lastMsg?.role === 'assistant' && lastMsg?.content) {
-            const textContent = typeof lastMsg.content === 'string' ? lastMsg.content :
-              (Array.isArray(lastMsg.content) ? lastMsg.content.find?.(c => c.type === 'text')?.text : '');
-            if (textContent) {
-              agent.completed = true;
-              agent.output = textContent;
+          // Extract files from write tool calls
+          const toolFiles = [];
+          for (const msg of msgs) {
+            const content = Array.isArray(msg.content) ? msg.content : [];
+            for (const c of content) {
+              if (c.type === 'toolCall' && (c.name === 'write' || c.name === 'Write')) {
+                const args = c.arguments || {};
+                const path = args.path || args.file_path || '';
+                const fileContent = args.content || '';
+                if (path && fileContent && path.includes('/') && !path.startsWith(',')) {
+                  // Strip workspace prefix
+                  const cleanPath = path.replace(/^\/root\/\.openclaw\/workspace\//, '');
+                  toolFiles.push({ path: cleanPath, content: fileContent });
+                }
+              }
             }
+          }
+          
+          // Check if agent is done (last msg from assistant without pending tool calls)
+          const lastMsg = msgs[msgs.length - 1];
+          const hasToolCalls = Array.isArray(lastMsg?.content) && 
+            lastMsg.content.some(c => c.type === 'toolCall');
+          const hasAssistantText = lastMsg?.role === 'assistant' && !hasToolCalls;
+          
+          if (hasAssistantText || (msgs.length >= 3 && toolFiles.length > 0)) {
+            agent.completed = true;
+            agent.toolFiles = toolFiles;
+            const textContent = Array.isArray(lastMsg?.content) ? 
+              lastMsg.content.find?.(c => c.type === 'text')?.text : 
+              (typeof lastMsg?.content === 'string' ? lastMsg.content : '');
+            agent.output = textContent || '';
+            console.log(`[Builder-v2] Agent "${agent.workOrder}" completed: ${toolFiles.length} files from tool calls`);
           }
         }
       } catch (e) {
@@ -263,9 +288,17 @@ async function pollAgentCompletion(buildId, agents, projectId, featureId) {
   const allTests = [];
   
   for (const agent of agents) {
+    // Extract files from tool call write operations (primary method)
+    if (agent.toolFiles?.length > 0) {
+      for (const f of agent.toolFiles) {
+        const isTest = /test|spec/i.test(f.path);
+        (isTest ? allTests : allFiles).push(f);
+      }
+    }
+    
+    // Also try extracting from text output (fallback)
     if (agent.output) {
       try {
-        // Try JSON summary first
         const jsonMatch = agent.output.match(/```json\n([\s\S]*?)\n```/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[1]);
@@ -273,24 +306,22 @@ async function pollAgentCompletion(buildId, agents, projectId, featureId) {
           if (parsed.tests) allTests.push(...parsed.tests);
           continue;
         }
-      } catch (e) { /* JSON parse failed, try code blocks */ }
+      } catch (e) { /* JSON parse failed */ }
 
-      // Extract code blocks with file paths: ```lang\n// path/file.ext or ```lang path/file.ext
       const codeBlockRegex = /```(\w+)?[\s]*(?:\/\/\s*)?([^\n]*?\.\w+)\n([\s\S]*?)```/g;
       let match;
       while ((match = codeBlockRegex.exec(agent.output)) !== null) {
-        const lang = match[1] || '';
         const path = match[2].trim().replace(/^\/\/\s*/, '').replace(/^#\s*/, '');
         const content = match[3];
-        if (path && content && path.includes('/') || path.includes('.')) {
+        if (path && content && (path.includes('/') || path.includes('.'))) {
           const isTest = /test|spec/i.test(path);
           (isTest ? allTests : allFiles).push({ path, content });
         }
       }
-      
-      if (allFiles.length === 0 && allTests.length === 0) {
-        console.log(`[Builder-v2] Agent "${agent.workOrder}": completed but no files extracted (output: ${agent.output.length} chars)`);
-      }
+    }
+    
+    if (!agent.toolFiles?.length && !agent.output) {
+      console.log(`[Builder-v2] Agent "${agent.workOrder}": no output or files`);
     }
   }
   
