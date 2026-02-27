@@ -5,6 +5,17 @@ const crypto = require("crypto");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Platform CI project ID — used when "dashboard" is passed as project_id
+const PLATFORM_CI_PROJECT = "91607ad6-bacc-4ea9-8d58-007d984016f2";
+
+// Rewrite "dashboard" to platform CI project
+router.use("/:project_id", (req, res, next) => {
+  if (req.params.project_id === "dashboard") {
+    req.params.project_id = PLATFORM_CI_PROJECT;
+  }
+  next();
+});
+
 // --- Auth middleware (copied from refinery.js) ---
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
