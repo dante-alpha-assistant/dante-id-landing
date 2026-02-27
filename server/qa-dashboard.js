@@ -1145,4 +1145,41 @@ router.get("/global/project/:project_id/code-context", async (req, res) => {
   }
 });
 
+// GET /api/qa/builds/:project_id — builds with agent work order details
+router.get("/builds/:project_id", async (req, res) => {
+  try {
+    const { data: builds } = await supabase
+      .from("builds")
+      .select("id, project_id, feature_id, status, files, logs, metadata, created_at, updated_at")
+      .eq("project_id", req.params.project_id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    // Enrich with feature names
+    const featureIds = [...new Set((builds || []).map(b => b.feature_id).filter(Boolean))];
+    const { data: features } = featureIds.length > 0
+      ? await supabase.from("features").select("id, name").in("id", featureIds)
+      : { data: [] };
+    const featureMap = Object.fromEntries((features || []).map(f => [f.id, f.name]));
+
+    const enriched = (builds || []).map(b => ({
+      ...b,
+      feature_name: featureMap[b.feature_id] || "Unknown",
+      file_count: (b.files || []).length,
+      agents: (b.metadata?.agents || []).map(a => ({
+        workOrder: a.workOrder,
+        completed: a.completed,
+        sessionKey: a.sessionKey,
+        fileCount: (a.toolFiles || []).length,
+      })),
+      pr_url: b.metadata?.pr_url,
+      pr_number: b.metadata?.pr_number,
+    }));
+
+    res.json({ builds: enriched });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -155,9 +155,18 @@ function ProjectPanel({ projectId, onClose }) {
 
   if (!projectId) return null
 
+  const [builds, setBuilds] = useState([])
+  const [expandedBuild, setExpandedBuild] = useState(null)
+
+  useEffect(() => {
+    if (!projectId) return
+    apiFetch(`/api/qa/builds/${projectId}`).then(d => setBuilds(d.builds || [])).catch(() => {})
+  }, [projectId])
+
   const tabs = [
     { key: 'overview', label: 'Overview' },
     { key: 'history', label: 'History' },
+    { key: 'builds', label: 'Builds' },
     { key: 'coverage', label: 'Coverage' },
     { key: 'logs', label: 'Logs' },
   ]
@@ -333,6 +342,86 @@ function ProjectPanel({ projectId, onClose }) {
                     </tbody>
                   </table>
                 </div>
+              </>
+            )}
+
+            {/* ── Builds Tab ── */}
+            {activeTab === 'builds' && (
+              <>
+                <h3 className="text-sm font-semibold text-md-on-surface mb-3">Builder v2 Builds</h3>
+                {builds.length === 0 ? (
+                  <p className="text-xs text-md-on-surface-variant">No builds found for this project.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {builds.map(b => (
+                      <div key={b.id} className="border border-md-outline-variant bg-md-surface-container p-3">
+                        <div className="flex items-center justify-between mb-2 cursor-pointer" onClick={() => setExpandedBuild(expandedBuild === b.id ? null : b.id)}>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold ${b.status === 'done' ? 'text-green-500' : b.status === 'partial' ? 'text-amber-500' : b.status === 'generating' ? 'text-amber-500 animate-pulse' : b.status === 'failed' ? 'text-red-500' : 'text-md-outline'}`}>
+                              [{b.status?.toUpperCase()}]
+                            </span>
+                            <span className="text-xs text-md-on-surface font-medium">{b.feature_name}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] text-md-on-surface-variant">
+                            <span>{b.file_count} files</span>
+                            <span>{b.agents?.length || 0} agents</span>
+                            {b.pr_url && <a href={b.pr_url} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">PR #{b.pr_number}</a>}
+                            <span>{new Date(b.created_at).toLocaleString()}</span>
+                            <span>{expandedBuild === b.id ? '▼' : '▶'}</span>
+                          </div>
+                        </div>
+
+                        {expandedBuild === b.id && (
+                          <div className="mt-2 space-y-2">
+                            {/* Work Orders / Agents */}
+                            {b.agents?.length > 0 && (
+                              <div>
+                                <h4 className="text-[10px] text-md-outline uppercase mb-1">Work Orders</h4>
+                                <div className="space-y-1">
+                                  {b.agents.map((a, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs px-2 py-1 bg-md-surface-variant">
+                                      <span className={`font-bold ${a.completed ? 'text-green-500' : 'text-red-500'}`}>
+                                        {a.completed ? '✅' : '❌'}
+                                      </span>
+                                      <span className="text-md-on-surface flex-1">{a.workOrder}</span>
+                                      <span className="text-md-on-surface-variant">{a.fileCount || 0} files</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Files list */}
+                            {b.files?.length > 0 && (
+                              <div>
+                                <h4 className="text-[10px] text-md-outline uppercase mb-1">Generated Files</h4>
+                                <div className="space-y-0.5">
+                                  {b.files.map((f, i) => (
+                                    <div key={i} className="text-xs text-md-on-surface-variant font-mono px-2">
+                                      📄 {f.path} <span className="text-md-outline">({(f.content?.length || 0).toLocaleString()} chars)</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Logs */}
+                            {b.logs?.length > 0 && (
+                              <div>
+                                <h4 className="text-[10px] text-md-outline uppercase mb-1">Build Log</h4>
+                                <div className="bg-md-surface-variant p-2 space-y-0.5">
+                                  {b.logs.map((l, i) => (
+                                    <div key={i} className="text-[10px] text-md-on-surface-variant font-mono">$ {typeof l === 'string' ? l : l.msg}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 
