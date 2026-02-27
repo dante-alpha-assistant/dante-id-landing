@@ -43,9 +43,26 @@ async function requireAuth(req, res, next) {
 
 /**
  * Map a filename from build content to a codebase path
+ * Returns null for scaffold files that should be skipped
  */
 function mapFilePath(filename) {
-  if (filename === "package.json") return null; // SKIP
+  // Skip scaffold/config files
+  const scaffoldFiles = [
+    "package.json", "package-lock.json", ".env.example", ".env",
+    "vite.config.ts", "vite.config.js", "tailwind.config.js", "tailwind.config.ts",
+    "postcss.config.js", "tsconfig.json", "index.html", "vercel.json",
+    "README.md", ".gitignore", "playwright.config.js"
+  ];
+  if (scaffoldFiles.includes(filename) || scaffoldFiles.includes(path.basename(filename))) {
+    return null;
+  }
+
+  // Skip root-level src files that would conflict (App.tsx, main.tsx, etc.)
+  if (filename === "src/App.tsx" || filename === "src/App.jsx" || 
+      filename === "src/main.tsx" || filename === "src/main.jsx" ||
+      filename === "src/index.css" || filename === "src/App.css") {
+    return null;
+  }
 
   if (filename.startsWith("server/") && filename.endsWith(".js")) return filename;
   if (filename.startsWith("src/") && filename.endsWith(".jsx")) return filename;
@@ -53,8 +70,16 @@ function mapFilePath(filename) {
   if (filename.endsWith(".js")) return `server/${path.basename(filename)}`;
   if (filename.endsWith(".jsx")) return `src/components/${path.basename(filename)}`;
 
-  // Default: keep as-is
+  // Default: keep as-is  
   return filename;
+}
+
+/**
+ * Check if file already exists in repo
+ */
+function fileExistsInRepo(filePath) {
+  const fullPath = path.join(REPO_DIR, filePath);
+  return fs.existsSync(fullPath);
 }
 
 /**
@@ -121,9 +146,17 @@ router.post("/", requireAuth, async (req, res) => {
     try { git(`branch -D ${branch}`); } catch (e) { /* branch may not exist */ }
     git(`checkout -b ${branch}`);
 
-    // 6. Write files
+    // 6. Write files (skip existing files to avoid overwrites)
     const filesWritten = [];
+    const filesSkipped = [];
     for (const [filePath, code] of Object.entries(fileMap)) {
+      // Skip if file already exists (defensive layer against duplicate generation)
+      if (fileExistsInRepo(filePath)) {
+        filesSkipped.push(filePath);
+        console.log(`[platform-apply] Skipping existing file: ${filePath}`);
+        continue;
+      }
+      
       const fullPath = path.join(REPO_DIR, filePath);
       const dir = path.dirname(fullPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -166,13 +199,38 @@ router.post("/", requireAuth, async (req, res) => {
     });
 
     // 10. Return
-    return res.json({ success: true, branch, pr_url: prUrl, files_written: filesWritten });
+    return res.json({ 
+      success: true, 
+      branch, 
+      pr_url: prUrl, 
+      files_written: filesWritten,
+      files_skipped: filesSkipped,
+      total_files: Object.keys(fileMap).length
+    });
   } catch (err) {
     console.error("[platform-apply] Error:", err.message);
     return res.status(500).json({ error: err.message });
   } finally {
     // 11. Always checkout main
     try { git("checkout main"); } catch (e) { /* best effort */ }
+  }
+});
+
+// POST /retry/:project_id — Retry platform/apply for a project (create new branch/PR)
+router.post("/retry/:project_id", requireAuth, async (req, res) => {
+  const { project_id } = req.params;
+  try {
+    // Clear previous applied status so we can re-run
+    await supabase
+      .from("projects")
+      .update({ internal_applied_at: null, internal_pr_url: null })
+      .eq("id", project_id);
+    
+    // Forward to main apply endpoint
+    req.body.project_id = project_id;
+    return router.handle(req, res);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
