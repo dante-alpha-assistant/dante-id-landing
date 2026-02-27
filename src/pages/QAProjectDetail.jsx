@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tabs, TabList, Tab, TabPanel } from '../components/qa/Tabs'
 import Sparkline from '../components/qa/Sparkline'
+import TestHistoryTab from '../components/qa/TestHistoryTab'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -210,7 +211,7 @@ export default function QAProjectDetail() {
           </TabPanel>
 
           <TabPanel value="history">
-            <ComingSoon label="Test History" />
+            <TestHistoryTab projectId={project_id} />
           </TabPanel>
 
           <TabPanel value="coverage">
