@@ -36,14 +36,14 @@ async function requireAuth(req, res, next) {
 }
 
 // --- Call OpenClaw API ---
-async function openclawInvoke(tool, params) {
+async function openclawInvoke(tool, args) {
   const res = await fetch(`${OPENCLAW_URL}/tools/invoke`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${OPENCLAW_TOKEN}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ tool, params }),
+    body: JSON.stringify({ tool, args }),
   });
   return res.json();
 }
@@ -171,19 +171,24 @@ router.post("/generate-code", requireAuth, async (req, res) => {
       );
       const results = await Promise.allSettled(spawnPromises);
       results.forEach((r, i) => {
+        const details = r.status === 'fulfilled' ? r.value?.result?.details : null;
         agents.push({
           workOrder: workOrders[i].title,
           status: r.status,
-          sessionKey: r.status === 'fulfilled' ? r.value?.childSessionKey : null,
-          error: r.status === 'rejected' ? r.reason?.message : null,
+          sessionKey: details?.childSessionKey || null,
+          runId: details?.runId || null,
+          error: r.status === 'rejected' ? r.reason?.message : (r.value?.ok === false ? r.value?.error?.message : null),
         });
       });
     } else {
       const result = await spawnBuildAgent(project_id, feature_id, null, blueprint, platformContext);
+      const details = result?.result?.details;
       agents.push({
         workOrder: feature.name,
-        status: 'fulfilled',
-        sessionKey: result?.childSessionKey,
+        status: result?.ok ? 'fulfilled' : 'rejected',
+        sessionKey: details?.childSessionKey || null,
+        runId: details?.runId || null,
+        error: result?.ok === false ? result?.error?.message : null,
       });
     }
 
@@ -233,18 +238,19 @@ async function pollAgentCompletion(buildId, agents, projectId, featureId) {
       if (!agent.sessionKey || agent.completed) continue;
       
       try {
-        const history = await openclawInvoke("sessions_history", {
+        const historyRes = await openclawInvoke("sessions_history", {
           sessionKey: agent.sessionKey,
-          limit: 1,
+          limit: 5,
         });
         
-        const msgs = history?.messages || [];
+        // /tools/invoke wraps result in { ok, result: { details } }
+        const msgs = historyRes?.result?.details?.messages || historyRes?.messages || [];
         if (msgs.length > 0) {
           const lastMsg = msgs[msgs.length - 1];
-          if (lastMsg?.content) {
-            const textContent = lastMsg.content.find?.(c => c.type === 'text')?.text || 
-                              (typeof lastMsg.content === 'string' ? lastMsg.content : '');
-            if (textContent && !lastMsg.content.find?.(c => c.type === 'toolCall')) {
+          if (lastMsg?.role === 'assistant' && lastMsg?.content) {
+            const textContent = typeof lastMsg.content === 'string' ? lastMsg.content :
+              (Array.isArray(lastMsg.content) ? lastMsg.content.find?.(c => c.type === 'text')?.text : '');
+            if (textContent) {
               agent.completed = true;
               agent.output = textContent;
             }
