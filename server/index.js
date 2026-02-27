@@ -2112,6 +2112,16 @@ app.all("/app/:username/:slug*", async (req, res) => {
   }
 });
 
+// --- Serve frontend (production: container serves static files) ---
+const distPath = path.join(__dirname, "..", "dist");
+if (require("fs").existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
 // --- Error handling ---
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
