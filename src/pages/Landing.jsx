@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
+import { TubesBackground } from "../components/TubesBackground"
 
 const navLinks = [
   { label: "How It Works", href: "#how-it-works" },
@@ -206,33 +207,33 @@ export default function Landing() {
       </header>
 
       <main>
-        {/* Hero - Simplified */}
-        <section className="relative py-20 sm:py-32 px-4 sm:px-6 overflow-hidden" id="top">
-          {/* Blur shapes */}
-          <div className="absolute top-20 left-10 w-96 h-96 bg-md-primary/15 blur-3xl rounded-full" />
-          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-md-secondary-container/30 blur-3xl rounded-full" />
-
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-md-on-background reveal">
-              Build your startup<br />
-              <span className="text-md-primary">in days, not months.</span>
-            </h1>
-            <p className="text-md-on-surface-variant mt-6 sm:mt-8 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto reveal" style={{ "--delay": "100ms" }}>
-              dante.id gives you a full AI team that builds your business while you focus on your vision.
-            </p>
-            <div className="mt-8 sm:mt-10 reveal" style={{ "--delay": "200ms" }}>
-              <Link
-                to={ctaLink}
-                className="inline-flex items-center gap-2 rounded-full bg-md-primary text-md-on-primary px-8 py-4 text-lg font-medium active:scale-95 transition-all duration-300 ease-md-standard hover:shadow-lg hover:shadow-md-primary/25"
-              >
-                Start Building
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-              </Link>
+        {/* Hero - Simplified with 3D Tubes Background */}
+        <section className="relative h-[90vh] min-h-[600px] overflow-hidden" id="top">
+          <TubesBackground className="absolute inset-0 bg-md-background">
+            <div className="flex flex-col items-center justify-center w-full h-full px-4 sm:px-6">
+              <div className="max-w-4xl mx-auto text-center pointer-events-auto">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)] reveal">
+                  Build your startup<br />
+                  <span className="text-md-primary">in days, not months.</span>
+                </h1>
+                <p className="text-white/90 mt-6 sm:mt-8 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto reveal drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]" style={{ "--delay": "100ms" }}>
+                  dante.id gives you a full AI team that builds your business while you focus on your vision.
+                </p>
+                <div className="mt-8 sm:mt-10 reveal" style={{ "--delay": "200ms" }}>
+                  <Link
+                    to={ctaLink}
+                    className="inline-flex items-center gap-2 rounded-full bg-md-primary text-md-on-primary px-8 py-4 text-lg font-medium active:scale-95 transition-all duration-300 ease-md-standard hover:shadow-lg hover:shadow-md-primary/50 pointer-events-auto"
+                  >
+                    Start Building
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                  </Link>
+                </div>
+                <p className="text-white/70 text-sm mt-4 reveal" style={{ "--delay": "300ms" }}>
+                  Free to join. No credit card required.
+                </p>
+              </div>
             </div>
-            <p className="text-md-on-surface-variant/70 text-sm mt-4 reveal" style={{ "--delay": "300ms" }}>
-              Free to join. No credit card required.
-            </p>
-          </div>
+          </TubesBackground>
         </section>
 
         {/* Social proof */}
