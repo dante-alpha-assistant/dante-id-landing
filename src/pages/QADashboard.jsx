@@ -14,9 +14,9 @@ async function apiFetch(path) {
 }
 
 function StatusBadge({ status }) {
-  const color = status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : status === 'failure' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-500/20 text-zinc-400'
+  const color = status === 'success' ? 'bg-emerald-500/20 text-[#33ff00]' : status === 'failure' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-500/20 text-zinc-400'
   const label = status === 'success' ? 'Passing' : status === 'failure' ? 'Failing' : 'Unknown'
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{label}</span>
+  return <span className={`px-2 py-0.5 rounded-none text-xs font-mono font-medium ${color}`}>{label}</span>
 }
 
 function SeverityBadge({ project }) {
@@ -26,16 +26,13 @@ function SeverityBadge({ project }) {
   const healthScore = p.health_score ?? 100
   const lint = p.lint_errors ?? 0
 
-  // FAIL
   if (healthScore < 60 || lint > 5 || passRate < 70 || coverage < 60) {
-    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">🚨 Critical</span>
+    return <span className="px-2 py-0.5 rounded-none text-xs font-mono font-medium bg-red-500/20 text-red-400">🚨 Critical</span>
   }
-  // WARNING
   if (healthScore < 90 || (lint >= 1 && lint <= 5) || passRate < 90 || coverage < 80) {
-    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400">⚠️ Warning</span>
+    return <span className="px-2 py-0.5 rounded-none text-xs font-mono font-medium bg-amber-500/20 text-amber-400">⚠️ Warning</span>
   }
-  // PASS
-  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400">✅ Healthy</span>
+  return <span className="px-2 py-0.5 rounded-none text-xs font-mono font-medium bg-emerald-500/20 text-[#33ff00]">✅ Healthy</span>
 }
 
 function getSeverity(proj) {
@@ -55,11 +52,11 @@ function getStatusCategory(proj) {
   return 'warning'
 }
 
-function MiniBar({ value, max = 100, color = 'bg-emerald-500' }) {
+function MiniBar({ value, max = 100, color = 'bg-[#33ff00]' }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
   return (
-    <div className="w-16 h-1.5 bg-zinc-700 rounded-full overflow-hidden inline-block ml-2 align-middle">
-      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+    <div className="w-16 h-1.5 bg-zinc-800 rounded-none overflow-hidden inline-block ml-2 align-middle">
+      <div className={`h-full rounded-none ${color}`} style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -172,111 +169,111 @@ function ProjectPanel({ projectId, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40 transition-opacity" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-full max-w-xl bg-md-surface-container z-50 shadow-2xl border-l border-md-outline-variant overflow-y-auto animate-slide-in">
-        <div className="sticky top-0 bg-md-surface-container border-b border-md-outline-variant px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-md-on-background font-semibold text-lg truncate pr-4">
-            {loading ? 'Loading…' : detail?.project?.name || 'Project Detail'}
+      <div className="fixed inset-0 bg-black/60 z-40 transition-opacity" onClick={onClose} />
+      <div className="fixed top-0 right-0 h-full w-full max-w-xl bg-[#0a0a0a] z-50 border-l border-[#333] overflow-y-auto animate-slide-in font-mono">
+        <div className="sticky top-0 bg-[#0a0a0a] border-b border-[#333] px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-[#33ff00] font-semibold text-lg truncate pr-4 uppercase tracking-wider">
+            {loading ? 'Loading…' : `> ${(detail?.project?.name || 'Project').toUpperCase()}`}
           </h2>
-          <button onClick={onClose} className="text-md-on-surface-variant hover:text-md-on-background text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-[#33ff00] text-xl leading-none">✕</button>
         </div>
 
         {/* Tab Bar */}
         {!loading && detail && (
-          <div className="sticky top-[57px] bg-md-surface-container z-10 flex border-b border-md-outline-variant px-6">
+          <div className="sticky top-[57px] bg-[#0a0a0a] z-10 flex border-b border-[#333] px-6">
             {tabs.map(t => (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className={`px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === t.key ? 'border-b-2 border-emerald-500 text-md-on-surface' : 'text-md-on-surface-variant hover:text-md-on-surface'}`}>
-                {t.label}
+                className={`px-4 py-2.5 text-sm font-mono uppercase tracking-wider transition-colors ${activeTab === t.key ? 'border-b-2 border-[#33ff00] text-[#33ff00]' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                [{t.label}]
               </button>
             ))}
           </div>
         )}
 
         {loading ? (
-          <div className="p-6 text-md-on-surface-variant text-sm animate-pulse">Loading project details…</div>
+          <div className="p-6 text-zinc-400 text-sm animate-pulse font-mono">Loading project details…</div>
         ) : !detail ? (
-          <div className="p-6 text-md-on-surface-variant text-sm">Failed to load project data.</div>
+          <div className="p-6 text-zinc-400 text-sm font-mono">Failed to load project data.</div>
         ) : (
           <div className="p-6 space-y-6">
             {/* ── Overview Tab ── */}
             {activeTab === 'overview' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Build Status</div>
+                  <div className="bg-[#111] border border-[#333] rounded-none p-4">
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Build Status</div>
                     <StatusBadge status={detail.latest?.build_status} />
                   </div>
-                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Project Status</div>
-                    <span className="text-md-on-background text-sm font-medium">{detail.project?.status || '—'}</span>
+                  <div className="bg-[#111] border border-[#333] rounded-none p-4">
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Project Status</div>
+                    <span className="text-zinc-100 text-sm font-medium">{detail.project?.status || '—'}</span>
                   </div>
-                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Tests</div>
+                  <div className="bg-[#111] border border-[#333] rounded-none p-4">
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Tests</div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-lg font-bold ${detail.latest?.test_failed === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <span className={`text-lg font-bold ${detail.latest?.test_failed === 0 ? 'text-[#33ff00]' : 'text-red-400'}`}>
                         {detail.latest?.test_passed ?? '—'}/{detail.latest?.test_total ?? '—'}
                       </span>
                       {detail.latest?.test_total > 0 && (
-                        <span className="text-md-on-surface-variant text-xs">
+                        <span className="text-zinc-500 text-xs">
                           ({Math.round((detail.latest.test_passed / detail.latest.test_total) * 100)}%)
                         </span>
                       )}
                     </div>
                     <TrendSparkline data={generateTrendData()} color={detail.latest?.test_failed === 0 ? 'emerald' : 'red'} />
                   </div>
-                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Coverage</div>
-                    <span className={`text-lg font-bold ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <div className="bg-[#111] border border-[#333] rounded-none p-4">
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Coverage</div>
+                    <span className={`text-lg font-bold ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-[#33ff00]' : 'text-amber-400'}`}>
                       {detail.latest?.test_coverage != null ? `${detail.latest.test_coverage}%` : '—'}
                     </span>
                     <TrendSparkline data={generateTrendData()} color={(detail.latest?.test_coverage ?? 0) >= 80 ? 'emerald' : 'amber'} />
                   </div>
-                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Lint Errors</div>
-                    <span className={`text-lg font-bold ${detail.latest?.lint_errors === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <div className="bg-[#111] border border-[#333] rounded-none p-4">
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Lint Errors</div>
+                    <span className={`text-lg font-bold ${detail.latest?.lint_errors === 0 ? 'text-[#33ff00]' : 'text-amber-400'}`}>
                       {detail.latest?.lint_errors ?? '—'}
                     </span>
                     <TrendSparkline data={generateTrendData()} color={detail.latest?.lint_errors === 0 ? 'emerald' : 'amber'} />
                   </div>
-                  <div className="bg-md-surface-container-high rounded-md-lg p-4">
-                    <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-1">Total Runs</div>
-                    <span className="text-lg font-bold text-md-on-background">{detail.run_count}</span>
+                  <div className="bg-[#111] border border-[#333] rounded-none p-4">
+                    <div className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Total Runs</div>
+                    <span className="text-lg font-bold text-zinc-100">{detail.run_count}</span>
                     <TrendSparkline data={generateTrendData()} />
                   </div>
                 </div>
 
                 {detail.project?.repo_url && (
                   <a href={detail.project.repo_url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-md-primary text-sm hover:underline">
+                    className="inline-flex items-center gap-2 text-[#33ff00] text-sm hover:underline font-mono">
                     ↗ View on GitHub
                   </a>
                 )}
 
                 <div>
-                  <h3 className="text-md-on-background text-sm font-semibold mb-3">CI Run History</h3>
+                  <h3 className="text-zinc-100 text-sm font-semibold mb-3 uppercase tracking-wider">CI Run History</h3>
                   {detail.runs.length === 0 ? (
-                    <p className="text-md-on-surface-variant text-xs">No CI runs recorded yet.</p>
+                    <p className="text-zinc-500 text-xs">No CI runs recorded yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {detail.runs.map((run, i) => (
-                        <div key={run.id || i} className={`flex items-center gap-3 px-3 py-2 rounded-md-lg text-xs ${run.build_status === 'failure' ? 'bg-red-500/10 border border-red-500/20' : 'bg-md-surface-container-high'}`}>
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${run.build_status === 'success' ? 'bg-emerald-500' : run.build_status === 'failure' ? 'bg-red-500' : 'bg-zinc-500'}`} />
-                          <span className="text-md-on-surface-variant w-36 flex-shrink-0">{new Date(run.created_at).toLocaleString()}</span>
-                          <span className="text-md-on-background flex-shrink-0">
+                        <div key={run.id || i} className={`flex items-center gap-3 px-3 py-2 rounded-none text-xs ${run.build_status === 'failure' ? 'bg-red-500/10 border border-red-500/20' : 'bg-[#111] border border-[#222]'}`}>
+                          <span className={`w-2 h-2 rounded-none flex-shrink-0 ${run.build_status === 'success' ? 'bg-[#33ff00]' : run.build_status === 'failure' ? 'bg-red-500' : 'bg-zinc-500'}`} />
+                          <span className="text-zinc-400 w-36 flex-shrink-0">{new Date(run.created_at).toLocaleString()}</span>
+                          <span className="text-zinc-100 flex-shrink-0">
                             {run.test_passed}/{run.test_total} tests
                           </span>
-                          {run.test_total > 0 && <MiniBar value={run.test_passed} max={run.test_total} color={run.test_failed === 0 ? 'bg-emerald-500' : 'bg-red-500'} />}
-                          <span className="text-md-on-surface-variant ml-auto flex-shrink-0">
+                          {run.test_total > 0 && <MiniBar value={run.test_passed} max={run.test_total} color={run.test_failed === 0 ? 'bg-[#33ff00]' : 'bg-red-500'} />}
+                          <span className="text-zinc-400 ml-auto flex-shrink-0">
                             {run.test_coverage != null ? `${run.test_coverage}% cov` : ''}
                           </span>
                           {run.lint_errors > 0 && <span className="text-amber-400 flex-shrink-0">{run.lint_errors} lint</span>}
                           {run.commit_sha && (
-                            <a href={`https://github.com/dante-alpha-assistant/dante-id-landing/commit/${run.commit_sha}`} target="_blank" rel="noopener noreferrer" className="text-md-primary hover:underline flex-shrink-0 font-mono">
+                            <a href={`https://github.com/dante-alpha-assistant/dante-id-landing/commit/${run.commit_sha}`} target="_blank" rel="noopener noreferrer" className="text-[#33ff00] hover:underline flex-shrink-0 font-mono">
                               {run.commit_sha.slice(0, 7)}
                             </a>
                           )}
-                          {run.commit_message && <span className="text-md-on-surface-variant truncate max-w-[120px]" title={run.commit_message}>{run.commit_message.slice(0, 40)}</span>}
+                          {run.commit_message && <span className="text-zinc-500 truncate max-w-[120px]" title={run.commit_message}>{run.commit_message.slice(0, 40)}</span>}
                         </div>
                       ))}
                     </div>
@@ -291,15 +288,15 @@ function ProjectPanel({ projectId, onClose }) {
                 <div className="flex gap-2 mb-4">
                   {['all', 'passing', 'failing'].map(f => (
                     <button key={f} onClick={() => setHistoryFilter(f)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${historyFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'bg-md-surface-container-high text-md-on-surface-variant hover:text-md-on-surface'}`}>
-                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                      className={`px-3 py-1 rounded-none text-xs font-mono uppercase tracking-wider transition-colors border ${historyFilter === f ? 'border-[#33ff00] text-[#33ff00] bg-[#33ff00]/10' : 'border-[#333] text-zinc-400 hover:text-zinc-200'}`}>
+                      [{f}]
                     </button>
                   ))}
                 </div>
-                <div className="bg-md-surface-container rounded-md-lg overflow-hidden border border-md-outline-variant">
-                  <table className="w-full text-xs">
+                <div className="bg-[#111] rounded-none overflow-hidden border border-[#333]">
+                  <table className="w-full text-xs font-mono">
                     <thead>
-                      <tr className="text-md-on-surface-variant uppercase tracking-wider border-b border-md-outline-variant">
+                      <tr className="text-zinc-400 uppercase tracking-wider border-b border-[#333]">
                         <th className="text-left px-3 py-2">Run #</th>
                         <th className="text-left px-3 py-2">Date</th>
                         <th className="text-center px-3 py-2">Status</th>
@@ -310,13 +307,13 @@ function ProjectPanel({ projectId, onClose }) {
                     <tbody>
                       {filteredRuns.map((run, i) => (
                         <Fragment key={run.id || i}>
-                          <tr className={`border-b border-md-outline-variant/50 cursor-pointer hover:bg-md-surface-container-high transition-colors ${run.build_status === 'failure' ? 'bg-red-500/5' : ''}`}
+                          <tr className={`border-b border-[#222] cursor-pointer hover:bg-[#1a1a1a] transition-colors ${run.build_status === 'failure' ? 'bg-red-500/5' : ''}`}
                             onClick={() => setExpandedRun(expandedRun === i ? null : i)}>
-                            <td className="px-3 py-2 text-md-on-background font-mono">#{filteredRuns.length - i}</td>
-                            <td className="px-3 py-2 text-md-on-surface-variant">{new Date(run.created_at).toLocaleString()}</td>
+                            <td className="px-3 py-2 text-zinc-100 font-mono">#{filteredRuns.length - i}</td>
+                            <td className="px-3 py-2 text-zinc-400">{new Date(run.created_at).toLocaleString()}</td>
                             <td className="px-3 py-2 text-center"><StatusBadge status={run.build_status} /></td>
-                            <td className="px-3 py-2 text-center text-md-on-background">{run.test_passed}/{run.test_total}</td>
-                            <td className="px-3 py-2 text-right text-md-on-surface-variant">{run.duration ? `${run.duration}s` : '~4s'}</td>
+                            <td className="px-3 py-2 text-center text-zinc-100">{run.test_passed}/{run.test_total}</td>
+                            <td className="px-3 py-2 text-right text-zinc-400">{run.duration ? `${run.duration}s` : '~4s'}</td>
                           </tr>
                           {expandedRun === i && run.build_status === 'failure' && (
                             <tr>
@@ -328,7 +325,7 @@ function ProjectPanel({ projectId, onClose }) {
                         </Fragment>
                       ))}
                       {filteredRuns.length === 0 && (
-                        <tr><td colSpan={5} className="px-3 py-6 text-center text-md-on-surface-variant">No runs match this filter.</td></tr>
+                        <tr><td colSpan={5} className="px-3 py-6 text-center text-zinc-500">No runs match this filter.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -340,16 +337,16 @@ function ProjectPanel({ projectId, onClose }) {
             {activeTab === 'coverage' && (
               <>
                 <div className="text-center py-4">
-                  <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-2">Overall Coverage</div>
-                  <span className={`text-5xl font-bold ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <div className="text-zinc-400 text-xs uppercase tracking-wider mb-2">Overall Coverage</div>
+                  <span className={`text-5xl font-bold font-mono ${(detail.latest?.test_coverage ?? 0) >= 80 ? 'text-[#33ff00]' : 'text-amber-400'}`}>
                     {detail.latest?.test_coverage != null ? `${detail.latest.test_coverage}%` : '—'}
                   </span>
                 </div>
                 {detail.latest?.test_coverage != null ? (
-                  <div className="bg-md-surface-container rounded-md-lg overflow-hidden border border-md-outline-variant">
-                    <table className="w-full text-xs">
+                  <div className="bg-[#111] rounded-none overflow-hidden border border-[#333]">
+                    <table className="w-full text-xs font-mono">
                       <thead>
-                        <tr className="text-md-on-surface-variant uppercase tracking-wider border-b border-md-outline-variant">
+                        <tr className="text-zinc-400 uppercase tracking-wider border-b border-[#333]">
                           <th className="text-left px-3 py-2">File Path</th>
                           <th className="text-center px-3 py-2">Coverage %</th>
                           <th className="text-right px-3 py-2">Lines</th>
@@ -357,17 +354,17 @@ function ProjectPanel({ projectId, onClose }) {
                       </thead>
                       <tbody>
                         {MOCK_COVERAGE_FILES.map((f, i) => (
-                          <tr key={i} className="border-b border-md-outline-variant/50">
-                            <td className={`px-3 py-2 font-mono ${f.coverage < 80 ? 'text-red-400' : 'text-md-on-background'}`}>{f.path}</td>
-                            <td className={`px-3 py-2 text-center font-medium ${f.coverage < 80 ? 'text-red-400' : 'text-emerald-400'}`}>{f.coverage}%</td>
-                            <td className="px-3 py-2 text-right text-md-on-surface-variant">{f.covered}/{f.total}</td>
+                          <tr key={i} className="border-b border-[#222]">
+                            <td className={`px-3 py-2 font-mono ${f.coverage < 80 ? 'text-red-400' : 'text-zinc-100'}`}>{f.path}</td>
+                            <td className={`px-3 py-2 text-center font-medium ${f.coverage < 80 ? 'text-red-400' : 'text-[#33ff00]'}`}>{f.coverage}%</td>
+                            <td className="px-3 py-2 text-right text-zinc-400">{f.covered}/{f.total}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <p className="text-md-on-surface-variant text-sm text-center">Coverage data not available for this project</p>
+                  <p className="text-zinc-400 text-sm text-center font-mono">Coverage data not available for this project</p>
                 )}
               </>
             )}
@@ -376,13 +373,13 @@ function ProjectPanel({ projectId, onClose }) {
             {activeTab === 'logs' && (
               <>
                 <input type="text" placeholder="Search logs…" value={logSearch} onChange={e => setLogSearch(e.target.value)}
-                  className="w-full bg-md-surface-container-high border border-md-outline-variant rounded-md-lg px-3 py-2 text-sm text-md-on-background placeholder:text-md-on-surface-variant focus:outline-none focus:border-emerald-500 mb-3" />
-                <div className="bg-zinc-900 text-zinc-100 font-mono text-xs p-4 rounded-lg overflow-auto max-h-[60vh]">
+                  className="w-full bg-[#111] border border-[#333] rounded-none px-3 py-2 text-sm text-zinc-100 font-mono placeholder:text-zinc-600 focus:outline-none focus:border-[#33ff00] mb-3" />
+                <div className="bg-[#0a0a0a] text-zinc-100 font-mono text-xs p-4 rounded-none border border-[#333] overflow-auto max-h-[60vh]">
                   {logLines.map((line, i) => {
                     const isError = /error|Error|FAIL/.test(line)
                     const isPass = /pass|PASS|✓/.test(line)
                     return (
-                      <div key={i} className={`${isError ? 'bg-red-900/30' : ''} ${isPass ? 'text-emerald-400' : ''}`}>
+                      <div key={i} className={`${isError ? 'bg-red-900/30' : ''} ${isPass ? 'text-[#33ff00]' : ''}`}>
                         {line || '\u00A0'}
                       </div>
                     )
@@ -413,22 +410,22 @@ function Sidebar({ statusFilters, setStatusFilters, severityFilters, setSeverity
   return (
     <>
       {/* Mobile backdrop */}
-      {open && <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={onToggle} />}
+      {open && <div className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={onToggle} />}
 
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-40 w-60
-        bg-md-surface-container border-r border-md-outline-variant
-        flex flex-col transition-transform duration-200
+        bg-[#0a0a0a] border-r border-[#333]
+        flex flex-col transition-transform duration-200 font-mono
         ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Nav */}
         <nav className="p-4 space-y-1">
           {NAV_ITEMS.map(item => (
             <div key={item.label}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md-lg text-sm cursor-pointer transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-none text-sm cursor-pointer transition-colors ${
                 item.active
-                  ? 'bg-md-surface-container-high text-md-on-background font-medium'
-                  : 'text-md-on-surface-variant hover:bg-md-surface-container-high/50'
+                  ? 'bg-[#111] text-[#33ff00] font-medium border border-[#333]'
+                  : 'text-zinc-500 hover:bg-[#111] hover:text-zinc-300'
               }`}>
               <span>{item.icon}</span>
               <span>{item.label}</span>
@@ -436,29 +433,29 @@ function Sidebar({ statusFilters, setStatusFilters, severityFilters, setSeverity
           ))}
         </nav>
 
-        <hr className="border-md-outline-variant mx-4" />
+        <hr className="border-[#333] mx-4" />
 
         {/* Status filters */}
         <div className="p-4">
-          <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-2 font-medium">Status</div>
+          <div className="text-zinc-400 text-xs uppercase tracking-wider mb-2 font-medium">Status</div>
           {['passing', 'failing', 'warning'].map(key => (
-            <label key={key} className="flex items-center gap-2 px-2 py-1 text-sm text-md-on-surface cursor-pointer hover:bg-md-surface-container-high/50 rounded">
+            <label key={key} className="flex items-center gap-2 px-2 py-1 text-sm text-zinc-300 cursor-pointer hover:bg-[#111] rounded-none">
               <input type="checkbox" checked={statusFilters[key]} onChange={() => toggleStatus(key)}
-                className="accent-emerald-500 w-3.5 h-3.5" />
+                className="accent-[#33ff00] w-3.5 h-3.5" />
               <span className="capitalize">{key}</span>
             </label>
           ))}
         </div>
 
-        <hr className="border-md-outline-variant mx-4" />
+        <hr className="border-[#333] mx-4" />
 
         {/* Severity filters */}
         <div className="p-4">
-          <div className="text-md-on-surface-variant text-xs uppercase tracking-wider mb-2 font-medium">Severity</div>
+          <div className="text-zinc-400 text-xs uppercase tracking-wider mb-2 font-medium">Severity</div>
           {['critical', 'warning', 'healthy'].map(key => (
-            <label key={key} className="flex items-center gap-2 px-2 py-1 text-sm text-md-on-surface cursor-pointer hover:bg-md-surface-container-high/50 rounded">
+            <label key={key} className="flex items-center gap-2 px-2 py-1 text-sm text-zinc-300 cursor-pointer hover:bg-[#111] rounded-none">
               <input type="checkbox" checked={severityFilters[key]} onChange={() => toggleSeverity(key)}
-                className="accent-emerald-500 w-3.5 h-3.5" />
+                className="accent-[#33ff00] w-3.5 h-3.5" />
               <span className="capitalize">{key}</span>
             </label>
           ))}
@@ -495,8 +492,8 @@ export default function QADashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-md-background flex items-center justify-center">
-        <div className="text-md-primary text-sm animate-pulse">Loading QA Dashboard...</div>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-mono">
+        <div className="text-[#33ff00] text-sm animate-pulse">Loading QA Dashboard...</div>
       </div>
     )
   }
@@ -510,7 +507,7 @@ export default function QADashboard() {
   })
 
   return (
-    <div className="flex h-screen bg-md-background text-md-on-background">
+    <div className="flex h-screen bg-[#0a0a0a] text-zinc-100 font-mono">
       <Sidebar
         statusFilters={statusFilters} setStatusFilters={setStatusFilters}
         severityFilters={severityFilters} setSeverityFilters={setSeverityFilters}
@@ -520,7 +517,7 @@ export default function QADashboard() {
       <main className="flex-1 overflow-auto p-6">
         {/* Mobile hamburger */}
         <button onClick={() => setSidebarOpen(o => !o)}
-          className="lg:hidden mb-4 p-2 rounded-md-lg border border-md-outline-variant text-md-on-surface-variant hover:bg-md-surface-container-high">
+          className="lg:hidden mb-4 p-2 rounded-none border border-[#333] text-zinc-400 hover:bg-[#111]">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
@@ -529,10 +526,10 @@ export default function QADashboard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-md-on-background text-2xl font-bold tracking-tight">QA Command Center</h1>
-            <p className="text-md-on-surface-variant text-sm mt-0.5">Platform-wide quality metrics across all projects</p>
+            <h1 className="text-[#33ff00] text-2xl font-bold tracking-wider uppercase">&gt; QA_DASHBOARD</h1>
+            <p className="text-zinc-500 text-sm mt-0.5">Platform-wide quality metrics across all projects</p>
           </div>
-          <button onClick={load} className="rounded-full border border-md-outline-variant text-md-on-surface-variant px-5 py-2 text-sm font-medium hover:bg-md-surface-container-high active:scale-95 transition-all">↻ Refresh</button>
+          <button onClick={load} className="border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00]/10 rounded-none px-4 py-2 font-mono text-sm">[ ↻ Refresh ]</button>
         </div>
 
         {/* Platform Summary Cards */}
@@ -545,17 +542,17 @@ export default function QADashboard() {
         </div>
 
         {/* Per-Project Table */}
-        <div className="bg-md-surface-container rounded-md-lg border border-md-outline-variant overflow-hidden">
-          <div className="px-4 py-3 border-b border-md-outline-variant flex items-center justify-between">
+        <div className="bg-[#111] rounded-none border border-[#333] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#333] flex items-center justify-between">
             <div>
-              <h2 className="text-md-on-background text-sm font-semibold">Projects</h2>
-              <p className="text-md-on-surface-variant text-xs">{filtered.length} of {projects.length} projects</p>
+              <h2 className="text-[#33ff00] text-sm font-semibold uppercase tracking-wider">Projects</h2>
+              <p className="text-zinc-500 text-xs">{filtered.length} of {projects.length} projects</p>
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm font-mono">
               <thead>
-                <tr className="text-md-on-surface-variant text-xs uppercase tracking-wider border-b border-md-outline-variant">
+                <tr className="text-zinc-400 text-xs uppercase tracking-wider border-b border-[#333]">
                   <th className="text-left px-4 py-2">Project</th>
                   <th className="text-center px-4 py-2">Severity</th>
                   <th className="text-center px-4 py-2">Build</th>
@@ -572,11 +569,11 @@ export default function QADashboard() {
                   const critical = isCriticalProject(proj)
                   return (
                     <tr key={proj.project_id || i}
-                      className={`border-b border-md-outline-variant/50 hover:bg-md-surface-container-high transition-colors cursor-pointer ${critical ? 'border-l-4 border-l-red-500 bg-red-500/5' : ''}`}
+                      className={`border-b border-[#222] hover:bg-[#1a1a1a] transition-colors cursor-pointer ${critical ? 'border-l-4 border-l-red-500 bg-red-500/5' : ''}`}
                       onClick={() => setSelectedProject(proj.project_id)}>
                       <td className="px-4 py-3">
-                        <div className="text-md-on-background font-medium">{proj.project_name}</div>
-                        {proj.project_status && <div className="text-md-on-surface-variant text-xs">{proj.project_status}</div>}
+                        <div className="text-zinc-100 font-medium">{proj.project_name}</div>
+                        {proj.project_status && <div className="text-zinc-500 text-xs">{proj.project_status}</div>}
                         {critical && proj.consecutive_failures > 0 && (
                           <div className="text-red-400 text-xs mt-0.5">🔥 {proj.consecutive_failures} consecutive failures</div>
                         )}
@@ -584,31 +581,31 @@ export default function QADashboard() {
                       <td className="text-center px-4 py-3"><SeverityBadge project={proj} /></td>
                       <td className="text-center px-4 py-3"><StatusBadge status={proj.build_status} /></td>
                       <td className="text-center px-4 py-3">
-                        <span className={proj.lint_errors === 0 ? 'text-emerald-400' : 'text-amber-400'}>{proj.lint_errors ?? '—'}</span>
+                        <span className={proj.lint_errors === 0 ? 'text-[#33ff00]' : 'text-amber-400'}>{proj.lint_errors ?? '—'}</span>
                       </td>
                       <td className="text-center px-4 py-3">
                         {proj.test_total != null ? (
-                          <span className={proj.test_failed === 0 ? 'text-emerald-400' : 'text-red-400'}>
+                          <span className={proj.test_failed === 0 ? 'text-[#33ff00]' : 'text-red-400'}>
                             {proj.test_passed}/{proj.test_total}
-                            <span className="text-md-on-surface-variant ml-1">({proj.test_pass_rate ?? Math.round((proj.test_passed / proj.test_total) * 100)}%)</span>
+                            <span className="text-zinc-500 ml-1">({proj.test_pass_rate ?? Math.round((proj.test_passed / proj.test_total) * 100)}%)</span>
                           </span>
                         ) : '—'}
                       </td>
                       <td className="text-center px-4 py-3">
                         {proj.test_coverage != null ? (
-                          <span className={proj.test_coverage >= 80 ? 'text-emerald-400' : 'text-amber-400'}>{proj.test_coverage}%</span>
+                          <span className={proj.test_coverage >= 80 ? 'text-[#33ff00]' : 'text-amber-400'}>{proj.test_coverage}%</span>
                         ) : '—'}
                       </td>
-                      <td className="text-center px-4 py-3 text-md-on-surface-variant">{proj.run_count}</td>
-                      <td className="text-right px-4 py-3 text-md-on-surface-variant text-xs">
+                      <td className="text-center px-4 py-3 text-zinc-400">{proj.run_count}</td>
+                      <td className="text-right px-4 py-3 text-zinc-500 text-xs">
                         {proj.last_run ? new Date(proj.last_run).toLocaleString() : '—'}
                       </td>
                       <td className="text-center px-4 py-3">
                         {critical && (
                           <Link to={`/qa/${proj.project_id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="border border-red-500 text-red-400 px-2 py-0.5 rounded text-xs hover:bg-red-500/10 whitespace-nowrap">
-                            Debug Now
+                            className="border border-red-500 text-red-400 px-2 py-0.5 rounded-none text-xs hover:bg-red-500/10 whitespace-nowrap font-mono">
+                            [ Debug Now ]
                           </Link>
                         )}
                       </td>
@@ -616,7 +613,7 @@ export default function QADashboard() {
                   )
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-md-on-surface-variant">No projects match this filter.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-zinc-500">No projects match this filter.</td></tr>
                 )}
               </tbody>
             </table>
