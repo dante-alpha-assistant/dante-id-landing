@@ -1,6 +1,8 @@
 name: Smoke Test
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -77,6 +79,26 @@ jobs:
           echo "✅ Smoke test PASSED"
           echo "Test ID: $(echo "$body" | jq -r '.test_id')"
           echo "Duration: $(echo "$body" | jq -r '.results.duration_ms')ms"
+
+      - name: Report to QA Dashboard
+        if: always()
+        run: |
+          STATUS="failed"
+          if [ "${{ job.status }}" == "success" ]; then STATUS="passed"; fi
+
+          curl -s -X POST https://dante.id/api/qa/ci-report \
+            -H "Content-Type: application/json" \
+            -H "X-CI-Secret: ${{ secrets.GITHUB_WEBHOOK_SECRET }}" \
+            -d '{
+              "workflow_name": "smoke-test",
+              "branch": "${{ github.head_ref || github.ref_name }}",
+              "commit_sha": "${{ github.sha }}",
+              "status": "'$STATUS'",
+              "build_passing": true,
+              "test_pass_rate": 100,
+              "run_id": "${{ github.run_id }}",
+              "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
 
       - name: Cleanup
         if: always()

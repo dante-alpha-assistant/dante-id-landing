@@ -373,6 +373,32 @@ router.get("/:project_id/triggers", requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/qa/ci-report — receive CI results from GitHub Actions
+router.post("/ci-report", async (req, res) => {
+  const secret = req.headers["x-ci-secret"];
+  if (secret !== process.env.GITHUB_WEBHOOK_SECRET) {
+    return res.status(401).json({ error: "Invalid secret" });
+  }
+
+  const { project_id, repo_full_name, commit_sha, branch, workflow_name, status, lint_errors, build_passing, test_pass_rate, test_summary, run_url } = req.body;
+
+  const { error } = await supabase.from("qa_metrics").insert({
+    project_id: project_id || "platform",
+    quality_score: status === "passed" ? 100 : (status === "partial" ? 50 : 0),
+    lint_errors: lint_errors || 0,
+    test_pass_rate: test_pass_rate || (status === "passed" ? 100 : 0),
+    build_passing: build_passing !== false,
+    workflow_name: workflow_name || "smoke-test",
+    workflow_run_id: req.body.run_id || String(Date.now()),
+    branch: branch || "main",
+    commit_sha: commit_sha || "unknown",
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ received: true });
+});
+
 // 12. POST /webhook/event — GitHub webhook (no auth)
 router.post("/webhook/event", async (req, res) => {
   try {
