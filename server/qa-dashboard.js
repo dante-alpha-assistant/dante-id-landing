@@ -102,7 +102,7 @@ router.get("/global/project/:project_id", async (req, res) => {
     // Recent CI runs (last 20)
     const { data: runs } = await supabase
       .from("qa_metrics")
-      .select("id, created_at, build_status, lint_errors, lint_warnings, test_total, test_passed, test_failed, test_coverage")
+      .select("id, created_at, build_status, lint_errors, lint_warnings, test_total, test_passed, test_failed, test_coverage, commit_sha, commit_author, commit_message, test_details")
       .eq("project_id", pid)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -133,7 +133,7 @@ router.get("/global/project/:project_id/failures", async (req, res) => {
     const pid = req.params.project_id;
     const { data: failRun } = await supabase
       .from("qa_metrics")
-      .select("*")
+      .select("*, test_details, commit_sha, commit_author, commit_message")
       .eq("project_id", pid)
       .eq("build_status", "failure")
       .order("created_at", { ascending: false })
@@ -170,6 +170,12 @@ router.get("/global/project/:project_id/failures", async (req, res) => {
       });
     }
 
+    // Parse test_details if it's a string
+    let testDetails = failRun.test_details;
+    if (typeof testDetails === 'string') {
+      try { testDetails = JSON.parse(testDetails); } catch (_) { testDetails = null; }
+    }
+
     res.json({
       latest_failure: {
         type: failureType,
@@ -177,6 +183,10 @@ router.get("/global/project/:project_id/failures", async (req, res) => {
         run_id: failRun.id,
         created_at: failRun.created_at,
         raw_log: failRun.raw_log || null,
+        test_details: testDetails || null,
+        commit_sha: failRun.commit_sha || null,
+        commit_author: failRun.commit_author || null,
+        commit_message: failRun.commit_message || null,
       }
     });
   } catch (err) {
@@ -584,6 +594,10 @@ router.post("/ci-report", async (req, res) => {
   // Default to dante.id Platform CI project
   row.project_id = req.body.project_id || "91607ad6-bacc-4ea9-8d58-007d984016f2";
   if (test_coverage != null) row.test_coverage = test_coverage;
+  row.commit_sha = commit_sha || null;
+  row.commit_author = commit_author || null;
+  row.commit_message = commit_message || null;
+  row.test_details = test_details ? JSON.stringify(test_details) : null;
 
   const { error } = await supabase.from("qa_metrics").insert(row);
 
