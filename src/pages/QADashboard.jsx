@@ -271,6 +271,12 @@ function ProjectPanel({ projectId, onClose }) {
                             {run.test_coverage != null ? `${run.test_coverage}% cov` : ''}
                           </span>
                           {run.lint_errors > 0 && <span className="text-amber-400 flex-shrink-0">{run.lint_errors} lint</span>}
+                          {run.commit_sha && (
+                            <a href={`https://github.com/dante-alpha-assistant/dante-id-landing/commit/${run.commit_sha}`} target="_blank" rel="noopener noreferrer" className="text-md-primary hover:underline flex-shrink-0 font-mono">
+                              {run.commit_sha.slice(0, 7)}
+                            </a>
+                          )}
+                          {run.commit_message && <span className="text-md-on-surface-variant truncate max-w-[120px]" title={run.commit_message}>{run.commit_message.slice(0, 40)}</span>}
                         </div>
                       ))}
                     </div>
