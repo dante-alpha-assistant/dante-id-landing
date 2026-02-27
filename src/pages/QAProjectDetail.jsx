@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Tabs, TabList, Tab, TabPanel } from '../components/qa/Tabs'
 import Sparkline from '../components/qa/Sparkline'
 import TestHistoryTab from '../components/qa/TestHistoryTab'
+import CoverageTab from '../components/qa/CoverageTab'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -215,7 +216,7 @@ export default function QAProjectDetail() {
           </TabPanel>
 
           <TabPanel value="coverage">
-            <ComingSoon label="Coverage" />
+            <CoverageTab projectId={project_id} />
           </TabPanel>
 
           <TabPanel value="logs">
