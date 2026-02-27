@@ -373,15 +373,19 @@ Generate concise, working code for this feature. Focus on core logic, keep files
     let systemPrompt = CODE_GEN_SYSTEM;
     if (project.type === 'internal') {
       systemPrompt = INTERNAL_CODE_GEN_SYSTEM;
-      const platformCtx = await getInternalContext();
-      if (platformCtx) {
-        const ctxSummary = `\n\nEXISTING CODEBASE CONTEXT:\n` +
-          `Frontend Routes: ${JSON.stringify(platformCtx.frontend_routes)}\n` +
-          `API Routes: ${JSON.stringify(platformCtx.api_routes?.map(r => r.method + ' ' + r.path))}\n` +
-          `Database Tables: ${JSON.stringify(platformCtx.database_schema?.map(t => t.name))}\n` +
-          `Project Files: ${JSON.stringify(platformCtx.project_structure)}\n` +
-          `Design System: ${JSON.stringify(platformCtx.design_system)}\n`;
-        fullPrompt += ctxSummary;
+      try {
+        const platformCtx = await getInternalContext();
+        if (platformCtx) {
+          const ctxSummary = `\n\nEXISTING CODEBASE CONTEXT:\n` +
+            `Frontend Routes: ${JSON.stringify(platformCtx.frontend_routes || [])}\n` +
+            `API Routes: ${JSON.stringify(platformCtx.api_routes || {})}\n` +
+            `Database Tables: ${JSON.stringify(platformCtx.database_schema || [])}\n` +
+            `Project Files: ${JSON.stringify(platformCtx.project_structure || [])}\n` +
+            `Design System: ${JSON.stringify(platformCtx.design_system || {})}\n`;
+          fullPrompt += ctxSummary;
+        }
+      } catch (ctxErr) {
+        console.log('[Builder] Context injection failed (non-fatal):', ctxErr.message);
       }
       console.log('[Builder] Using INTERNAL system prompt for project type:', project.type);
     }
