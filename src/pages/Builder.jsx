@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const API_BASE_BUILDER = '/api/builder'
+const API_BASE_BUILDER = '/api/builder-v2'
 const API_BASE_REFINERY = '/api/refinery'
 
 async function apiCall(base, path, options = {}) {
@@ -30,7 +30,8 @@ const STATUS_LABELS = {
   pending: { text: 'Pending', cls: 'text-md-outline' },
   generating: { text: 'Generating...', cls: 'text-amber-500 animate-pulse' },
   review: { text: 'Review', cls: 'text-md-primary' },
-  done: { text: 'Done', cls: 'text-md-primary' },
+  done: { text: 'Done', cls: 'text-green-500' },
+  partial: { text: 'Partial', cls: 'text-amber-500' },
   failed: { text: 'Failed', cls: 'text-red-500' }
 }
 
@@ -132,14 +133,15 @@ export default function Builder() {
   const [repoLoading, setRepoLoading] = useState(false)
 
   const fetchData = useCallback(async () => {
-    const [featRes, buildsRes] = await Promise.all([
-      apiCall(API_BASE_REFINERY, `/${project_id}/features`),
-      apiCall(API_BASE_BUILDER, `/${project_id}/builds`)
-    ])
+    const featRes = await apiCall(API_BASE_REFINERY, `/${project_id}/features`)
     setFeatures(featRes.features || [])
+    // Fetch latest build per feature from Supabase directly
+    const { data: builds } = await supabase.from('builds').select('id, feature_id, status, files, metadata').eq('project_id', project_id).order('created_at', { ascending: false })
     const bMap = {}
-    for (const b of (buildsRes.builds || [])) {
-      bMap[b.feature_id] = b
+    for (const b of (builds || [])) {
+      if (!bMap[b.feature_id]) {
+        bMap[b.feature_id] = { build_id: b.id, feature_id: b.feature_id, status: b.status, file_count: (b.files || []).length }
+      }
     }
     setBuildsMap(bMap)
     setLoading(false)
@@ -150,22 +152,69 @@ export default function Builder() {
   useEffect(() => {
     const hasGenerating = Object.values(buildsMap).some(b => b.status === 'generating')
     if (!hasGenerating) return
-    const interval = setInterval(fetchData, 5000)
+    const interval = setInterval(async () => {
+      // Refresh current build if generating
+      if (currentBuild?.status === 'generating' && currentBuild?.id) {
+        const res = await apiCall(API_BASE_BUILDER, `/${project_id}/builds/${currentBuild.id}`)
+        if (res.build) {
+          setCurrentBuild(res.build)
+          if (res.build.status !== 'generating') {
+            // Build finished, refresh all
+            fetchData()
+            if (res.build.files?.length > 0 && !selectedFile) setSelectedFile(res.build.files[0])
+          }
+        }
+      } else {
+        fetchData()
+      }
+    }, 5000)
     return () => clearInterval(interval)
-  }, [buildsMap, fetchData])
+  }, [buildsMap, fetchData, currentBuild, project_id, selectedFile])
 
   const fetchBuild = async (featureId) => {
-    const res = await apiCall(API_BASE_BUILDER, `/${project_id}/builds/${featureId}`)
+    // Look up build ID from buildsMap
+    const buildEntry = buildsMap[featureId]
+    if (!buildEntry?.build_id) {
+      // Try fetching latest build for this feature from Supabase
+      const { data } = await supabase.from('builds').select('*').eq('feature_id', featureId).eq('project_id', project_id).order('created_at', { ascending: false }).limit(1).single()
+      if (data) {
+        setCurrentBuild(data)
+        if (data.files?.length > 0 && !selectedFile) setSelectedFile(data.files[0])
+        return data
+      }
+      setCurrentBuild(null)
+      return null
+    }
+    const res = await apiCall(API_BASE_BUILDER, `/${project_id}/builds/${buildEntry.build_id}`)
     if (res.build) {
       setCurrentBuild(res.build)
       const files = res.build.files || []
-      if (files.length > 0 && !selectedFile) {
-        setSelectedFile(files[0])
-      }
+      if (files.length > 0 && !selectedFile) setSelectedFile(files[0])
+      // Update buildsMap with latest status
+      setBuildsMap(prev => ({ ...prev, [featureId]: { ...prev[featureId], status: res.build.status, file_count: files.length } }))
     } else {
       setCurrentBuild(null)
     }
     return res.build
+  }
+
+  const [prLoading, setPrLoading] = useState(false)
+  const [prUrl, setPrUrl] = useState(null)
+
+  const createPR = async () => {
+    if (!currentBuild?.id) return
+    setPrLoading(true)
+    try {
+      const res = await apiCall(API_BASE_BUILDER, `/${project_id}/builds/${currentBuild.id}/create-pr`, { method: 'POST' })
+      if (res.pr_url) {
+        setPrUrl(res.pr_url)
+      } else {
+        alert(`PR creation failed: ${res.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      alert(`PR creation failed: ${err.message}`)
+    }
+    setPrLoading(false)
   }
 
   const selectFeature = async (f) => {
@@ -182,7 +231,16 @@ export default function Builder() {
         method: 'POST',
         body: JSON.stringify({ feature_id: featureId, project_id })
       })
-      if (res.build) {
+      if (res.build_id) {
+        // v2 response: { build_id, agents_spawned, agents }
+        const buildStub = { id: res.build_id, feature_id: featureId, status: 'generating', files: [], logs: [], agents_spawned: res.agents_spawned }
+        setCurrentBuild(buildStub)
+        setBuildsMap(prev => ({
+          ...prev,
+          [featureId]: { build_id: res.build_id, feature_id: featureId, status: 'generating', file_count: 0, agents_spawned: res.agents_spawned }
+        }))
+      } else if (res.build) {
+        // v1 fallback
         setCurrentBuild(res.build)
         setBuildsMap(prev => ({
           ...prev,
@@ -500,18 +558,39 @@ export default function Builder() {
               {/* Status banner */}
               <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 border-b border-md-outline-variant ${
                 currentBuild.status === 'generating' ? 'bg-amber-500/10 text-amber-500' :
-                currentBuild.status === 'review' ? 'bg-md-primary/10 text-md-primary' :
-                currentBuild.status === 'done' ? 'bg-md-primary/10 text-md-primary' :
+                currentBuild.status === 'done' ? 'bg-green-500/10 text-green-500' :
+                currentBuild.status === 'partial' ? 'bg-amber-500/10 text-amber-500' :
                 currentBuild.status === 'failed' ? 'bg-red-500/10 text-red-500' :
                 'bg-md-outline/10 text-md-outline'
               }`}>
                 {currentBuild.status === 'generating' && <span className="animate-pulse">●</span>}
                 STATUS: [{currentBuild.status.toUpperCase()}]
-                {currentBuild.github_url && (
-                  <a href={currentBuild.github_url} target="_blank" rel="noopener noreferrer" className="ml-auto text-md-primary hover:underline">
-                    View on GitHub →
-                  </a>
+                {currentBuild.status === 'generating' && currentBuild.logs?.length > 0 && (
+                  <span className="text-md-on-surface-variant ml-2">
+                    {currentBuild.logs[currentBuild.logs.length - 1]?.match?.(/Progress: (\d+\/\d+)/)?.[1] || 
+                     (typeof currentBuild.logs[currentBuild.logs.length - 1] === 'string' && currentBuild.logs[currentBuild.logs.length - 1].match(/Progress: (\d+\/\d+)/)?.[1]) ||
+                     ''}
+                  </span>
                 )}
+                {(currentBuild.files || []).length > 0 && (
+                  <span className="text-md-on-surface-variant ml-2">{currentBuild.files.length} files</span>
+                )}
+                <div className="ml-auto flex items-center gap-2">
+                  {(currentBuild.status === 'done' || currentBuild.status === 'partial') && (currentBuild.files || []).length > 0 && !prUrl && !currentBuild.metadata?.pr_url && (
+                    <button
+                      onClick={createPR}
+                      disabled={prLoading}
+                      className="px-3 py-1 border border-green-500 text-green-500 hover:bg-green-500 hover:text-black text-[10px] font-bold transition-all uppercase"
+                    >
+                      {prLoading ? 'Creating PR...' : '[ Create PR ]'}
+                    </button>
+                  )}
+                  {(prUrl || currentBuild.metadata?.pr_url) && (
+                    <a href={prUrl || currentBuild.metadata?.pr_url} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline text-[10px] font-bold">
+                      View PR →
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* File tree + code viewer */}
@@ -565,10 +644,9 @@ export default function Builder() {
                         {showLogs && (
                           <div className="mt-2 space-y-1 bg-md-surface-variant border border-md-outline-variant rounded-md-lg p-3">
                             {currentBuild.logs.map((log, i) => (
-                              <div key={i} className="text-xs text-md-on-surface-variant">
+                              <div key={i} className="text-xs text-md-on-surface-variant font-mono">
                                 <span className="text-md-outline">$</span>{' '}
-                                <span className="text-md-outline">{new Date(log.ts).toLocaleTimeString()}</span>{' '}
-                                {log.msg}
+                                {typeof log === 'string' ? log : `${new Date(log.ts).toLocaleTimeString()} ${log.msg}`}
                               </div>
                             ))}
                           </div>
