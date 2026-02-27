@@ -638,4 +638,195 @@ router.get("/:project_id/summary", requireAuth, async (req, res) => {
   }
 });
 
+// ============================================================
+// Phase 2 endpoints (public, /global/project/:project_id/ prefix)
+// ============================================================
+
+// 1. GET /global/project/:project_id/runs — paginated runs
+router.get("/global/project/:project_id/runs", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+    const status = req.query.status || "all";
+
+    let query = supabase
+      .from("qa_metrics")
+      .select("*", { count: "exact" })
+      .eq("project_id", pid);
+
+    if (status === "success") query = query.eq("build_status", "success");
+    else if (status === "failure") query = query.eq("build_status", "failure");
+
+    if (req.query.from) query = query.gte("created_at", req.query.from);
+    if (req.query.to) query = query.lte("created_at", req.query.to);
+
+    query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+
+    const runs = (data || []).map((r) => ({
+      id: r.id,
+      ci_run_id: r.ci_run_id,
+      build_status: r.build_status,
+      test_passed: r.test_passed,
+      test_failed: r.test_failed,
+      test_total: r.test_total,
+      test_coverage: r.test_coverage,
+      lint_errors: r.lint_errors,
+      commit_sha: r.commit_sha,
+      commit_message: r.commit_message,
+      commit_author: r.commit_author,
+      pr_url: r.pr_url,
+      created_at: r.created_at,
+    }));
+
+    res.json({ runs, total: count || 0, limit, offset });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. GET /global/project/:project_id/coverage-trend
+router.get("/global/project/:project_id/coverage-trend", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365);
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    const { data, error } = await supabase
+      .from("qa_metrics")
+      .select("test_coverage, created_at")
+      .eq("project_id", pid)
+      .gte("created_at", since)
+      .not("test_coverage", "is", null)
+      .order("created_at", { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const rows = data || [];
+
+    // Build daily history (last value per day)
+    const byDate = {};
+    for (const r of rows) {
+      const date = r.created_at.slice(0, 10);
+      byDate[date] = parseFloat(r.test_coverage);
+    }
+    const history = Object.entries(byDate).map(([date, coverage]) => ({ date, coverage }));
+
+    const current = rows.length ? parseFloat(rows[rows.length - 1].test_coverage) : null;
+    // Previous = first value in window
+    const previous = rows.length > 1 ? parseFloat(rows[0].test_coverage) : current;
+    const change = current != null && previous != null ? Math.round((current - previous) * 10) / 10 : 0;
+    const trend = change > 0 ? "up" : change < 0 ? "down" : "stable";
+
+    res.json({
+      overall: { current, previous, change, trend },
+      history,
+      files: [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. GET /global/project/:project_id/runs/:run_id/logs
+router.get("/global/project/:project_id/runs/:run_id/logs", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("qa_metrics")
+      .select("id, logs")
+      .eq("id", req.params.run_id)
+      .eq("project_id", req.params.project_id)
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: "Run not found" });
+
+    const logText = data.logs || "";
+    const lines = logText.split("\n");
+    const highlightedErrors = [];
+    lines.forEach((line, i) => {
+      if (/error|fail|exception/i.test(line)) {
+        highlightedErrors.push({ line: i + 1, message: line.trim() });
+      }
+    });
+
+    res.json({ runId: data.id, logs: logText, highlightedErrors });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. POST /global/project/:project_id/runs/:run_id/retry — stub
+router.post("/global/project/:project_id/runs/:run_id/retry", async (req, res) => {
+  try {
+    // Verify run exists
+    const { data, error } = await supabase
+      .from("qa_metrics")
+      .select("id")
+      .eq("id", req.params.run_id)
+      .eq("project_id", req.params.project_id)
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: "Run not found" });
+
+    res.json({
+      success: true,
+      newRunId: null,
+      status: "queued",
+      message: "Re-run has been queued. This is a stub — actual CI integration coming soon.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. GET /global/project/:project_id/runs/:run_id/logs/download
+router.get("/global/project/:project_id/runs/:run_id/logs/download", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("qa_metrics")
+      .select("id, logs, ci_run_id")
+      .eq("id", req.params.run_id)
+      .eq("project_id", req.params.project_id)
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: "Run not found" });
+
+    const filename = `run-${data.ci_run_id || data.id}-logs.txt`;
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(data.logs || "No logs available.");
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. GET /global/project/:project_id/sparkline — last 7 data points
+router.get("/global/project/:project_id/sparkline", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+    const { data, error } = await supabase
+      .from("qa_metrics")
+      .select("test_passed, test_total, test_coverage, lint_errors, build_status, created_at")
+      .eq("project_id", pid)
+      .order("created_at", { ascending: false })
+      .limit(7);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const rows = (data || []).reverse(); // chronological order
+
+    res.json({
+      testPassRate: rows.map((r) => (r.test_total > 0 ? Math.round((r.test_passed / r.test_total) * 100) : null)),
+      coverage: rows.map((r) => (r.test_coverage != null ? parseFloat(r.test_coverage) : null)),
+      lintErrors: rows.map((r) => r.lint_errors ?? null),
+      buildSuccess: rows.map((r) => (r.build_status === "success" ? 1 : 0)),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
