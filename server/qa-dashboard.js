@@ -1012,4 +1012,137 @@ router.get("/flaky-tests/:project_id", async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/qa/global/project/:project_id/runs/:run_id/diff
+// Fetch commit diff from GitHub for a specific run
+// ---------------------------------------------------------------------------
+router.get("/global/project/:project_id/runs/:run_id/diff", async (req, res) => {
+  try {
+    const { project_id, run_id } = req.params;
+
+    // 1. Look up the run to get commit_sha
+    const { data: run, error: runErr } = await supabase
+      .from("qa_metrics")
+      .select("commit_sha, commit_author, commit_message")
+      .eq("id", run_id)
+      .eq("project_id", project_id)
+      .single();
+
+    if (runErr) return res.status(404).json({ error: "Run not found" });
+    if (!run || !run.commit_sha) return res.json({ commit: null, files: [] });
+
+    // 2. Get GitHub connection for owner/repo
+    const { data: ghConn } = await supabase
+      .from("github_connections")
+      .select("owner, repo")
+      .eq("project_id", project_id)
+      .single();
+
+    if (!ghConn || !ghConn.owner || !ghConn.repo) {
+      return res.status(400).json({ error: "No GitHub connection found for this project", files: [] });
+    }
+
+    // 3. Call GitHub API
+    const ghToken = process.env.GH_TOKEN;
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${ghConn.owner}/${ghConn.repo}/commits/${run.commit_sha}`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          ...(ghToken ? { Authorization: `Bearer ${ghToken}` } : {}),
+          "User-Agent": "dante-id-api",
+        },
+      }
+    );
+
+    if (!ghRes.ok) {
+      return res.json({ error: "GitHub API unavailable", files: [] });
+    }
+
+    const data = await ghRes.json();
+
+    res.json({
+      commit: {
+        sha: data.sha,
+        message: data.commit?.message || "",
+        author: data.commit?.author?.name || "",
+        date: data.commit?.author?.date || "",
+      },
+      files: (data.files || []).map(f => ({
+        filename: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        patch: f.patch || "",
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/qa/global/project/:project_id/code-context
+// Fetch file content from GitHub with surrounding line context
+// ---------------------------------------------------------------------------
+router.get("/global/project/:project_id/code-context", async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const { file, line, context: ctxParam } = req.query;
+
+    if (!file || !line) {
+      return res.status(400).json({ error: "file and line query params required" });
+    }
+
+    const lineNum = parseInt(line, 10);
+    const contextLines = parseInt(ctxParam, 10) || 10;
+
+    // 1. Get GitHub connection
+    const { data: ghConn } = await supabase
+      .from("github_connections")
+      .select("owner, repo")
+      .eq("project_id", project_id)
+      .single();
+
+    if (!ghConn || !ghConn.owner || !ghConn.repo) {
+      return res.status(400).json({ error: "No GitHub connection found for this project" });
+    }
+
+    // 2. Fetch raw file from GitHub
+    const ghToken = process.env.GH_TOKEN;
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${ghConn.owner}/${ghConn.repo}/contents/${encodeURIComponent(file)}`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3.raw",
+          ...(ghToken ? { Authorization: `Bearer ${ghToken}` } : {}),
+          "User-Agent": "dante-id-api",
+        },
+      }
+    );
+
+    if (!ghRes.ok) {
+      return res.status(ghRes.status === 404 ? 404 : 502).json({ error: "Could not fetch file from GitHub" });
+    }
+
+    const content = await ghRes.text();
+    const allLines = content.split("\n");
+
+    // 3. Extract surrounding context
+    const startLine = Math.max(1, lineNum - contextLines);
+    const endLine = Math.min(allLines.length, lineNum + contextLines);
+
+    const lines = [];
+    for (let i = startLine; i <= endLine; i++) {
+      const entry = { num: i, content: allLines[i - 1] };
+      if (i === lineNum) entry.highlight = true;
+      lines.push(entry);
+    }
+
+    res.json({ file, startLine, endLine, lines });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
