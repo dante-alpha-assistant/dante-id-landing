@@ -44,17 +44,57 @@ async function requireAuth(req, res, next) {
 /**
  * Map a filename from build content to a codebase path
  */
+/**
+ * Scaffold files that must NEVER be overwritten by generated code.
+ * These are core app files that would break the existing codebase.
+ */
+const SCAFFOLD_SKIP = new Set([
+  "package.json", "package-lock.json",
+  "index.html",
+  "vite.config.js", "vite.config.ts",
+  "tailwind.config.js", "tailwind.config.ts",
+  "postcss.config.js", "postcss.config.ts",
+  "tsconfig.json", "tsconfig.node.json",
+  ".env", ".env.example", ".env.local",
+  "vercel.json",
+  "src/App.tsx", "src/App.jsx",
+  "src/main.tsx", "src/main.jsx",
+  "src/index.tsx", "src/index.jsx",
+  "src/index.css", "src/App.css",
+]);
+
 function mapFilePath(filename) {
-  if (filename === "package.json") return null; // SKIP
+  // Skip scaffold files — never overwrite core app structure
+  const normalized = filename.replace(/^\.\//, "");
+  if (SCAFFOLD_SKIP.has(normalized)) return null;
 
-  if (filename.startsWith("server/") && filename.endsWith(".js")) return filename;
-  if (filename.startsWith("src/") && filename.endsWith(".jsx")) return filename;
-  if (filename.endsWith(".sql")) return `supabase/migrations/${path.basename(filename)}`;
-  if (filename.endsWith(".js")) return `server/${path.basename(filename)}`;
-  if (filename.endsWith(".jsx")) return `src/components/${path.basename(filename)}`;
+  // Skip anything in server/ that's a config file
+  if (normalized.startsWith("server/") && (
+    normalized.includes("config") || normalized.includes("postcss") || normalized.includes("tailwind")
+  )) return null;
 
-  // Default: keep as-is
-  return filename;
+  // Allow: src/components/*, src/pages/*, src/contexts/*, src/hooks/*, src/lib/*
+  if (normalized.startsWith("src/components/")) return normalized;
+  if (normalized.startsWith("src/pages/")) return normalized;
+  if (normalized.startsWith("src/contexts/")) return normalized;
+  if (normalized.startsWith("src/hooks/")) return normalized;
+  if (normalized.startsWith("src/lib/")) return normalized;
+  if (normalized.startsWith("src/utils/")) return normalized;
+
+  // Allow: server/*.js (new API routes)
+  if (normalized.startsWith("server/") && normalized.endsWith(".js")) return normalized;
+
+  // Allow: migrations
+  if (normalized.endsWith(".sql")) return `supabase/migrations/${path.basename(normalized)}`;
+
+  // Allow: .jsx/.tsx files → place in components
+  if (normalized.endsWith(".jsx") || normalized.endsWith(".tsx")) {
+    const base = path.basename(normalized);
+    return `src/components/${base}`;
+  }
+
+  // Reject everything else (README, docs, configs, etc.)
+  return null;
 }
 
 /**
