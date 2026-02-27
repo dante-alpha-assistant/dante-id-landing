@@ -1,15 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import QAStatusCard from '../components/qa/QAStatusCard'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function apiFetch(path) {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token || localStorage.getItem('supabase_token') || localStorage.getItem('token')
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+    headers: { 'Content-Type': 'application/json' }
   })
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
