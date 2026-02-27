@@ -5,6 +5,8 @@ import Sparkline from '../components/qa/Sparkline'
 import TestHistoryTab from '../components/qa/TestHistoryTab'
 import CoverageTab from '../components/qa/CoverageTab'
 import LogsTab from '../components/qa/LogsTab'
+import PipelineFlow from '../components/qa/PipelineFlow'
+import FailureDetail from '../components/qa/FailureDetail'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -45,6 +47,7 @@ export default function QAProjectDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [retrying, setRetrying] = useState(false)
+  const [failures, setFailures] = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -59,6 +62,7 @@ export default function QAProjectDetail() {
       if (sparkRes && sparkRes.ok) {
         setSparklines(await sparkRes.json())
       }
+      fetch(`${API_BASE}/api/qa/global/project/${project_id}/failures`).then(r => r.json()).then(setFailures).catch(() => {})
     } catch (e) {
       setError(e.message)
     } finally {
@@ -150,35 +154,22 @@ export default function QAProjectDetail() {
           </TabList>
 
           <TabPanel value="overview">
-            {/* Metric Cards */}
-            {latest && (
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <MetricCard title="Build Status">
-                  <StatusBadge status={latest.build_status} large />
-                </MetricCard>
-                <MetricCard title="Lint Errors" sparkData={sparklines?.lint} sparkInvert>
-                  <span className={`text-2xl font-bold ${latest.lint_errors === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {latest.lint_errors}
-                  </span>
-                </MetricCard>
-                <MetricCard title="Tests" sparkData={sparklines?.tests}>
-                  <span className={`text-2xl font-bold ${testPct === 100 ? 'text-emerald-400' : testPct >= 80 ? 'text-amber-400' : 'text-red-400'}`}>
-                    {latest.test_passed}/{latest.test_total}
-                  </span>
-                  <span className="text-md-on-surface-variant text-sm ml-2">({testPct}%)</span>
-                </MetricCard>
-                <MetricCard title="Coverage" sparkData={sparklines?.coverage}>
-                  <span className={`text-2xl font-bold ${coveragePct >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {coveragePct}%
-                  </span>
-                </MetricCard>
-              </div>
-            )}
+            {/* Pipeline Flow */}
+            <PipelineFlow latest={latest} />
+
+            {/* Failure Detail */}
+            <FailureDetail failures={failures} latest={latest} />
 
             {/* CI Run History */}
             <div className="bg-md-surface-container border border-md-outline-variant rounded-md-lg overflow-hidden">
               <div className="px-5 py-3 border-b border-md-outline-variant">
                 <h2 className="text-md-on-background font-semibold">CI Run History</h2>
+                <div className="flex gap-1 mt-2">
+                  {displayRuns.map((run, i) => (
+                    <div key={i} className={`w-2 h-2 rounded-full ${run.build_status === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}
+                         title={new Date(run.created_at).toLocaleDateString()} />
+                  ))}
+                </div>
               </div>
               <table className="w-full text-sm">
                 <thead>

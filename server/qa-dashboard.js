@@ -127,6 +127,63 @@ router.get("/global/project/:project_id", async (req, res) => {
   }
 });
 
+// GET /api/qa/global/project/:projectId/failures — failure details for situation room
+router.get("/global/project/:project_id/failures", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+    const { data: failRun } = await supabase
+      .from("qa_metrics")
+      .select("*")
+      .eq("project_id", pid)
+      .eq("build_status", "failure")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!failRun) {
+      return res.json({ latest_failure: null });
+    }
+
+    let failureType = "build";
+    const errors = [];
+
+    if (failRun.test_failed > 0 || (failRun.test_total > 0 && failRun.test_passed < failRun.test_total)) {
+      failureType = "test";
+      errors.push({
+        name: "Test Suite",
+        message: `${failRun.test_failed || (failRun.test_total - failRun.test_passed)} test(s) failed out of ${failRun.test_total}`,
+      });
+    }
+
+    if (failRun.lint_errors > 0) {
+      if (failureType === "build") failureType = "lint";
+      errors.push({
+        name: "Lint",
+        message: `${failRun.lint_errors} lint error(s), ${failRun.lint_warnings || 0} warning(s)`,
+      });
+    }
+
+    if (failRun.build_status === "failure" && errors.length === 0) {
+      errors.push({
+        name: "Build",
+        message: "Build process failed. Check CI logs for details.",
+      });
+    }
+
+    res.json({
+      latest_failure: {
+        type: failureType,
+        errors,
+        run_id: failRun.id,
+        created_at: failRun.created_at,
+        raw_log: failRun.raw_log || null,
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Auth middleware (copied from refinery.js) ---
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
