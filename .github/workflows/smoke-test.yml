@@ -53,6 +53,7 @@ jobs:
               const testedEndpoints = passed + failed; // every test targets an endpoint
               const test_coverage = Math.min(Math.round((testedEndpoints / totalEndpoints) * 100), 100);
 
+              console.log('Test results: passed=' + passed + ' failed=' + failed + ' total=' + total);
               const payload = {
                 build_status: failed === 0 ? 'success' : 'failure',
                 test_total: total,
