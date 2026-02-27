@@ -150,6 +150,34 @@ router.post("/deploy", requireAuth, async (req, res) => {
     }
     logs.push(logEntry("Quality gate passed"));
 
+    // Coverage gate
+    try {
+      const { data: latestCoverage } = await supabase
+        .from("coverage_history")
+        .select("coverage_pct")
+        .eq("project_id", project_id)
+        .order("recorded_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestCoverage && latestCoverage.coverage_pct < 60 && !isForce) {
+        logs.push(logEntry(`❌ Coverage gate FAILED: ${latestCoverage.coverage_pct}% < 60% threshold — deploy blocked`));
+        return res.status(400).json({
+          error: "Deploy blocked by coverage gate",
+          coverage: latestCoverage.coverage_pct,
+          threshold: 60,
+          logs
+        });
+      }
+      if (latestCoverage && latestCoverage.coverage_pct < 60 && isForce) {
+        logs.push(logEntry(`⚠️ Coverage: ${latestCoverage.coverage_pct}% < 60% — FORCE DEPLOY override`));
+      } else if (latestCoverage) {
+        logs.push(logEntry(`✅ Coverage: ${latestCoverage.coverage_pct}%`));
+      }
+    } catch (e) {
+      logs.push(logEntry("Coverage data not available — skipping gate"));
+    }
+
     // Fetch builds
     logs.push(logEntry("Fetching builds..."));
     const { data: builds } = await supabase
