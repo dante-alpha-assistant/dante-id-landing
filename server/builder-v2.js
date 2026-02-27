@@ -6,7 +6,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 // Builder worker: Mu's OpenClaw instance (dedicated build plane)
 // Override with OPENCLAW_BUILDER_URL/TOKEN for different workers
-const OPENCLAW_URL = process.env.OPENCLAW_BUILDER_URL || process.env.OPENCLAW_URL || "http://159.65.235.128:18789";
+const OPENCLAW_URL = process.env.OPENCLAW_BUILDER_URL || process.env.OPENCLAW_URL || "http://165.22.180.183:18789";
 const OPENCLAW_TOKEN = process.env.OPENCLAW_BUILDER_TOKEN || process.env.OPENCLAW_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN;
 
 // Auth middleware (copy from builder.js)
