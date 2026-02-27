@@ -59,11 +59,11 @@ export default function QADashboard() {
 
       {/* Platform Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <QAStatusCard title="Health Score" value={p.health_score != null ? `${p.health_score}%` : '—'} status={p.health_score >= 80 ? 'pass' : p.health_score != null ? 'fail' : 'unknown'} icon="💚" />
-        <QAStatusCard title="Avg Lint Errors" value={p.avg_lint_errors ?? '—'} status={p.avg_lint_errors === 0 ? 'pass' : p.avg_lint_errors > 0 ? 'fail' : 'unknown'} icon="⚡" />
-        <QAStatusCard title="Builds Passing" value={p.builds_total ? `${p.builds_passing}/${p.builds_total}` : '—'} status={p.builds_passing === p.builds_total ? 'pass' : 'fail'} icon="🔨" />
-        <QAStatusCard title="Avg Test Pass Rate" value={p.avg_test_pass_rate != null ? `${p.avg_test_pass_rate}%` : '—'} status={p.avg_test_pass_rate >= 90 ? 'pass' : p.avg_test_pass_rate != null ? 'fail' : 'unknown'} icon="✓" />
-        <QAStatusCard title="Avg Coverage" value={p.avg_coverage != null ? `${p.avg_coverage}%` : '—'} status={p.avg_coverage >= 80 ? 'pass' : p.avg_coverage != null ? 'fail' : 'unknown'} icon="◉" />
+        <QAStatusCard title="Health Score" value={p.health_score != null ? `${p.health_score}%` : '—'} status={p.health_score >= 80 ? 'pass' : p.health_score >= 60 ? 'warn' : p.health_score != null ? 'fail' : 'unknown'} icon="💚" />
+        <QAStatusCard title="Avg Lint Errors" value={p.avg_lint_errors ?? '—'} status={p.avg_lint_errors === 0 ? 'pass' : p.avg_lint_errors <= 5 ? 'warn' : 'fail'} icon="⚡" />
+        <QAStatusCard title="Builds Passing" value={p.builds_total ? `${p.builds_passing}/${p.builds_total}` : '—'} status={p.builds_passing === p.builds_total ? 'pass' : p.builds_passing > 0 ? 'warn' : 'fail'} icon="🔨" />
+        <QAStatusCard title="Avg Test Pass Rate" value={p.avg_test_pass_rate != null ? `${p.avg_test_pass_rate}%` : '—'} status={p.avg_test_pass_rate >= 90 ? 'pass' : p.avg_test_pass_rate >= 70 ? 'warn' : p.avg_test_pass_rate != null ? 'fail' : 'unknown'} icon="✓" />
+        <QAStatusCard title="Avg Coverage" value={p.avg_coverage != null ? `${p.avg_coverage}%` : '—'} status={p.avg_coverage >= 80 ? 'pass' : p.avg_coverage >= 60 ? 'warn' : p.avg_coverage != null ? 'fail' : 'unknown'} icon="◉" />
       </div>
 
       {/* Per-Project Table */}
