@@ -5,6 +5,17 @@ const crypto = require("crypto");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Platform CI project ID — used when "dashboard" is passed as project_id
+const PLATFORM_CI_PROJECT = "91607ad6-bacc-4ea9-8d58-007d984016f2";
+
+// Rewrite "dashboard" to platform CI project in all param-based routes
+router.param("project_id", (req, res, next, val) => {
+  if (val === "dashboard") {
+    req.params.project_id = PLATFORM_CI_PROJECT;
+  }
+  next();
+});
+
 // --- Auth middleware (copied from refinery.js) ---
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -483,7 +494,7 @@ router.get("/:project_id/summary", requireAuth, async (req, res) => {
   try {
     const { data } = await supabase
       .from("qa_metrics")
-      .select("quality_score, lint_errors, test_pass_rate, build_passing, created_at")
+      .select("lint_errors, build_status, test_total, test_passed, test_failed, test_coverage, created_at")
       .eq("project_id", req.params.project_id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -499,11 +510,16 @@ router.get("/:project_id/summary", requireAuth, async (req, res) => {
       });
     }
 
+    const testPassRate = data.test_total > 0 ? Math.round((data.test_passed / data.test_total) * 100) : 100;
     res.json({
-      quality_score: data.quality_score,
+      quality_score: testPassRate,
       lint_errors: data.lint_errors,
-      test_pass_rate: data.test_pass_rate,
-      build_passing: data.build_passing,
+      test_pass_rate: testPassRate,
+      build_passing: data.build_status === "success",
+      test_total: data.test_total,
+      test_passed: data.test_passed,
+      test_failed: data.test_failed,
+      test_coverage: data.test_coverage,
       last_run: data.created_at,
     });
   } catch (err) {
