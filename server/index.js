@@ -149,6 +149,7 @@ app.use("/api/admin", require("./admin"));
 app.use("/api/platform/context", require("./platform-context"));
 app.use("/api/platform/apply", require("./platform-apply"));
 app.use("/api/platform/status", require("./platform-status"));
+app.use("/api/platform/analytics", require("./platform-analytics"));
 app.use("/api/validator", require("./validator"));
 app.use("/api/projects/:id/qa-results", require("./qa-results"));
 app.use("/api/iterate", require("./iterate"));
