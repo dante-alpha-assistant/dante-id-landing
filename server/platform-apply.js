@@ -73,11 +73,13 @@ function mapFilePath(filename) {
     normalized.includes("config") || normalized.includes("postcss") || normalized.includes("tailwind")
   )) return null;
 
-  // Allow: src/components/*, src/pages/*, src/contexts/*, src/hooks/*, src/lib/*
+  // Allow: src/components/*, src/pages/*, src/contexts/*, src/hooks/*, src/lib/*, src/utils/*
   if (normalized.startsWith("src/components/")) return normalized;
   if (normalized.startsWith("src/pages/")) return normalized;
   if (normalized.startsWith("src/contexts/")) return normalized;
   if (normalized.startsWith("src/hooks/")) return normalized;
+  if (normalized.startsWith("src/lib/")) return normalized;
+  if (normalized.startsWith("src/utils/")) return normalized;
   if (normalized.startsWith("src/lib/")) return normalized;
   if (normalized.startsWith("src/utils/")) return normalized;
 
@@ -161,10 +163,18 @@ router.post("/", requireAuth, async (req, res) => {
     try { git(`branch -D ${branch}`); } catch (e) { /* branch may not exist */ }
     git(`checkout -b ${branch}`);
 
-    // 6. Write files
+    // 6. Write files (skip existing to avoid overwrites)
     const filesWritten = [];
+    const filesSkipped = [];
     for (const [filePath, code] of Object.entries(fileMap)) {
+      // Skip if file already exists in repo (defensive layer)
       const fullPath = path.join(REPO_DIR, filePath);
+      if (fs.existsSync(fullPath)) {
+        filesSkipped.push(filePath);
+        console.log(`[platform-apply] Skipping existing: ${filePath}`);
+        continue;
+      }
+      
       const dir = path.dirname(fullPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(fullPath, code, "utf8");
@@ -206,7 +216,13 @@ router.post("/", requireAuth, async (req, res) => {
     });
 
     // 10. Return
-    return res.json({ success: true, branch, pr_url: prUrl, files_written: filesWritten });
+    return res.json({ 
+      success: true, 
+      branch, 
+      pr_url: prUrl, 
+      files_written: filesWritten,
+      files_skipped: filesSkipped
+    });
   } catch (err) {
     console.error("[platform-apply] Error:", err.message);
     return res.status(500).json({ error: err.message });
