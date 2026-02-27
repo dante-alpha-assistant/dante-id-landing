@@ -452,6 +452,40 @@ Provide specific code fixes for each failed/warning test.`;
   }
 });
 
+// --- POST /:project_id/run-tests — trigger GitHub Actions CI ---
+router.post("/:project_id/run-tests", requireAuth, async (req, res) => {
+  try {
+    const response = await fetch(
+      "https://api.github.com/repos/dante-alpha-assistant/dante-id-landing/actions/workflows/smoke-test.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `token ${process.env.GH_TOKEN}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ref: "main" })
+      }
+    );
+
+    if (response.status === 204) {
+      await supabase.from("ci_triggers").insert({
+        project_id: req.params.project_id,
+        user_id: req.user?.id || "system",
+        workflow_name: "smoke-test.yml",
+        branch: "main",
+        status: "dispatched"
+      });
+      res.json({ triggered: true, message: "CI pipeline triggered" });
+    } else {
+      const err = await response.text();
+      res.status(response.status).json({ error: err });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- POST /run-all — run tests for all built features in a project ---
 router.post("/run-all", requireAuth, async (req, res) => {
   const { project_id } = req.body;

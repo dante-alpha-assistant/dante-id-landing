@@ -101,6 +101,8 @@ export default function Inspector() {
   const [fixSuggestions, setFixSuggestions] = useState(null)
   const [loadingFixes, setLoadingFixes] = useState(false)
   const [builds, setBuilds] = useState({})
+  const [ciRunning, setCiRunning] = useState(false)
+  const [ciResult, setCiResult] = useState(null)
 
   const fetchData = useCallback(async () => {
     const [featRes, testRes] = await Promise.all([
@@ -185,6 +187,22 @@ export default function Inspector() {
     }
   }, [testResults, selectedFeature])
 
+  const handleRunCI = async () => {
+    setCiRunning(true)
+    setCiResult(null)
+    try {
+      const res = await apiCall(`/${project_id}/run-tests`, {
+        method: 'POST',
+        body: JSON.stringify({})
+      })
+      setCiResult(res)
+    } catch (err) {
+      setCiResult({ error: err.message })
+    } finally {
+      setCiRunning(false)
+    }
+  }
+
   const testedFeatures = testResults.filter(r => r.status !== 'untested')
   const passedCount = testResults.filter(r => r.status === 'passed').length
   const passRate = testedFeatures.length > 0 ? Math.round((passedCount / testedFeatures.length) * 100) : 0
@@ -224,6 +242,20 @@ export default function Inspector() {
             Dashboard
           </button>
           <span className="text-xl font-bold tracking-tight uppercase">INSPECTOR</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRunCI}
+            disabled={ciRunning}
+            className="border border-[#33ff00] text-[#33ff00] bg-transparent hover:bg-[#33ff00]/10 rounded-none px-4 py-2 font-mono text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {ciRunning ? '[ Running... ]' : '[ Run Tests ]'}
+          </button>
+          {ciResult && (
+            <div className={`p-2 border font-mono text-xs ${ciResult.error ? 'border-red-500 text-red-400' : 'border-[#33ff00] text-[#33ff00]'}`}>
+              {ciResult.error ? `✗ ${ciResult.error}` : '✓ CI pipeline triggered — results will appear in QA dashboard'}
+            </div>
+          )}
         </div>
       </div>
 
