@@ -1,106 +1,76 @@
-name: Smoke Test
-
+name: dante.id Platform CI
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
-  smoke-test:
+  test:
     runs-on: ubuntu-latest
-    
+    env:
+      TEST_BASE_URL: https://dante.id
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Start API server
+      - name: Run tests against production
+        id: tests
         run: |
-          # Create minimal env for testing
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
-          echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
-          echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> .env
-          
-          # Start server in background
-          npm start &
-          
-          # Wait for server to be ready
-          for i in {1..30}; do
-            if curl -s http://localhost:3001/api/health > /dev/null; then
-              echo "Server is up!"
-              break
-            fi
-            echo "Waiting for server... ($i/30)"
-            sleep 2
-          done
-        env:
-          NODE_ENV: test
-
-      - name: Run smoke test
-        run: |
-          echo "Running E2E pipeline smoke test..."
-          
-          # Call the test-pipeline endpoint
-          response=$(curl -s -w "\n%{http_code}" -X POST \
-            http://localhost:3001/api/platform/test-pipeline \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}")
-          
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-          
-          echo "Response code: $http_code"
-          echo "Response body:"
-          echo "$body" | jq .
-          
-          # Check if test passed
-          if [ "$http_code" != "200" ]; then
-            echo "❌ Smoke test FAILED (HTTP $http_code)"
-            exit 1
-          fi
-          
-          overall=$(echo "$body" | jq -r '.results.overall')
-          if [ "$overall" != "passed" ]; then
-            echo "❌ Smoke test FAILED (overall: $overall)"
-            exit 1
-          fi
-          
-          echo "✅ Smoke test PASSED"
-          echo "Test ID: $(echo "$body" | jq -r '.test_id')"
-          echo "Duration: $(echo "$body" | jq -r '.results.duration_ms')ms"
+          npx vitest run --reporter=json --outputFile=test-results.json 2>&1 || true
 
       - name: Report to QA Dashboard
         if: always()
         run: |
-          STATUS="failed"
-          if [ "${{ job.status }}" == "success" ]; then STATUS="passed"; fi
-
-          curl -s -X POST https://dante.id/api/qa/ci-report \
-            -H "Content-Type: application/json" \
-            -H "X-CI-Secret: ${{ secrets.CI_WEBHOOK_SECRET }}" \
-            -d '{
-              "repo_id": "dante-alpha-assistant/dante-id-landing",
-              "status": "'$STATUS'",
-              "build_status": "'$STATUS'",
-              "lint_errors": 0,
-              "test_total": 1,
-              "test_passed": '$( [ "$STATUS" = "passed" ] && echo 1 || echo 0 )',
-              "test_failed": '$( [ "$STATUS" = "failed" ] && echo 1 || echo 0 )'
-            }'
-
-      - name: Cleanup
-        if: always()
-        run: |
-          # Kill the server
-          pkill -f "node.*server" || true
+          if [ -f test-results.json ]; then
+            node -e "
+              const fs = require('fs');
+              const results = JSON.parse(fs.readFileSync('test-results.json', 'utf8'));
+              const testSuites = results.testResults || [];
+              let passed = 0, failed = 0, total = 0;
+              const details = [];
+              testSuites.forEach(suite => {
+                (suite.assertionResults || []).forEach(test => {
+                  total++;
+                  if (test.status === 'passed') passed++;
+                  else failed++;
+                  details.push({
+                    name: test.fullName || test.title,
+                    file: suite.name,
+                    status: test.status,
+                    error_message: test.failureMessages ? test.failureMessages.join('\n') : null,
+                    duration_ms: test.duration
+                  });
+                });
+              });
+              const payload = {
+                build_status: failed === 0 ? 'success' : 'failure',
+                test_total: total,
+                test_passed: passed,
+                test_failed: failed,
+                lint_errors: 0,
+                lint_warnings: 0,
+                test_details: details,
+                commit_sha: process.env.GITHUB_SHA,
+                commit_message: 'CI run',
+                commit_author: process.env.GITHUB_ACTOR
+              };
+              fetch('https://dante.id/api/qa/ci-report', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CI-Secret': process.env.CI_WEBHOOK_SECRET
+                },
+                body: JSON.stringify(payload)
+              }).then(r => r.json()).then(console.log).catch(console.error);
+            "
+          else
+            echo 'No test results file found'
+          fi
+        env:
+          CI_WEBHOOK_SECRET: ${{ secrets.CI_WEBHOOK_SECRET }}

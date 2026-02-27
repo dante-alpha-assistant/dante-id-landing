@@ -559,13 +559,23 @@ router.post("/ci-report", async (req, res) => {
     return res.status(401).json({ error: "Invalid secret" });
   }
 
-  const { status, lint_errors, test_total, test_passed, test_failed, test_coverage } = req.body;
+  const {
+    status, build_status, lint_errors, test_total, test_passed, test_failed, test_coverage,
+    lint_warnings, test_details, commit_sha, commit_message, commit_author, raw_log
+  } = req.body;
+
+  // Log extended fields that don't have DB columns yet
+  if (test_details) {
+    console.log(`[ci-report] ${test_details.length} test details received`);
+    console.log(`[ci-report] commit: ${commit_sha || 'unknown'} by ${commit_author || 'unknown'} — ${commit_message || ''}`);
+    if (raw_log) console.log(`[ci-report] raw_log length: ${raw_log.length}`);
+  }
 
   const row = {
     repo_id: req.body.repo_id || "dante-alpha-assistant/dante-id-landing",
     lint_errors: lint_errors || 0,
-    lint_warnings: req.body.lint_warnings || 0,
-    build_status: status === "passed" ? "success" : "failure",
+    lint_warnings: lint_warnings || 0,
+    build_status: build_status || (status === "passed" ? "success" : "failure"),
     test_total: test_total || (status === "passed" ? 1 : 0),
     test_passed: test_passed || (status === "passed" ? 1 : 0),
     test_failed: test_failed || 0,
@@ -577,7 +587,7 @@ router.post("/ci-report", async (req, res) => {
   const { error } = await supabase.from("qa_metrics").insert(row);
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ received: true });
+  res.json({ received: true, test_details_logged: !!(test_details) });
 });
 
 // 12. POST /webhook/event — GitHub webhook (no auth)
