@@ -8,9 +8,9 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // Platform CI project ID — used when "dashboard" is passed as project_id
 const PLATFORM_CI_PROJECT = "91607ad6-bacc-4ea9-8d58-007d984016f2";
 
-// Rewrite "dashboard" to platform CI project
-router.use("/:project_id", (req, res, next) => {
-  if (req.params.project_id === "dashboard") {
+// Rewrite "dashboard" to platform CI project in all param-based routes
+router.param("project_id", (req, res, next, val) => {
+  if (val === "dashboard") {
     req.params.project_id = PLATFORM_CI_PROJECT;
   }
   next();
