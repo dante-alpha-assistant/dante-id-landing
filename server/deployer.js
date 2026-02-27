@@ -550,6 +550,58 @@ router.post("/deploy", requireAuth, async (req, res) => {
   }
 });
 
+// --- GET /:project_id/quality-gate ---
+router.get("/:project_id/quality-gate", requireAuth, async (req, res) => {
+  try {
+    // Get latest CI run for the platform project
+    const { data: latestRun } = await supabase
+      .from("qa_metrics")
+      .select("build_status, test_passed, test_total, test_failed, test_coverage, lint_errors, lint_warnings, commit_sha, commit_author, commit_message, created_at")
+      .eq("project_id", "91607ad6-bacc-4ea9-8d58-007d984016f2")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    // Get Inspector results for this specific project
+    const { data: testResults } = await supabase
+      .from("test_results")
+      .select("status, severity")
+      .eq("project_id", req.params.project_id);
+
+    const inspectorResults = testResults || [];
+    const blockers = inspectorResults.filter(t => t.status === "failed" && t.severity === "blocker");
+    const warnings = inspectorResults.filter(t => t.status === "failed" && t.severity !== "blocker");
+
+    // Quality gate rules
+    const ciPassing = latestRun?.build_status === "success";
+    const testPassRate = latestRun?.test_total > 0 ? (latestRun.test_passed / latestRun.test_total) * 100 : 0;
+    const coverageOk = (latestRun?.test_coverage || 0) >= 80;
+    const noBlockers = blockers.length === 0;
+    const noLintErrors = (latestRun?.lint_errors || 0) === 0;
+
+    const passed = ciPassing && testPassRate >= 90 && coverageOk && noBlockers;
+
+    res.json({
+      passed,
+      checks: [
+        { name: "CI Build", status: ciPassing ? "pass" : "fail", detail: latestRun?.build_status || "unknown" },
+        { name: "Tests", status: testPassRate >= 90 ? "pass" : testPassRate >= 70 ? "warn" : "fail", detail: `${latestRun?.test_passed || 0}/${latestRun?.test_total || 0} (${testPassRate.toFixed(0)}%)` },
+        { name: "Coverage", status: coverageOk ? "pass" : "warn", detail: `${latestRun?.test_coverage || 0}%` },
+        { name: "Lint", status: noLintErrors ? "pass" : "warn", detail: `${latestRun?.lint_errors || 0} errors` },
+        { name: "Blockers", status: noBlockers ? "pass" : "fail", detail: `${blockers.length} blockers, ${warnings.length} warnings` },
+      ],
+      lastRun: latestRun ? {
+        commit_sha: latestRun.commit_sha,
+        commit_author: latestRun.commit_author,
+        commit_message: latestRun.commit_message,
+        created_at: latestRun.created_at,
+      } : null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- GET /:project_id --- (convenience alias)
 router.get("/:project_id", requireAuth, async (req, res) => {
   try {
