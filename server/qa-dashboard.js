@@ -16,6 +16,75 @@ router.param("project_id", (req, res, next, val) => {
   next();
 });
 
+// GET /api/qa/global/overview — aggregate QA metrics across ALL projects
+router.get("/global/overview", async (req, res) => {
+  try {
+    // Get latest metrics per project (using distinct on)
+    const { data: allMetrics, error } = await supabase
+      .from("qa_metrics")
+      .select("*, projects:project_id(id, name, status)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Group by project, keep latest per project
+    const byProject = {};
+    for (const m of (allMetrics || [])) {
+      const pid = m.project_id || "unassigned";
+      if (!byProject[pid]) byProject[pid] = { latest: m, history: [] };
+      byProject[pid].history.push(m);
+    }
+
+    const projects = Object.entries(byProject).map(([pid, data]) => {
+      const m = data.latest;
+      const passRate = m.test_total > 0 ? Math.round((m.test_passed / m.test_total) * 100) : null;
+      return {
+        project_id: pid === "unassigned" ? null : pid,
+        project_name: m.projects?.name || "Unassigned",
+        project_status: m.projects?.status || null,
+        lint_errors: m.lint_errors,
+        build_status: m.build_status,
+        test_total: m.test_total,
+        test_passed: m.test_passed,
+        test_failed: m.test_failed,
+        test_pass_rate: passRate,
+        test_coverage: m.test_coverage,
+        last_run: m.created_at,
+        run_count: data.history.length,
+      };
+    });
+
+    // Compute platform-wide aggregates
+    const withData = projects.filter(p => p.build_status);
+    const totalRuns = withData.reduce((s, p) => s + p.run_count, 0);
+    const avgLint = withData.length ? Math.round(withData.reduce((s, p) => s + (p.lint_errors || 0), 0) / withData.length) : 0;
+    const passingBuilds = withData.filter(p => p.build_status === "success").length;
+    const avgPassRate = withData.filter(p => p.test_pass_rate != null).length
+      ? Math.round(withData.filter(p => p.test_pass_rate != null).reduce((s, p) => s + p.test_pass_rate, 0) / withData.filter(p => p.test_pass_rate != null).length)
+      : null;
+    const avgCoverage = withData.filter(p => p.test_coverage != null).length
+      ? Math.round(withData.filter(p => p.test_coverage != null).reduce((s, p) => s + parseFloat(p.test_coverage), 0) / withData.filter(p => p.test_coverage != null).length * 10) / 10
+      : null;
+
+    res.json({
+      platform: {
+        total_projects: withData.length,
+        total_runs: totalRuns,
+        avg_lint_errors: avgLint,
+        builds_passing: passingBuilds,
+        builds_total: withData.length,
+        avg_test_pass_rate: avgPassRate,
+        avg_coverage: avgCoverage,
+        health_score: withData.length ? Math.round((passingBuilds / withData.length) * 100) : 0,
+      },
+      projects,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Auth middleware (copied from refinery.js) ---
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;

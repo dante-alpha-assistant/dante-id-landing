@@ -1,11 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import QAStatusCard from '../components/qa/QAStatusCard'
-import QATrendChart from '../components/qa/QATrendChart'
-import ErrorLogTable from '../components/qa/ErrorLogTable'
-import CITriggerPanel from '../components/qa/CITriggerPanel'
-import QualityGatesConfig from '../components/qa/QualityGatesConfig'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -19,80 +15,29 @@ async function apiFetch(path) {
   return res.json()
 }
 
-async function apiPost(path, body) {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token || localStorage.getItem('supabase_token') || localStorage.getItem('token')
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify(body)
-  })
-  if (!res.ok) throw new Error(`API ${res.status}`)
-  return res.json()
+function StatusBadge({ status }) {
+  const color = status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : status === 'failure' ? 'bg-red-500/20 text-red-400' : 'bg-zinc-500/20 text-zinc-400'
+  const label = status === 'success' ? 'Passing' : status === 'failure' ? 'Failing' : 'Unknown'
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{label}</span>
 }
 
 export default function QADashboard() {
-  const { project_id } = useParams()
   const navigate = useNavigate()
-  const [status, setStatus] = useState(null)
-  const [trends, setTrends] = useState([])
-  const [errors, setErrors] = useState([])
-  const [errorPage, setErrorPage] = useState(1)
-  const [errorTotalPages, setErrorTotalPages] = useState(1)
-  const [gates, setGates] = useState([])
-  const [triggers, setTriggers] = useState([])
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     try {
-      const [s, t, e, g, tr] = await Promise.all([
-        apiFetch(`/api/qa/${project_id}/status`),
-        apiFetch(`/api/qa/${project_id}/trends?days=30`),
-        apiFetch(`/api/qa/${project_id}/errors?page=${errorPage}`),
-        apiFetch(`/api/qa/${project_id}/gates`),
-        apiFetch(`/api/qa/${project_id}/triggers?limit=5`),
-      ])
-      setStatus(s)
-      setTrends(t.data || t)
-      setErrors(e.errors || e.data || [])
-      setErrorTotalPages(e.totalPages || 1)
-      setGates(g.gates || g)
-      setTriggers(tr.triggers || tr.data || [])
+      const result = await apiFetch('/api/qa/global/overview')
+      setData(result)
     } catch (err) {
-      console.error('QA load error:', err)
+      console.error('QA global load error:', err)
     } finally {
       setLoading(false)
     }
-  }, [project_id, errorPage])
+  }, [])
 
   useEffect(() => { load() }, [load])
-
-  const handleTrigger = async (type) => {
-    try {
-      await apiPost(`/api/qa/${project_id}/trigger`, { type })
-      setTimeout(load, 2000)
-    } catch (err) {
-      console.error('Trigger error:', err)
-    }
-  }
-
-  const handleResolve = async (errorId) => {
-    try {
-      await apiPost(`/api/qa/${project_id}/errors/${errorId}/resolve`, {})
-      load()
-    } catch (err) {
-      console.error('Resolve error:', err)
-    }
-  }
-
-  const handleSaveGates = async (updatedGates) => {
-    try {
-      await apiPost(`/api/qa/${project_id}/gates`, { gates: updatedGates })
-      load()
-    } catch (err) {
-      console.error('Save gates error:', err)
-    }
-  }
 
   if (loading) {
     return (
@@ -102,41 +47,80 @@ export default function QADashboard() {
     )
   }
 
+  const p = data?.platform || {}
+
   return (
     <div className="min-h-screen bg-md-background text-md-on-background p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <button onClick={() => navigate(`/dashboard/${project_id}`)} className="text-md-on-surface-variant text-xs hover:text-md-primary mb-1 transition-colors">← Back to Dashboard</button>
-          <h1 className="text-md-on-background text-xl font-semibold tracking-tight">QA Dashboard</h1>
-          <p className="text-md-on-surface-variant text-xs">Project: {project_id}</p>
+          <h1 className="text-md-on-background text-xl font-semibold tracking-tight">QA Command Center</h1>
+          <p className="text-md-on-surface-variant text-xs">Platform-wide quality metrics across all projects</p>
         </div>
         <button onClick={load} className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 text-sm font-medium active:scale-95 transition-transform">↻ Refresh</button>
       </div>
 
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <QAStatusCard title="Lint Errors" value={status?.metrics?.lint_errors ?? '—'} status={status?.metrics?.lint_errors === 0 ? 'pass' : status?.metrics?.lint_errors > 0 ? 'fail' : 'unknown'} icon="⚡" />
-        <QAStatusCard title="Build Status" value={status?.metrics?.build_status === 'success' ? 'Passing' : status?.metrics?.build_status === 'failure' ? 'Failing' : '—'} status={status?.metrics?.build_status === 'success' ? 'pass' : status?.metrics?.build_status === 'failure' ? 'fail' : 'unknown'} icon="🔨" />
-        <QAStatusCard title="Tests" value={status?.metrics?.test_passed != null ? `${status.metrics.test_passed}/${status.metrics.test_total}` : '—'} status={status?.metrics?.test_failed === 0 ? 'pass' : status?.metrics?.test_failed > 0 ? 'fail' : 'unknown'} icon="✓" />
-        <QAStatusCard title="Coverage" value={status?.metrics?.test_coverage != null ? `${status.metrics.test_coverage}%` : '—'} status={status?.metrics?.test_coverage >= 80 ? 'pass' : status?.metrics?.test_coverage != null ? 'fail' : 'unknown'} icon="◉" />
+      {/* Platform Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <QAStatusCard title="Health Score" value={p.health_score != null ? `${p.health_score}%` : '—'} status={p.health_score >= 80 ? 'pass' : p.health_score != null ? 'fail' : 'unknown'} icon="💚" />
+        <QAStatusCard title="Avg Lint Errors" value={p.avg_lint_errors ?? '—'} status={p.avg_lint_errors === 0 ? 'pass' : p.avg_lint_errors > 0 ? 'fail' : 'unknown'} icon="⚡" />
+        <QAStatusCard title="Builds Passing" value={p.builds_total ? `${p.builds_passing}/${p.builds_total}` : '—'} status={p.builds_passing === p.builds_total ? 'pass' : 'fail'} icon="🔨" />
+        <QAStatusCard title="Avg Test Pass Rate" value={p.avg_test_pass_rate != null ? `${p.avg_test_pass_rate}%` : '—'} status={p.avg_test_pass_rate >= 90 ? 'pass' : p.avg_test_pass_rate != null ? 'fail' : 'unknown'} icon="✓" />
+        <QAStatusCard title="Avg Coverage" value={p.avg_coverage != null ? `${p.avg_coverage}%` : '—'} status={p.avg_coverage >= 80 ? 'pass' : p.avg_coverage != null ? 'fail' : 'unknown'} icon="◉" />
       </div>
 
-      {/* Trend Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <QATrendChart data={trends} dataKey="lint_errors" title="Lint Errors (30d)" />
-        <QATrendChart data={trends} dataKey="coverage" title="Coverage % (30d)" />
-      </div>
-
-      {/* Error Log */}
-      <div className="mb-6">
-        <ErrorLogTable errors={errors} page={errorPage} totalPages={errorTotalPages} onPageChange={setErrorPage} onResolve={handleResolve} />
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <CITriggerPanel triggers={triggers} onTrigger={handleTrigger} />
-        <QualityGatesConfig gates={gates} onSave={handleSaveGates} />
+      {/* Per-Project Table */}
+      <div className="bg-md-surface-container rounded-md-lg border border-md-outline-variant overflow-hidden">
+        <div className="px-4 py-3 border-b border-md-outline-variant">
+          <h2 className="text-md-on-background text-sm font-semibold">Projects</h2>
+          <p className="text-md-on-surface-variant text-xs">{data?.projects?.length || 0} projects with CI data</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-md-on-surface-variant text-xs uppercase tracking-wider border-b border-md-outline-variant">
+                <th className="text-left px-4 py-2">Project</th>
+                <th className="text-center px-4 py-2">Build</th>
+                <th className="text-center px-4 py-2">Lint</th>
+                <th className="text-center px-4 py-2">Tests</th>
+                <th className="text-center px-4 py-2">Coverage</th>
+                <th className="text-center px-4 py-2">Runs</th>
+                <th className="text-right px-4 py-2">Last Run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.projects || []).map((proj, i) => (
+                <tr key={proj.project_id || i} className="border-b border-md-outline-variant/50 hover:bg-md-surface-container-high transition-colors cursor-pointer" onClick={() => proj.project_id && navigate(`/qa/${proj.project_id}`)}>
+                  <td className="px-4 py-3">
+                    <div className="text-md-on-background font-medium">{proj.project_name}</div>
+                    {proj.project_status && <div className="text-md-on-surface-variant text-xs">{proj.project_status}</div>}
+                  </td>
+                  <td className="text-center px-4 py-3"><StatusBadge status={proj.build_status} /></td>
+                  <td className="text-center px-4 py-3">
+                    <span className={proj.lint_errors === 0 ? 'text-emerald-400' : 'text-amber-400'}>{proj.lint_errors ?? '—'}</span>
+                  </td>
+                  <td className="text-center px-4 py-3">
+                    {proj.test_total != null ? (
+                      <span className={proj.test_failed === 0 ? 'text-emerald-400' : 'text-red-400'}>{proj.test_passed}/{proj.test_total}</span>
+                    ) : '—'}
+                  </td>
+                  <td className="text-center px-4 py-3">
+                    {proj.test_coverage != null ? (
+                      <span className={proj.test_coverage >= 80 ? 'text-emerald-400' : 'text-amber-400'}>{proj.test_coverage}%</span>
+                    ) : '—'}
+                  </td>
+                  <td className="text-center px-4 py-3 text-md-on-surface-variant">{proj.run_count}</td>
+                  <td className="text-right px-4 py-3 text-md-on-surface-variant text-xs">
+                    {proj.last_run ? new Date(proj.last_run).toLocaleString() : '—'}
+                  </td>
+                </tr>
+              ))}
+              {(!data?.projects || data.projects.length === 0) && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-md-on-surface-variant">No CI data yet. Push to main to trigger the smoke test.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
