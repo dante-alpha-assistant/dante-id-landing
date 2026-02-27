@@ -4,8 +4,10 @@ const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-const OPENCLAW_URL = process.env.OPENCLAW_URL || "http://localhost:18789";
-const OPENCLAW_TOKEN = process.env.OPENCLAW_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN;
+// Builder worker: Mu's OpenClaw instance (dedicated build plane)
+// Override with OPENCLAW_BUILDER_URL/TOKEN for different workers
+const OPENCLAW_URL = process.env.OPENCLAW_BUILDER_URL || process.env.OPENCLAW_URL || "http://159.65.235.128:18789";
+const OPENCLAW_TOKEN = process.env.OPENCLAW_BUILDER_TOKEN || process.env.OPENCLAW_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN;
 
 // Auth middleware (copy from builder.js)
 async function requireAuth(req, res, next) {
