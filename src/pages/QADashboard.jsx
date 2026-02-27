@@ -116,10 +116,10 @@ export default function QADashboard() {
 
       {/* Status Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <QAStatusCard title="Lint Errors" value={status?.lint_errors ?? '—'} status={status?.lint_errors === 0 ? 'pass' : status?.lint_errors > 0 ? 'fail' : 'unknown'} icon="⚡" />
-        <QAStatusCard title="Build Status" value={status?.build_status ?? '—'} status={status?.build_status === 'passing' ? 'pass' : status?.build_status === 'failing' ? 'fail' : 'unknown'} icon="🔨" />
-        <QAStatusCard title="Tests" value={status?.tests_passed != null ? `${status.tests_passed}/${status.tests_total}` : '—'} status={status?.tests_passed === status?.tests_total ? 'pass' : 'fail'} icon="✓" />
-        <QAStatusCard title="Coverage" value={status?.coverage != null ? `${status.coverage}%` : '—'} status={status?.coverage >= 80 ? 'pass' : status?.coverage != null ? 'fail' : 'unknown'} icon="◉" />
+        <QAStatusCard title="Lint Errors" value={status?.metrics?.lint_errors ?? '—'} status={status?.metrics?.lint_errors === 0 ? 'pass' : status?.metrics?.lint_errors > 0 ? 'fail' : 'unknown'} icon="⚡" />
+        <QAStatusCard title="Build Status" value={status?.metrics?.build_status === 'success' ? 'Passing' : status?.metrics?.build_status === 'failure' ? 'Failing' : '—'} status={status?.metrics?.build_status === 'success' ? 'pass' : status?.metrics?.build_status === 'failure' ? 'fail' : 'unknown'} icon="🔨" />
+        <QAStatusCard title="Tests" value={status?.metrics?.test_passed != null ? `${status.metrics.test_passed}/${status.metrics.test_total}` : '—'} status={status?.metrics?.test_failed === 0 ? 'pass' : status?.metrics?.test_failed > 0 ? 'fail' : 'unknown'} icon="✓" />
+        <QAStatusCard title="Coverage" value={status?.metrics?.test_coverage != null ? `${status.metrics.test_coverage}%` : '—'} status={status?.metrics?.test_coverage >= 80 ? 'pass' : status?.metrics?.test_coverage != null ? 'fail' : 'unknown'} icon="◉" />
       </div>
 
       {/* Trend Charts */}
