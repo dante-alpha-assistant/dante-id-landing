@@ -571,6 +571,7 @@ router.post("/ci-report", async (req, res) => {
     if (raw_log) console.log(`[ci-report] raw_log length: ${raw_log.length}`);
   }
 
+  console.log(`[ci-report] build_status from body: "${build_status}", status: "${status}"`);
   const row = {
     repo_id: req.body.repo_id || "dante-alpha-assistant/dante-id-landing",
     lint_errors: lint_errors || 0,
