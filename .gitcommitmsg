@@ -1,0 +1,7 @@
+fix: add platform-apply endpoint and internal redirect (WP-5/WP-6)
+
+- Add server/platform-apply.js with POST/GET/preview/status endpoints
+- Handle both build.files[] and build.content formats for file extraction
+- Create GitHub PR against dante-id-landing for internal projects
+- Add deployer redirect for type:internal projects -> platform/apply
+- Mark projects with internal_applied_at and internal_pr_url on success
