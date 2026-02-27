@@ -153,6 +153,7 @@ app.use("/api/platform/analytics", require("./platform-analytics"));
 app.use("/api/platform/self-improve", require("./platform-self-improve"));
 app.use("/api/platform/test-pipeline", require("./platform-test-pipeline"));
 app.use("/api/platform/health", require("./platform-health"));
+app.use("/api/platform/activity", require("./platform-activity"));
 app.use("/api/validator", require("./validator"));
 app.use("/api/projects/:id/qa-results", require("./qa-results"));
 app.use("/api/iterate", require("./iterate"));
