@@ -5,6 +5,7 @@
  * Re-runnable: overwrites existing test files.
  *
  * Usage: node server/generate-tests.js
+ * Also exports reusable functions for programmatic use (from builder.js etc.)
  */
 
 import { writeFileSync, mkdirSync } from 'fs'
@@ -89,6 +90,49 @@ function generateTestForEndpoint(method, path, isPublicRoute) {
 `
 }
 
+/**
+ * Generate test file contents for an array of endpoints.
+ * @param {Array<{method: string, path: string}>} endpoints
+ * @returns {Array<{path: string, content: string}>} test files ready to include in a build
+ */
+export function generateTestsForEndpoints(endpoints) {
+  if (!endpoints || endpoints.length === 0) return []
+
+  // Group by category
+  const groups = {}
+  for (const ep of endpoints) {
+    const cat = categorize(ep.path)
+    if (!groups[cat]) groups[cat] = []
+    groups[cat].push(ep)
+  }
+
+  const testFiles = []
+  for (const [category, routes] of Object.entries(groups)) {
+    const Name = category.charAt(0).toUpperCase() + category.slice(1)
+    let code = `import { describe, it, expect } from 'vitest'\n\n`
+    code += `const BASE = process.env.TEST_BASE_URL || 'http://localhost:3001'\n\n`
+    code += `describe('${Name} API (generated)', () => {\n`
+
+    for (const route of routes) {
+      const method = route.method || 'GET'
+      const path = route.path
+      const pub = isPublic(path)
+      code += generateTestForEndpoint(method, path, pub)
+    }
+
+    code += '})\n'
+    testFiles.push({
+      path: `tests/api/${category}.generated.test.js`,
+      content: code
+    })
+  }
+
+  return testFiles
+}
+
+// Re-export helpers for flexibility
+export { isPublic, categorize, parameterize, generateTestForEndpoint }
+
 async function main() {
   console.log(`Fetching context from ${BASE_URL}/api/platform/context ...`)
   let context
@@ -167,4 +211,8 @@ async function main() {
   console.log('Run with: npm test')
 }
 
-main().catch(console.error)
+// Run main() only when executed directly (not imported)
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
+if (isDirectRun) {
+  main().catch(console.error)
+}

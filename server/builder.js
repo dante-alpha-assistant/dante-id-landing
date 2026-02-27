@@ -430,6 +430,39 @@ Generate concise, working code for this feature. Focus on core logic, keep files
       console.log(`[Builder] Self-validation: inlined ${fixedImports} missing imports as placeholders`);
     }
 
+    // --- Auto-generate tests for detected API endpoints ---
+    try {
+      const detectedEndpoints = [];
+      const routePattern = /router\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/gi;
+      for (const file of files) {
+        if (!file.content) continue;
+        let match;
+        const content = file.content;
+        // Reset lastIndex for global regex
+        routePattern.lastIndex = 0;
+        while ((match = routePattern.exec(content)) !== null) {
+          const method = match[1].toUpperCase();
+          const routePath = match[2];
+          // Construct full API path if relative
+          const fullPath = routePath.startsWith('/api/') ? routePath : `/api/${routePath.replace(/^\//, '')}`;
+          detectedEndpoints.push({ method, path: fullPath });
+        }
+      }
+      if (detectedEndpoints.length > 0) {
+        console.log(`[Builder] Detected ${detectedEndpoints.length} API endpoints, generating tests...`);
+        const { generateTestsForEndpoints } = await import('./generate-tests.js');
+        const testFiles = generateTestsForEndpoints(detectedEndpoints);
+        if (testFiles.length > 0) {
+          files.push(...testFiles);
+          console.log(`[Builder] Added ${testFiles.length} test file(s) to build output`);
+        }
+      } else {
+        console.log('[Builder] No API endpoints detected in generated files, skipping test generation');
+      }
+    } catch (testGenErr) {
+      console.log('[Builder] Test generation failed (non-fatal):', testGenErr.message);
+    }
+
     const logs = [
       { ts: new Date().toISOString(), msg: `Generated ${files.length} files` },
       { ts: new Date().toISOString(), msg: fixedImports > 0 ? `Self-validation: ${fixedImports} phantom imports inlined` : 'All imports resolved' },
