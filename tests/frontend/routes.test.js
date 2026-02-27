@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-const BASE = process.env.TEST_BASE_URL || 'https://dante.id'
+const BASE = process.env.TEST_FRONTEND_URL || 'https://dante.id'
 
 const routes = [
   '/',
