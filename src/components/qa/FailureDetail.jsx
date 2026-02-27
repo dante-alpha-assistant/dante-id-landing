@@ -13,8 +13,8 @@ function TestDetailBlock({ details }) {
 
   return (
     <div className="mb-3">
-      <p className="text-zinc-400 text-xs mb-2 font-mono uppercase tracking-wider">Failing Tests:</p>
-      <div className="bg-[#0a0a0a] text-zinc-100 font-mono text-xs p-4 rounded-none border border-[#333] overflow-x-auto max-h-64 overflow-y-auto space-y-1">
+      <p className="text-md-on-surface-variant text-xs mb-2">Failing Tests:</p>
+      <div className="bg-zinc-900 text-zinc-100 font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-64 overflow-y-auto space-y-1">
         {failingTests.map((t, i) => {
           const line = parseLineNumber(t.error_message)
           const filePath = t.file || t.name || 'unknown'
@@ -50,18 +50,18 @@ export default function FailureDetail({ failures, latest }) {
   }
 
   return (
-    <div className="bg-red-500/5 border border-red-500/30 rounded-none p-5 mb-8 font-mono">
-      <h3 className="text-red-400 font-semibold text-sm mb-3 uppercase tracking-wider">🚨 FAILURE_ANALYSIS</h3>
+    <div className="bg-red-500/5 border border-red-500/20 rounded-md-lg p-5 mb-8">
+      <h3 className="text-red-400 font-semibold text-sm mb-3">🚨 FAILURE ANALYSIS</h3>
 
       {f ? (
         <>
-          <p className="text-zinc-400 text-sm mb-3">
-            Type: <span className="text-zinc-100 font-medium">
+          <p className="text-md-on-surface-variant text-sm mb-3">
+            Type: <span className="text-md-on-background font-medium">
               {f.type === 'test' ? 'Test Failure' : f.type === 'lint' ? 'Lint Issues' : 'Build Failure'}
             </span>
             {f.commit_sha && (
-              <span className="ml-3 text-xs text-zinc-500">
-                Commit: <a href={`https://github.com/dante-alpha-assistant/dante-id-landing/commit/${f.commit_sha}`} target="_blank" rel="noopener noreferrer" className="text-[#33ff00] hover:underline font-mono">{f.commit_sha.slice(0, 7)}</a>
+              <span className="ml-3 text-xs text-zinc-400">
+                Commit: <a href={`https://github.com/dante-alpha-assistant/dante-id-landing/commit/${f.commit_sha}`} target="_blank" rel="noopener noreferrer" className="text-md-primary hover:underline font-mono">{f.commit_sha.slice(0, 7)}</a>
                 {f.commit_author && <> by {f.commit_author}</>}
               </span>
             )}
@@ -71,8 +71,8 @@ export default function FailureDetail({ failures, latest }) {
 
           {f.errors && f.errors.length > 0 && (
             <div className="mb-3">
-              <p className="text-zinc-400 text-xs mb-2 uppercase tracking-wider">Error Details:</p>
-              <div className="bg-[#0a0a0a] text-zinc-100 font-mono text-xs p-4 rounded-none border border-[#333] overflow-x-auto max-h-64 overflow-y-auto">
+              <p className="text-md-on-surface-variant text-xs mb-2">Error Details:</p>
+              <div className="bg-zinc-900 text-zinc-100 font-mono text-xs p-4 rounded-lg overflow-x-auto max-h-64 overflow-y-auto">
                 {f.errors.map((err, i) => (
                   <div key={i} className="mb-1">
                     <span className="text-red-400">{err.name}:</span> {err.message}
@@ -85,12 +85,12 @@ export default function FailureDetail({ failures, latest }) {
             </div>
           )}
 
-          <p className="text-zinc-500 text-xs">
+          <p className="text-md-on-surface-variant text-xs">
             Run: {f.run_id} — {new Date(f.created_at).toLocaleString()}
           </p>
         </>
       ) : (
-        <p className="text-zinc-400 text-sm">
+        <p className="text-md-on-surface-variant text-sm">
           Build failed. Structured error data not yet available for this run.
         </p>
       )}
