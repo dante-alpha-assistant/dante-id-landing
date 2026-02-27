@@ -26,7 +26,10 @@ async function callAI(systemPrompt, userPrompt) {
     })
   });
   const data = await resp.json();
-  return JSON.parse(data.choices[0].message.content);
+  let content = data.choices[0].message.content;
+  // Strip markdown fences if present
+  content = content.replace(/^```(?:json)?\s*/m, "").replace(/```\s*$/m, "").trim();
+  return JSON.parse(content);
 }
 
 // POST /api/platform/self-improve — AI analyzes platform and creates improvement projects
