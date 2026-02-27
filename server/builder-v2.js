@@ -54,8 +54,7 @@ async function spawnBuildAgent(projectId, featureId, workOrder, blueprint, platf
   
   const result = await openclawInvoke("sessions_spawn", {
     task,
-    label: `build-${projectId}-${featureId}-${workOrder?.id || 'main'}`,
-    model: "codex",
+    label: `build-${(workOrder?.id || 'main').slice(0, 50)}`,
     runTimeoutSeconds: 300,
   });
   
