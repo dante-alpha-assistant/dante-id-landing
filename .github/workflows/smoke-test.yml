@@ -88,7 +88,7 @@ jobs:
 
           curl -s -X POST https://dante.id/api/qa/ci-report \
             -H "Content-Type: application/json" \
-            -H "X-CI-Secret: ${{ secrets.GITHUB_WEBHOOK_SECRET }}" \
+            -H "X-CI-Secret: ${{ secrets.CI_WEBHOOK_SECRET }}" \
             -d '{
               "repo_id": "dante-alpha-assistant/dante-id-landing",
               "status": "'$STATUS'",
