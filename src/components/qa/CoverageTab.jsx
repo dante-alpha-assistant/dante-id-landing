@@ -15,8 +15,16 @@ function StatusBadge({ coverage }) {
   return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">Poor</span>
 }
 
+function ThresholdBadge({ current, threshold }) {
+  if (current == null) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-500/20 text-zinc-400">No data</span>
+  if (current >= 80) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400">{current.toFixed(1)}% ✓</span>
+  if (current >= threshold) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400">{current.toFixed(1)}%</span>
+  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">{current.toFixed(1)}% ✗ Below {threshold}%</span>
+}
+
 export default function CoverageTab({ projectId }) {
   const [data, setData] = useState(null)
+  const [thresholdData, setThresholdData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -25,10 +33,17 @@ export default function CoverageTab({ projectId }) {
     ;(async () => {
       try {
         setLoading(true)
-        const res = await fetch(`${API_BASE}/api/qa/global/project/${projectId}/coverage-trend?days=30`)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const json = await res.json()
+        const [trendRes, thresholdRes] = await Promise.all([
+          fetch(`${API_BASE}/api/qa/global/project/${projectId}/coverage-trend?days=30`),
+          fetch(`${API_BASE}/api/qa/coverage/${projectId}`)
+        ])
+        if (!trendRes.ok) throw new Error(`HTTP ${trendRes.status}`)
+        const json = await trendRes.json()
         if (!cancelled) setData(json)
+        if (thresholdRes.ok) {
+          const tj = await thresholdRes.json()
+          if (!cancelled) setThresholdData(tj)
+        }
       } catch (e) {
         if (!cancelled) setError(e.message)
       } finally {
@@ -58,6 +73,30 @@ export default function CoverageTab({ projectId }) {
               (<TrendArrow trend={overall.trend} change={overall.change} /> from last week)
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Deploy Threshold */}
+      {thresholdData && (
+        <div className="bg-md-surface-container border border-md-outline-variant rounded-md-lg p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-md-on-surface-variant text-sm">DEPLOY THRESHOLD</div>
+            <ThresholdBadge current={thresholdData.current} threshold={thresholdData.threshold} />
+          </div>
+          <div className="text-xs text-md-on-surface-variant mb-2">
+            Minimum {thresholdData.threshold}% required to deploy. {thresholdData.passing ? '✅ Passing' : '❌ Blocked'}
+          </div>
+          {thresholdData.history && thresholdData.history.length > 0 && (
+            <div className="mt-3 space-y-1">
+              <div className="text-xs text-md-on-surface-variant font-medium">Recent readings:</div>
+              {thresholdData.history.slice(0, 5).map((h, i) => (
+                <div key={i} className="flex justify-between text-xs text-md-on-background">
+                  <span>{parseFloat(h.coverage_pct).toFixed(1)}%</span>
+                  <span className="text-md-on-surface-variant">{new Date(h.recorded_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

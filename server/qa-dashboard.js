@@ -770,6 +770,36 @@ router.get("/global/project/:project_id/runs", async (req, res) => {
   }
 });
 
+// Coverage threshold endpoint (public)
+router.get("/coverage/:project_id", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+    const { data: history, error } = await supabase
+      .from("coverage_history")
+      .select("coverage_pct, recorded_at, feature_id")
+      .eq("project_id", pid)
+      .order("recorded_at", { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    if (!history || history.length === 0) {
+      return res.json({ current: null, threshold: 60, history: [], passing: true });
+    }
+
+    const current = parseFloat(history[0].coverage_pct);
+    return res.json({
+      current,
+      threshold: 60,
+      history,
+      passing: current >= 60
+    });
+  } catch (e) {
+    console.error("[QA] Coverage fetch error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 2. GET /global/project/:project_id/coverage-trend
 router.get("/global/project/:project_id/coverage-trend", async (req, res) => {
   try {

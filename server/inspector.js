@@ -242,6 +242,17 @@ Analyze each code file against the test specifications. Generate comprehensive t
     const coverageEstimate = aiResult.coverage_estimate || 0;
     const blockers = aiResult.blockers || [];
 
+    // Persist coverage history
+    try {
+      await supabase.from("coverage_history").insert({
+        project_id,
+        feature_id,
+        coverage_pct: coverageEstimate
+      });
+    } catch (e) {
+      console.log("[Inspector] Failed to record coverage:", e.message);
+    }
+
     // Determine overall status
     const hasFailures = results.some(r => r.status === "fail");
     const hasWarnings = results.some(r => r.status === "warn");
