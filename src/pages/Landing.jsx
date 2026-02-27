@@ -354,62 +354,188 @@ export default function Landing() {
 
         {/* FAQ */}
         <section className="py-24 px-6" id="faq">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-12">
+          <div style={{ backgroundColor: '#FAFAFA', borderRadius: '16px', padding: '32px', maxWidth: '800px', margin: '0 auto 80px' }}>
+            <div className="text-center mb-10">
               <span className="inline-block rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs font-medium px-4 py-1.5 mb-4 reveal">FAQ</span>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-md-on-background reveal" style={{ "--delay": "100ms" }}>
                 Questions?
               </h2>
             </div>
-            {faqItems.map((item, index) => {
-              const isOpen = openIndex === index
-              return (
-                <div key={item.question} className="border-b border-md-border/20 reveal" style={{ "--delay": `${index * 50}ms` }}>
-                  <button
-                    className="w-full flex justify-between items-center py-4 text-left text-md-on-background hover:text-md-primary transition-colors duration-300 ease-md-standard"
-                    type="button"
-                    onClick={() => setOpenIndex(isOpen ? null : index)}
-                    aria-expanded={isOpen}
-                  >
-                    <span className="text-sm font-medium">{item.question}</span>
-                    <span className="text-md-on-surface-variant text-lg ml-4">{isOpen ? "−" : "+"}</span>
-                  </button>
-                  {isOpen && <p className="text-md-on-surface-variant text-sm pb-4">{item.answer}</p>}
-                </div>
-              )
-            })}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', overflow: 'hidden' }}>
+              {faqItems.map((item, index) => {
+                const isOpen = openIndex === index
+                const isLast = index === faqItems.length - 1
+                return (
+                  <div key={item.question} className="reveal" style={{ "--delay": `${index * 50}ms`, borderBottom: isLast ? 'none' : '1px solid rgba(0,0,0,0.06)' }}>
+                    <button
+                      className="w-full flex justify-between items-center p-5 text-left text-md-on-background hover:bg-gray-50 transition-all duration-200 ease-md-standard"
+                      style={{ backgroundColor: isOpen ? '#FAFAFA' : '#FFFFFF' }}
+                      type="button"
+                      onClick={() => setOpenIndex(isOpen ? null : index)}
+                      aria-expanded={isOpen}
+                    >
+                      <span className="text-sm font-medium pr-4">{item.question}</span>
+                      <span
+                        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-md-on-surface-variant text-lg ml-2 transition-all duration-200"
+                        style={{ backgroundColor: isOpen ? '#E8E0EB' : '#F5F5F5', transform: isOpen ? 'rotate(0deg)' : 'rotate(0deg)' }}
+                      >
+                        {isOpen ? "−" : "+"}
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-5" style={{ backgroundColor: '#FAFAFA' }}>
+                        <p className="text-md-on-surface-variant text-sm leading-relaxed">{item.answer}</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </section>
 
         {/* CTA */}
-        <section className="relative py-24 px-6 overflow-hidden" id="waitlist">
-          <div className="absolute top-0 left-1/3 w-80 h-80 bg-md-primary/15 blur-3xl rounded-full" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-md-secondary-container/30 blur-3xl rounded-full" />
+        <section
+          className="relative py-24 sm:py-32 px-6 overflow-hidden"
+          id="waitlist"
+          style={{
+            background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)'
+          }}
+        >
+          {/* Subtle grid pattern */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
+              backgroundSize: '24px 24px'
+            }}
+          />
+          {/* Gradient orbs */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: '-100px',
+              left: '-100px',
+              width: '300px',
+              height: '300px',
+              background: '#7C3AED',
+              opacity: 0.2,
+              filter: 'blur(100px)',
+              borderRadius: '50%'
+            }}
+          />
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              bottom: '-50px',
+              right: '-50px',
+              width: '300px',
+              height: '300px',
+              background: '#EC4899',
+              opacity: 0.15,
+              filter: 'blur(100px)',
+              borderRadius: '50%'
+            }}
+          />
           <div className="max-w-2xl mx-auto text-center relative z-10">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-md-on-background reveal">
+            <h2
+              className="reveal"
+              style={{
+                fontSize: 'clamp(36px, 5vw, 56px)',
+                fontWeight: 800,
+                color: '#FFFFFF',
+                letterSpacing: '-0.02em',
+                marginBottom: '16px',
+                lineHeight: 1.1
+              }}
+            >
               Ready to build?
             </h2>
-            <p className="text-md-on-surface-variant mt-4 reveal" style={{ "--delay": "100ms" }}>
+            <p
+              className="reveal"
+              style={{
+                "--delay": "100ms",
+                fontSize: '20px',
+                color: 'rgba(255,255,255,0.7)',
+                maxWidth: '500px',
+                margin: '0 auto 48px',
+                lineHeight: 1.5
+              }}
+            >
               Join the waitlist and get early access to your AI startup team.
             </p>
             <form
-              className="flex flex-col sm:flex-row gap-3 mt-8 justify-center reveal"
+              className="flex flex-col sm:flex-row gap-3 justify-center reveal"
               style={{ "--delay": "200ms" }}
               onSubmit={(event) => handleSubmit(event, "cta")}
             >
               <input
-                className="flex-1 max-w-sm px-4 h-14 bg-md-surface-variant rounded-t-lg rounded-b-none border-b-2 border-md-border text-md-on-background placeholder-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors duration-300 ease-md-standard"
                 type="email"
                 placeholder="user@email.com"
                 value={ctaEmail}
                 onChange={(event) => setCtaEmail(event.target.value)}
                 required
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '12px',
+                  padding: '20px 24px',
+                  fontSize: '16px',
+                  color: '#FFFFFF',
+                  width: '100%',
+                  maxWidth: '400px',
+                  outline: 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#7C3AED';
+                  e.target.style.background = 'rgba(255,255,255,0.12)';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(124,58,237,0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+                  e.target.style.background = 'rgba(255,255,255,0.08)';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
-              <button className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 font-medium active:scale-95 transition-all duration-300 ease-md-standard hover:shadow-md whitespace-nowrap" type="submit">
+              <button
+                type="submit"
+                style={{
+                  background: 'linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  padding: '20px 40px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 24px rgba(124,58,237,0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+                onMouseDown={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
                 Join Waitlist
               </button>
             </form>
-            <p className="text-md-on-surface-variant text-xs mt-3 reveal" style={{ "--delay": "300ms" }}>
+            <p
+              className="reveal"
+              style={{
+                "--delay": "300ms",
+                fontSize: '14px',
+                color: 'rgba(255,255,255,0.5)',
+                marginTop: '16px'
+              }}
+            >
               Free to join. No credit card required.
             </p>
           </div>
@@ -417,43 +543,212 @@ export default function Landing() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-md-border/10 py-12 px-6 bg-md-surface-container">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+      <footer
+        style={{
+          background: '#0A0A0A',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          padding: '80px 24px 40px'
+        }}
+      >
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
+              gap: '64px'
+            }}
+          >
+            {/* Brand column */}
             <div>
-              <span className="text-xl font-bold text-md-primary">dante<span className="text-md-tertiary">.id</span></span>
-              <p className="text-md-on-surface-variant text-sm mt-3">Build with AI.</p>
+              {/* Brand mark - stylized "d" monogram */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="40" height="40" rx="10" fill="#7C3AED"/>
+                  <path d="M14 12C14 10.8954 14.8954 10 16 10H20C24.4183 10 28 13.5817 28 18V22C28 26.4183 24.4183 30 20 30H16C14.8954 30 14 29.1046 14 28V12Z" fill="white"/>
+                  <path d="M20 16H18V24H20C22.2091 24 24 22.2091 24 20C24 17.7909 22.2091 16 20 16Z" fill="#7C3AED"/>
+                </svg>
+                <span style={{
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  letterSpacing: '-0.01em'
+                }}>
+                  dante.id
+                </span>
+              </div>
+              <p style={{
+                fontSize: '14px',
+                color: 'rgba(255,255,255,0.5)',
+                marginTop: '8px'
+              }}>
+                Build with AI.
+              </p>
             </div>
+
+            {/* Product column */}
             <div>
-              <h4 className="text-sm font-bold text-md-on-background mb-3">Product</h4>
-              <div className="space-y-2">
-                <a href="#how-it-works" className="block text-sm text-md-on-surface-variant hover:text-md-primary transition-colors duration-300">How It Works</a>
-                <a href="#features" className="block text-sm text-md-on-surface-variant hover:text-md-primary transition-colors duration-300">Features</a>
-                <a href="#pricing" className="block text-sm text-md-on-surface-variant hover:text-md-primary transition-colors duration-300">Pricing</a>
+              <h4 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '24px'
+              }}>
+                Product
+              </h4>
+              <div>
+                <a href="#how-it-works" style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  textDecoration: 'none',
+                  marginBottom: '12px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+                onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.6)'}
+                >
+                  How It Works
+                </a>
+                <a href="#features" style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  textDecoration: 'none',
+                  marginBottom: '12px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+                onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.6)'}
+                >
+                  Features
+                </a>
+                <a href="#pricing" style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  textDecoration: 'none',
+                  marginBottom: '12px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+                onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.6)'}
+                >
+                  Pricing
+                </a>
               </div>
             </div>
+
+            {/* Company column */}
             <div>
-              <h4 className="text-sm font-bold text-md-on-background mb-3">Company</h4>
-              <div className="space-y-2">
-                <span className="block text-sm text-md-on-surface-variant">About</span>
-                <span className="block text-sm text-md-on-surface-variant">Blog</span>
-                <span className="block text-sm text-md-on-surface-variant">Contact</span>
+              <h4 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '24px'
+              }}>
+                Company
+              </h4>
+              <div>
+                <span style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '12px'
+                }}>About</span>
+                <span style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '12px'
+                }}>Blog</span>
+                <span style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '12px'
+                }}>Contact</span>
               </div>
             </div>
+
+            {/* Legal column */}
             <div>
-              <h4 className="text-sm font-bold text-md-on-background mb-3">Legal</h4>
-              <div className="space-y-2">
-                <span className="block text-sm text-md-on-surface-variant">Privacy Policy</span>
-                <span className="block text-sm text-md-on-surface-variant">Terms of Service</span>
+              <h4 style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '24px'
+              }}>
+                Legal
+              </h4>
+              <div>
+                <span style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '12px'
+                }}>Privacy Policy</span>
+                <span style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '12px'
+                }}>Terms of Service</span>
               </div>
             </div>
           </div>
-          <div className="border-t border-md-border/10 pt-6 flex justify-between items-center text-xs text-md-on-surface-variant">
+
+          {/* Bottom bar */}
+          <div style={{
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            marginTop: '64px',
+            paddingTop: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '14px',
+            color: 'rgba(255,255,255,0.4)'
+          }}>
             <span>© 2026 dante.id</span>
-            <div className="flex gap-4">
-              <a href="https://x.com" className="text-md-on-surface-variant hover:text-md-primary transition-colors duration-300" aria-label="Twitter/X">𝕏</a>
-              <a href="https://discord.com" className="text-md-on-surface-variant hover:text-md-primary transition-colors duration-300" aria-label="Discord">Discord</a>
-              <a href="https://github.com" className="text-md-on-surface-variant hover:text-md-primary transition-colors duration-300" aria-label="GitHub">GitHub</a>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <a href="https://x.com" style={{
+                color: 'rgba(255,255,255,0.4)',
+                textDecoration: 'none',
+                transition: 'color 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+              onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}
+              aria-label="Twitter/X"
+              >
+                𝕏
+              </a>
+              <a href="https://discord.com" style={{
+                color: 'rgba(255,255,255,0.4)',
+                textDecoration: 'none',
+                transition: 'color 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+              onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}
+              aria-label="Discord"
+              >
+                Discord
+              </a>
+              <a href="https://github.com" style={{
+                color: 'rgba(255,255,255,0.4)',
+                textDecoration: 'none',
+                transition: 'color 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#FFFFFF'}
+              onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}
+              aria-label="GitHub"
+              >
+                GitHub
+              </a>
             </div>
           </div>
         </div>
