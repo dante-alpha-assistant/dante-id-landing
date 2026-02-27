@@ -175,6 +175,8 @@ export default function QAProjectDetail() {
                 <thead>
                   <tr className="text-md-on-surface-variant text-left border-b border-md-outline-variant">
                     <th className="px-5 py-2 font-medium">Date</th>
+                    <th className="px-5 py-2 font-medium">Commit</th>
+                    <th className="px-5 py-2 font-medium">Author</th>
                     <th className="px-5 py-2 font-medium">Build</th>
                     <th className="px-5 py-2 font-medium">Tests</th>
                     <th className="px-5 py-2 font-medium">Coverage</th>
@@ -188,6 +190,15 @@ export default function QAProjectDetail() {
                     return (
                       <tr key={run.id} className={`border-b border-md-outline-variant ${failed ? 'bg-red-500/10' : ''}`}>
                         <td className="px-5 py-2 text-md-on-surface-variant">{new Date(run.created_at).toLocaleDateString()}</td>
+                        <td className="px-5 py-2 font-mono text-xs">
+                          {run.commit_sha ? (
+                            <a href={`https://github.com/dante-alpha-assistant/dante-id-landing/commit/${run.commit_sha}`} target="_blank" rel="noopener noreferrer" className="text-md-primary hover:underline" title={run.commit_message || ''}>
+                              {run.commit_sha.slice(0, 7)}
+                            </a>
+                          ) : <span className="text-zinc-500">—</span>}
+                          {run.commit_message && <span className="ml-1 text-zinc-400 font-sans">{run.commit_message.length > 60 ? run.commit_message.slice(0, 60) + '…' : run.commit_message}</span>}
+                        </td>
+                        <td className="px-5 py-2 text-xs text-md-on-surface-variant">{run.commit_author || '—'}</td>
                         <td className="px-5 py-2"><StatusBadge status={run.build_status} /></td>
                         <td className="px-5 py-2">{run.test_passed}/{run.test_total} ({runTestPct}%)</td>
                         <td className="px-5 py-2">{Math.round(run.test_coverage ?? 0)}%</td>
@@ -196,7 +207,7 @@ export default function QAProjectDetail() {
                     )
                   })}
                   {displayRuns.length === 0 && (
-                    <tr><td colSpan={5} className="px-5 py-4 text-center text-md-on-surface-variant">No runs yet</td></tr>
+                    <tr><td colSpan={7} className="px-5 py-4 text-center text-md-on-surface-variant">No runs yet</td></tr>
                   )}
                 </tbody>
               </table>
