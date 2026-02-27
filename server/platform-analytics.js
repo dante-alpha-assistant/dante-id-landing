@@ -36,7 +36,7 @@ router.get("/", requireAuth, async (req, res) => {
     // Get internal projects count
     const { data: projects, error: projErr } = await supabase
       .from("projects")
-      .select("id, status, internal_applied_at, created_at")
+      .select("id, status, stage, created_at")
       .eq("type", "internal")
       .gte("created_at", since);
 
@@ -113,7 +113,7 @@ router.get("/", requireAuth, async (req, res) => {
     // Calculate self-building loop completion
     const loopMetrics = {
       total_projects: projects?.length || 0,
-      completed: projects?.filter(p => p.internal_applied_at).length || 0,
+      completed: projects?.filter(p => p.stage === "launched").length || 0,
       completion_rate: 0,
       by_stage: {}
     };

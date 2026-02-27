@@ -36,7 +36,7 @@ router.get("/", requireAuth, async (req, res) => {
     // Get internal projects with PR outcomes
     const { data: projects, error: projErr } = await supabase
       .from("projects")
-      .select("id, name, internal_applied_at, internal_pr_url, status, created_at")
+      .select("id, name, stage, status, created_at")
       .eq("type", "internal")
       .gte("created_at", since);
 
@@ -57,16 +57,16 @@ router.get("/", requireAuth, async (req, res) => {
       const detail = {
         id: p.id,
         name: p.name,
-        pr_url: p.internal_pr_url,
+        pr_url: "",
         created_at: p.created_at,
         outcome: "unknown"
       };
 
-      if (p.internal_pr_url) {
+      if ("") {
         outcomes.total_prs++;
         
         // Check if project was "completed" (PR merged) or "tested" (rejected/closed)
-        if (p.status === "live" || p.internal_applied_at) {
+        if (p.status === "live" || p.stage === "launched") {
           // Check deployments for actual merge status
           const { data: deploy } = await supabase
             .from("deployments")
