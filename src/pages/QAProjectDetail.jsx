@@ -7,6 +7,7 @@ import CoverageTab from '../components/qa/CoverageTab'
 import LogsTab from '../components/qa/LogsTab'
 import PipelineFlow from '../components/qa/PipelineFlow'
 import FailureDetail from '../components/qa/FailureDetail'
+import SituationRoom from '../components/qa/SituationRoom'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -49,6 +50,7 @@ export default function QAProjectDetail() {
   const [retrying, setRetrying] = useState(false)
   const [failures, setFailures] = useState(null)
   const [flakyTests, setFlakyTests] = useState(null)
+  const [debugMode, setDebugMode] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -144,6 +146,12 @@ export default function QAProjectDetail() {
           <button className="px-4 py-2 text-sm rounded-md text-md-on-surface-variant hover:text-md-on-background transition-colors">
             Download Logs
           </button>
+          <button
+            onClick={() => setDebugMode(v => !v)}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${debugMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-zinc-800 text-red-400 border border-red-500/30 hover:bg-zinc-700'}`}
+          >
+            {debugMode ? '✕ Close Debug' : '🔍 Debug Now'}
+          </button>
         </div>
 
         {/* Tabs */}
@@ -159,8 +167,42 @@ export default function QAProjectDetail() {
             {/* Pipeline Flow */}
             <PipelineFlow latest={latest} />
 
-            {/* Failure Detail */}
-            <FailureDetail failures={failures} latest={latest} />
+            {/* Failure Detail / Situation Room */}
+            {debugMode ? (
+              <div className="my-4">
+                <SituationRoom
+                  projectName={project.name}
+                  failure={{
+                    type: latest?.build_status === 'failure' ? 'build' : 'test',
+                    errors: (failures?.errors || []).slice(0, 5).map(e => ({
+                      name: e.test_name || 'Error',
+                      message: e.error_message || e.message || '',
+                      file: e.file || null,
+                      line: e.line || null,
+                    })),
+                    raw_log: failures?.raw_log || 'No raw log available.',
+                  }}
+                  codeContext={{
+                    file: 'src/index.js',
+                    line: 42,
+                    diff: [
+                      ' import { render } from "react-dom"',
+                      '-import App from "./OldApp"',
+                      '+import App from "./App"',
+                      ' ',
+                      ' render(<App />, document.getElementById("root"))',
+                    ].join('\n'),
+                  }}
+                  aiAnalysis={{
+                    rootCause: 'Placeholder — AI analysis will appear here when connected.',
+                    suggestedFix: null,
+                  }}
+                  impactRadius={{ dependentProjects: 3, affectedTests: 12 }}
+                />
+              </div>
+            ) : (
+              <FailureDetail failures={failures} latest={latest} />
+            )}
 
             {/* CI Run History */}
             <div className="bg-md-surface-container border border-md-outline-variant rounded-md-lg overflow-hidden">
