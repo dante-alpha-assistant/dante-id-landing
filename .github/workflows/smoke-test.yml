@@ -90,14 +90,13 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-CI-Secret: ${{ secrets.GITHUB_WEBHOOK_SECRET }}" \
             -d '{
-              "workflow_name": "smoke-test",
-              "branch": "${{ github.head_ref || github.ref_name }}",
-              "commit_sha": "${{ github.sha }}",
+              "repo_id": "dante-alpha-assistant/dante-id-landing",
               "status": "'$STATUS'",
-              "build_passing": true,
-              "test_pass_rate": 100,
-              "run_id": "${{ github.run_id }}",
-              "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              "build_status": "'$STATUS'",
+              "lint_errors": 0,
+              "test_total": 1,
+              "test_passed": '$( [ "$STATUS" = "passed" ] && echo 1 || echo 0 )',
+              "test_failed": '$( [ "$STATUS" = "failed" ] && echo 1 || echo 0 )'
             }'
 
       - name: Cleanup

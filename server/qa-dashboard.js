@@ -380,20 +380,22 @@ router.post("/ci-report", async (req, res) => {
     return res.status(401).json({ error: "Invalid secret" });
   }
 
-  const { project_id, repo_full_name, commit_sha, branch, workflow_name, status, lint_errors, build_passing, test_pass_rate, test_summary, run_url } = req.body;
+  const { status, lint_errors, test_total, test_passed, test_failed, test_coverage } = req.body;
 
-  const { error } = await supabase.from("qa_metrics").insert({
-    project_id: project_id || "platform",
-    quality_score: status === "passed" ? 100 : (status === "partial" ? 50 : 0),
+  const row = {
+    repo_id: req.body.repo_id || "dante-alpha-assistant/dante-id-landing",
     lint_errors: lint_errors || 0,
-    test_pass_rate: test_pass_rate || (status === "passed" ? 100 : 0),
-    build_passing: build_passing !== false,
-    workflow_name: workflow_name || "smoke-test",
-    workflow_run_id: req.body.run_id || String(Date.now()),
-    branch: branch || "main",
-    commit_sha: commit_sha || "unknown",
-    created_at: new Date().toISOString(),
-  });
+    lint_warnings: req.body.lint_warnings || 0,
+    build_status: status === "passed" ? "success" : "failure",
+    test_total: test_total || (status === "passed" ? 1 : 0),
+    test_passed: test_passed || (status === "passed" ? 1 : 0),
+    test_failed: test_failed || 0,
+  };
+  // Default to dante.id Platform CI project
+  row.project_id = req.body.project_id || "91607ad6-bacc-4ea9-8d58-007d984016f2";
+  if (test_coverage != null) row.test_coverage = test_coverage;
+
+  const { error } = await supabase.from("qa_metrics").insert(row);
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ received: true });
