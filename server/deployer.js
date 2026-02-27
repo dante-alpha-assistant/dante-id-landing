@@ -60,7 +60,8 @@ function logEntry(message) {
 
 // --- POST /deploy ---
 router.post("/deploy", requireAuth, async (req, res) => {
-  const { project_id, target = "vercel" } = req.body;
+  const { project_id, target = "vercel", force_deploy } = req.body;
+  const isForce = force_deploy === true;
   if (!project_id) {
     return res.status(400).json({ error: "project_id is required" });
   }
@@ -129,8 +130,22 @@ router.post("/deploy", requireAuth, async (req, res) => {
       const blockers = testResults.filter(
         (t) => t.status === "failed" || (Array.isArray(t.results) && t.results.some(r => r.status === "fail"))
       );
-      if (blockers.length > 0) {
-        logs.push(logEntry(`⚠️ Quality gate: ${blockers.length} issue(s) found — deploying anyway`));
+      if (blockers.length > 0 && !isForce) {
+        logs.push(logEntry(`❌ Quality gate FAILED: ${blockers.length} test failure(s) — deploy blocked`));
+        for (const b of blockers) {
+          const failedTests = Array.isArray(b.results) 
+            ? b.results.filter(r => r.status === "fail").map(r => r.test_name).join(", ") 
+            : "unknown";
+          logs.push(logEntry(`  → ${b.feature_id || "unknown feature"}: ${failedTests}`));
+        }
+        return res.status(400).json({ 
+          error: "Deploy blocked by quality gate", 
+          failures: blockers.length,
+          logs 
+        });
+      }
+      if (isForce && blockers.length > 0) {
+        logs.push(logEntry(`⚠️ Quality gate: ${blockers.length} issue(s) — FORCE DEPLOY override`));
       }
     }
     logs.push(logEntry("Quality gate passed"));

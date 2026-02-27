@@ -13,8 +13,10 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.96.0",
+    "@supabase/supabase-js": "^2.98.0",
     "clsx": "^2.1.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
     "langfuse": "^3.38.6",
     "node-cron": "^4.2.1",
     "react": "^19.2.0",
