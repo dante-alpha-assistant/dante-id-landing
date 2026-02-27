@@ -206,82 +206,32 @@ export default function Landing() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="relative py-16 sm:py-28 px-4 sm:px-6 overflow-hidden" id="top">
+        {/* Hero - Simplified */}
+        <section className="relative py-20 sm:py-32 px-4 sm:px-6 overflow-hidden" id="top">
           {/* Blur shapes */}
-          <div className="absolute top-20 left-10 w-72 h-72 bg-md-primary/20 blur-3xl rounded-full" />
-          <div className="absolute bottom-10 right-20 w-96 h-96 bg-md-secondary-container/40 blur-3xl rounded-full" />
-          <div className="absolute top-40 right-1/4 w-64 h-64 bg-md-tertiary/10 blur-3xl rounded-full" />
+          <div className="absolute top-20 left-10 w-96 h-96 bg-md-primary/15 blur-3xl rounded-full" />
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-md-secondary-container/30 blur-3xl rounded-full" />
 
-          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 md:gap-16 items-center relative z-10">
-            <div>
-              <span className="inline-block rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs font-medium px-4 py-1.5 mb-6 reveal" style={{ "--delay": "0ms" }}>
-                AI Startup Builder
-              </span>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-md-on-background reveal" style={{ "--delay": "100ms" }}>
-                Build your startup in days, not months.
-              </h1>
-              <p className="text-md-on-surface-variant mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed reveal" style={{ "--delay": "200ms" }}>
-                dante.id gives you a full AI team — strategist, designer, developer, lawyer — that builds your business while you focus on your vision.
-              </p>
-              <form
-                className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8 reveal"
-                style={{ "--delay": "300ms" }}
-                onSubmit={(event) => handleSubmit(event, "hero")}
+          <div className="max-w-4xl mx-auto text-center relative z-10">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-md-on-background reveal">
+              Build your startup<br />
+              <span className="text-md-primary">in days, not months.</span>
+            </h1>
+            <p className="text-md-on-surface-variant mt-6 sm:mt-8 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto reveal" style={{ "--delay": "100ms" }}>
+              dante.id gives you a full AI team that builds your business while you focus on your vision.
+            </p>
+            <div className="mt-8 sm:mt-10 reveal" style={{ "--delay": "200ms" }}>
+              <Link
+                to={ctaLink}
+                className="inline-flex items-center gap-2 rounded-full bg-md-primary text-md-on-primary px-8 py-4 text-lg font-medium active:scale-95 transition-all duration-300 ease-md-standard hover:shadow-lg hover:shadow-md-primary/25"
               >
-                <input
-                  className="flex-1 px-4 h-14 bg-md-surface-variant rounded-t-lg rounded-b-none border-b-2 border-md-border text-md-on-background placeholder-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors duration-300 ease-md-standard min-w-0"
-                  type="email"
-                  placeholder="user@email.com"
-                  value={heroEmail}
-                  onChange={(event) => setHeroEmail(event.target.value)}
-                  required
-                />
-                <button className="rounded-full bg-md-primary text-md-on-primary px-6 py-2.5 font-medium active:scale-95 transition-all duration-300 ease-md-standard hover:shadow-md whitespace-nowrap" type="submit">
-                  Start Building
-                </button>
-              </form>
-              {waitlistStatus === "success" && (
-                <p className="text-md-primary text-sm mt-3">You're on the list! ✓</p>
-              )}
-              {waitlistStatus === "error" && (
-                <p className="text-red-500 text-sm mt-3">Something went wrong. Try again.</p>
-              )}
-              <p className="text-md-on-surface-variant text-xs mt-3 reveal" style={{ "--delay": "400ms" }}>
-                Free to join. No credit card required.
-              </p>
+                Start Building
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              </Link>
             </div>
-            <div className="reveal" style={{ "--delay": "200ms" }}>
-              <div className="bg-md-surface-container rounded-md-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-300 ease-md-standard">
-                <div className="flex justify-between items-center mb-5">
-                  <h3 className="text-lg font-bold text-md-on-background">Your AI Team</h3>
-                  <span className="rounded-full bg-md-secondary-container text-md-on-secondary-container text-xs font-medium px-3 py-1">Active</span>
-                </div>
-                <div className="space-y-4 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-md-on-surface-variant">Strategy agent</span>
-                    <span className="text-md-primary font-medium">✓ Complete</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-md-on-surface-variant">Brand agent</span>
-                    <span className="text-md-primary font-medium">✓ Complete</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-md-on-surface-variant">Dev agent</span>
-                    <span className="text-md-tertiary font-medium">→ In Progress</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-md-on-surface-variant/60">Legal agent</span>
-                    <span className="text-md-on-surface-variant/60">Queued...</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-md-border/20 text-center text-sm">
-                  <div><div className="text-md-primary font-bold">4</div><div className="text-md-on-surface-variant text-xs">agents</div></div>
-                  <div><div className="text-md-primary font-bold">12hrs</div><div className="text-md-on-surface-variant text-xs">avg</div></div>
-                  <div><div className="text-md-primary font-bold">24/7</div><div className="text-md-on-surface-variant text-xs">uptime</div></div>
-                </div>
-              </div>
-            </div>
+            <p className="text-md-on-surface-variant/70 text-sm mt-4 reveal" style={{ "--delay": "300ms" }}>
+              Free to join. No credit card required.
+            </p>
           </div>
         </section>
 
