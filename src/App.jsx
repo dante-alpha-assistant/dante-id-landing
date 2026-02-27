@@ -23,6 +23,7 @@ import Iterate from './pages/Iterate'
 import Usage from './pages/Usage'
 import QADashboard from './pages/QADashboard'
 import Docs from './pages/Docs'
+import Demo from './pages/Demo'
 import RepoSelector from './components/RepoSelector'
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/demo" element={<Demo />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
