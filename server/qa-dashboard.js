@@ -85,6 +85,48 @@ router.get("/global/overview", async (req, res) => {
   }
 });
 
+// GET /api/qa/global/project/:project_id — public project detail for slide-out panel
+router.get("/global/project/:project_id", async (req, res) => {
+  try {
+    const pid = req.params.project_id;
+
+    // Latest metrics
+    const { data: latest } = await supabase
+      .from("qa_metrics")
+      .select("*")
+      .eq("project_id", pid)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    // Recent CI runs (last 20)
+    const { data: runs } = await supabase
+      .from("qa_metrics")
+      .select("id, created_at, build_status, lint_errors, lint_warnings, test_total, test_passed, test_failed, test_coverage")
+      .eq("project_id", pid)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    // Project info
+    const { data: project, error: projErr } = await supabase
+      .from("projects")
+      .select("id, name, full_name, status, created_at")
+      .eq("id", pid)
+      .single();
+
+    const projName = project?.name || project?.full_name || "Unknown Project";
+
+    res.json({
+      project: project ? { ...project, name: projName } : { id: pid, name: "Unknown Project" },
+      latest: latest || null,
+      runs: runs || [],
+      run_count: runs?.length || 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Auth middleware (copied from refinery.js) ---
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
