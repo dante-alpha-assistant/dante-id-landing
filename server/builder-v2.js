@@ -140,27 +140,12 @@ router.post("/generate-code", requireAuth, async (req, res) => {
       } catch (e) { console.log("[Builder-v2] Platform context fetch failed"); }
     }
 
-    // Create/update build record
-    const { data: existingBuild } = await supabase
+    // Always create a new build record (history preserved)
+    const { data: newBuild } = await supabase
       .from("builds")
-      .select("id")
-      .eq("feature_id", feature_id)
-      .eq("project_id", project_id)
-      .single();
-
-    let buildId;
-    if (existingBuild) {
-      buildId = existingBuild.id;
-      await supabase.from("builds")
-        .update({ status: "generating", files: [], logs: ["Spawning OpenClaw agents..."], updated_at: new Date().toISOString() })
-        .eq("id", buildId);
-    } else {
-      const { data: newBuild } = await supabase
-        .from("builds")
-        .insert({ project_id, feature_id, status: "generating", files: [], logs: ["Spawning OpenClaw agents..."] })
-        .select().single();
-      buildId = newBuild.id;
-    }
+      .insert({ project_id, feature_id, status: "generating", files: [], logs: ["Spawning OpenClaw agents..."] })
+      .select().single();
+    const buildId = newBuild.id;
 
     // Spawn agents — one per work order, or one for the whole feature
     const agents = [];
@@ -225,7 +210,7 @@ router.post("/generate-code", requireAuth, async (req, res) => {
 
 // --- Background polling for agent completion ---
 async function pollAgentCompletion(buildId, agents, projectId, featureId) {
-  const MAX_POLLS = 60;
+  const MAX_POLLS = 120;  // 10 minutes max
   const POLL_INTERVAL = 5000;
   
   for (let i = 0; i < MAX_POLLS; i++) {
@@ -280,20 +265,37 @@ async function pollAgentCompletion(buildId, agents, projectId, featureId) {
   for (const agent of agents) {
     if (agent.output) {
       try {
-        const jsonMatch = agent.output.match(/```json\n([\s\S]*?)\n```/) || 
-                          agent.output.match(/\{[\s\S]*"files"[\s\S]*\}/);
+        // Try JSON summary first
+        const jsonMatch = agent.output.match(/```json\n([\s\S]*?)\n```/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[1]);
           if (parsed.files) allFiles.push(...parsed.files);
           if (parsed.tests) allTests.push(...parsed.tests);
+          continue;
         }
-      } catch (e) {
-        console.log(`[Builder-v2] Failed to parse agent output:`, e.message);
+      } catch (e) { /* JSON parse failed, try code blocks */ }
+
+      // Extract code blocks with file paths: ```lang\n// path/file.ext or ```lang path/file.ext
+      const codeBlockRegex = /```(\w+)?[\s]*(?:\/\/\s*)?([^\n]*?\.\w+)\n([\s\S]*?)```/g;
+      let match;
+      while ((match = codeBlockRegex.exec(agent.output)) !== null) {
+        const lang = match[1] || '';
+        const path = match[2].trim().replace(/^\/\/\s*/, '').replace(/^#\s*/, '');
+        const content = match[3];
+        if (path && content && path.includes('/') || path.includes('.')) {
+          const isTest = /test|spec/i.test(path);
+          (isTest ? allTests : allFiles).push({ path, content });
+        }
+      }
+      
+      if (allFiles.length === 0 && allTests.length === 0) {
+        console.log(`[Builder-v2] Agent "${agent.workOrder}": completed but no files extracted (output: ${agent.output.length} chars)`);
       }
     }
   }
   
-  const finalStatus = allFiles.length > 0 ? "done" : "failed";
+  const completedCount = agents.filter(a => a.completed).length;
+  const finalStatus = allFiles.length > 0 ? "done" : completedCount > 0 ? "partial" : "failed";
   await supabase.from("builds")
     .update({ 
       status: finalStatus,
