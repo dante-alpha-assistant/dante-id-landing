@@ -230,11 +230,22 @@ router.post("/extract-features", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "PRD not found" });
     }
 
-    const systemPrompt = `You are a product manager. Extract a clean list of features from the PRD.
+    // Check if internal project — constrain feature count
+    const { data: project } = await supabase.from("projects").select("type").eq("id", project_id).single();
+    const isInternal = project?.type === "internal";
+
+    const systemPrompt = isInternal
+      ? `You are a product manager extracting features for an INTERNAL platform improvement (adding a feature to an existing app).
+CRITICAL CONSTRAINT: Extract 1-3 focused features MAX. Internal improvements should be surgical — one component, one hook, one API route. Do NOT over-engineer.
+Return JSON: { "features": [{"name": "string", "description": "string", "priority": "critical|high|medium|low|nice-to-have", "acceptance_criteria": ["string"]}] }
+Order by priority (critical first). Be specific, minimal, and focused.`
+      : `You are a product manager. Extract a clean list of features from the PRD.
 Return JSON: { "features": [{"name": "string", "description": "string", "priority": "critical|high|medium|low|nice-to-have", "acceptance_criteria": ["string"]}] }
 Order by priority (critical first). Be specific and actionable.`;
 
-    const userPrompt = `PRD content:\n${JSON.stringify(prd.content, null, 2)}\n\nExtract all features as a structured array.`;
+    const userPrompt = isInternal
+      ? `PRD content:\n${JSON.stringify(prd.content, null, 2)}\n\nExtract 1-3 focused features only. This is an internal improvement, not a new product. Keep it minimal.`
+      : `PRD content:\n${JSON.stringify(prd.content, null, 2)}\n\nExtract all features as a structured array.`;
 
     const result = await callAI(systemPrompt, userPrompt);
     const features = result.features || [];
