@@ -483,7 +483,7 @@ router.get("/:project_id/summary", requireAuth, async (req, res) => {
   try {
     const { data } = await supabase
       .from("qa_metrics")
-      .select("quality_score, lint_errors, test_pass_rate, build_passing, created_at")
+      .select("lint_errors, build_status, test_total, test_passed, test_failed, test_coverage, created_at")
       .eq("project_id", req.params.project_id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -499,11 +499,16 @@ router.get("/:project_id/summary", requireAuth, async (req, res) => {
       });
     }
 
+    const testPassRate = data.test_total > 0 ? Math.round((data.test_passed / data.test_total) * 100) : 100;
     res.json({
-      quality_score: data.quality_score,
+      quality_score: testPassRate,
       lint_errors: data.lint_errors,
-      test_pass_rate: data.test_pass_rate,
-      build_passing: data.build_passing,
+      test_pass_rate: testPassRate,
+      build_passing: data.build_status === "success",
+      test_total: data.test_total,
+      test_passed: data.test_passed,
+      test_failed: data.test_failed,
+      test_coverage: data.test_coverage,
       last_run: data.created_at,
     });
   } catch (err) {
